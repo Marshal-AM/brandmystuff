@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useInView, type HTMLMotionProps } from "framer-motion";
 import { AlertTriangle, Camera, Check, Info, Upload, X } from "lucide-react";
 import {
@@ -362,11 +363,14 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
       document.body.style.overflow = prev;
     };
   }, [onClose, open]);
-  return (
+  // Portal to <body>: ancestors with backdrop-filter/transform (the header) would otherwise
+  // become the containing block for `fixed` and pin the dialog to them instead of the viewport.
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[70] flex items-end justify-center bg-ink/70 p-0 backdrop-blur-md sm:items-center sm:p-6"
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-ink/70 p-4 backdrop-blur-md sm:p-6"
           onClick={onClose}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -375,7 +379,7 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
         >
           <motion.div
             className={cx(
-              "relative max-h-[92vh] w-full overflow-y-auto rounded-t-[2rem] border border-line-strong bg-gradient-to-b from-p-900 to-p-950 p-6 shadow-[0_40px_120px_rgba(0,0,0,0.7)] sm:rounded-[2rem] sm:p-7",
+              "relative max-h-[88vh] w-full overflow-y-auto rounded-[2rem] border border-line-strong bg-gradient-to-b from-p-900 to-p-950 p-6 shadow-[0_40px_120px_rgba(0,0,0,0.7)] sm:p-7",
               wide ? "sm:max-w-3xl" : "sm:max-w-lg",
             )}
             onClick={(e) => e.stopPropagation()}
@@ -395,7 +399,8 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
 

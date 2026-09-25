@@ -24,7 +24,7 @@ function Onboarding() {
       router.push(next === "/onboarding" ? "/dashboard" : next);
     });
   const low = me && BigInt(me.balances.sui) < 20_000_000n;
-  const valid = handle.length >= 3;
+  const valid = /^[a-z0-9-]{3,32}$/.test(handle);
   return (
     <div className="mx-auto max-w-lg px-4 pb-16">
       <div className="flex flex-col items-center text-center">
@@ -44,7 +44,7 @@ function Onboarding() {
         <Field label="Handle" hint="3–32 lowercase letters, digits or dashes">
           <div className="relative">
             <AtSign className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-p" />
-            <Input value={handle} onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} placeholder="maya" data-testid="handle" className="pl-10 font-mono" />
+            <Input value={handle} onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 32))} placeholder="maya" data-testid="handle" className="pl-10 font-mono" />
           </div>
         </Field>
         <div className={cx("flex items-center gap-2 overflow-hidden rounded-2xl border px-4 py-3 font-mono text-sm transition-colors duration-500", valid ? "border-p/40 bg-p/[0.08]" : "border-line bg-white/[0.02]")}>
@@ -83,7 +83,7 @@ function Onboarding() {
             </motion.div>
           )}
         </AnimatePresence>
-        <Button className="w-full" size="lg" loading={busy === "save"} disabled={handle.length < 3} onClick={submit} data-testid="save-handle">
+        <Button className="w-full" size="lg" loading={busy === "save"} disabled={!valid} onClick={submit} data-testid="save-handle">
           Create my profile
         </Button>
         <p className="text-center text-xs text-muted">This signs one Sui transaction (creates your on-chain profile). The ENS name is registered by the platform in the background.</p>

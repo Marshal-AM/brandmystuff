@@ -59,7 +59,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const mode: Ctx["mode"] = privy.authenticated ? "privy" : suiSession ? "sui" : null;
 
-  const token = useCallback(async () => (privy.authenticated ? await privy.getAccessToken() : null), [privy]);
+  // usePrivy() hands back a new object on most renders. Read it through a ref so
+  // token/api/refresh keep a stable identity; otherwise every consumer effect
+  // re-runs, /api/me is refetched in a loop and forms seeded from `me` get wiped.
+  const privyRef = useRef(privy);
+  privyRef.current = privy;
+  const token = useCallback(async () => (privyRef.current.authenticated ? await privyRef.current.getAccessToken() : null), []);
 
   const api = useCallback(
     async <T,>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> => {
@@ -84,14 +89,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     try {
       const m = await api<Me>("/api/me");
       setMe(m);
-      if (!privy.authenticated) setSuiSession(true);
+      if (!privyRef.current.authenticated) setSuiSession(true);
     } catch (e: any) {
       if (e?.status === 401) {
         setMe(null);
         setSuiSession(false);
       }
     }
-  }, [api, privy.authenticated]);
+  }, [api]);
 
   useEffect(() => {
     if (!privy.ready) return;
@@ -108,14 +113,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [account, api, dAppKit, refresh]);
 
   const logout = useCallback(async () => {
-    if (privy.authenticated) await privy.logout();
+    if (privyRef.current.authenticated) await privyRef.current.logout();
     await fetch("/api/auth/logout", { method: "POST" });
     try {
       await dAppKit.disconnectWallet();
     } catch {}
     setSuiSession(false);
     setMe(null);
-  }, [privy, dAppKit]);
+  }, [dAppKit]);
 
   const privySigner = useMemo(() => {
     const u = me?.user;

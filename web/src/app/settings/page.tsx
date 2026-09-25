@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Save } from "lucide-react";
 import { useSession } from "@/lib/client/session";
@@ -10,9 +10,13 @@ export default function Settings() {
   const { me, authenticated, api, refresh } = useSession();
   const [f, setF] = useState({ displayName: "", bio: "", twitter: "", website: "", brandName: "" });
   const { busy, run } = useAction();
+  // Seed the form once per signed-in user; later session refreshes must not overwrite what's being typed.
+  const seeded = useRef<string | null>(null);
   useEffect(() => {
     const u = me?.user;
-    if (u) setF({ displayName: u.display_name ?? "", bio: u.bio ?? "", twitter: u.twitter ?? "", website: u.website ?? "", brandName: u.brand_name ?? "" });
+    if (!u || seeded.current === u.id) return;
+    seeded.current = u.id;
+    setF({ displayName: u.display_name ?? "", bio: u.bio ?? "", twitter: u.twitter ?? "", website: u.website ?? "", brandName: u.brand_name ?? "" });
   }, [me?.user]);
   if (!authenticated)
     return (
