@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, animate, motion } from 'framer-motion'
 import { useRef, useState } from 'react'
 import { AdArt } from '../components/AdArt'
 import { Bot, type BotMood } from '../components/Bot'
@@ -9,12 +9,19 @@ import { rng, useCountUp, useSequence, useViewport } from '../lib/hooks'
 import './scout.css'
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
-const FLY = 3.4 // seconds a card takes to pass the camera
-const Z0 = -2600
-const Z1 = 700
 const PERSPECTIVE = 900
+const VP_Y = 0.46 // vanishing point, as a fraction of height
+const Z0 = -2600 // where cards appear
+const ZH = -260 // where a card pauses beside the bot for inspection
+const Z1 = 700 // behind the camera
+const APPROACH = 1.25
+const HOLD = 1.15
+const EXIT_MATCH = 0.95
+const EXIT_SKIP = 0.8
 const DIST_MS = 2300
+const INTRO_MS = 1500
 const TOTAL_LISTINGS = DISTRICTS.reduce((s, d) => s + d.listings, 0)
+const TRAY_W = 56
 
 const FILLERS: Record<string, { art: ArtKind; titles: string[] }> = {
   outdoor: { art: 'billboard', titles: ['Worli Sea Face Hoarding', 'MG Road Unipole', 'Airport Road Gantry'] },
@@ -26,53 +33,173 @@ const FILLERS: Record<string, { art: ArtKind; titles: string[] }> = {
   events: { art: 'stadium', titles: ['Marathon Finish Arch', 'Comedy Night Stage', 'Esports Arena'] },
 }
 
-type Card = { uid: number; ad: AdSpace; side: 'l' | 'r'; tier: number }
-type Ghost = { uid: number; ad: AdSpace; x: number; y: number }
+type Side = 'l' | 'r'
+type Hero = { uid: number; ad: AdSpace; side: Side; slot: number | null }
+type Drift = { uid: number; ad: AdSpace; side: Side; y: number }
+type Focus = { uid: number; side: Side; verdict: 'pending' | 'match' | 'skip' }
+type Geo = {
+  w: number
+  h: number
+  sideX: number
+  cardW: number
+  cardH: number
+  tray: (slot: number) => { x: number; y: number }
+}
+
+const k = (z: number) => PERSPECTIVE / (PERSPECTIVE - z)
+
+/** A listing that slows down beside Scout, gets scanned, then either flies into the shortlist or streams past. */
+function HeroCard({ hero, g }: { hero: Hero; g: Geo }) {
+  const s = hero.side === 'l' ? -1 : 1
+  const match = hero.slot !== null
+  const E = match ? EXIT_MATCH : EXIT_SKIP
+  const T = APPROACH + HOLD + E
+  const t1 = APPROACH / T
+  const t2 = (APPROACH + HOLD) / T
+  const tgt = match ? g.tray(hero.slot!) : { x: 0, y: 0 }
+  const times = [0, t1, t2, 1]
+  const ease = [[0.16, 1, 0.3, 1], 'linear', match ? [0.65, 0, 0.25, 1] : [0.6, 0, 0.9, 0.4]] as never
+
+  return (
+    <motion.div
+      className={`sc-card ${match ? 'is-match' : 'is-skip'}`}
+      style={{ width: g.cardW, height: g.cardH, marginLeft: -g.cardW / 2, marginTop: -g.cardH / 2 }}
+      initial={{ x: s * g.sideX * 2.2, y: 0, z: Z0, rotateY: -s * 38, scale: 1, opacity: 0 }}
+      animate={{
+        x: [s * g.sideX * 2.2, s * g.sideX, s * g.sideX * 0.97, match ? tgt.x : s * g.sideX * 1.2],
+        y: [0, 0, 0, match ? tgt.y : 0],
+        z: [Z0, ZH, ZH + 30, match ? 0 : Z1],
+        rotateY: [-s * 38, -s * 18, -s * 15, match ? 0 : -s * 34],
+        scale: [1, 1, 1, match ? TRAY_W / g.cardW : 1],
+        opacity: [0, 1, 1, 1, 0],
+      }}
+      transition={{
+        duration: T,
+        times,
+        ease,
+        opacity: { duration: T, times: [0, t1 * 0.6, t2, match ? 0.94 : 0.85, 1], ease: 'linear' },
+      }}
+    >
+      <div className="sc-card-in">
+        <AdArt kind={hero.ad.art} className="sc-art" />
+        <div className="sc-meta">
+          <b>{hero.ad.title}</b>
+          <span>{DISTRICTS.find((d) => d.id === hero.ad.district)?.name}</span>
+        </div>
+        {/* scan line sweeping the card while Scout reads it */}
+        <motion.i
+          className="sc-scan"
+          initial={{ y: -10, opacity: 0 }}
+          animate={{ y: [-10, g.cardH], opacity: [0, 1, 1, 0] }}
+          transition={{ delay: APPROACH + 0.05, duration: 0.85, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="sc-verdict"
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: APPROACH + 0.75, type: 'spring', stiffness: 500, damping: 22 }}
+        >
+          {match && <Icon name="check" size={12} stroke={3.4} />}
+          {match ? `${hero.ad.match}% match` : `${hero.ad.match}% · skip`}
+        </motion.div>
+        {match ? (
+          <motion.div
+            className="sc-glow"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0.7] }}
+            transition={{ delay: APPROACH + 0.75, duration: 0.7 }}
+          />
+        ) : (
+          <motion.div
+            className="sc-dim"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: APPROACH + 0.85, duration: 0.4 }}
+          />
+        )}
+      </div>
+    </motion.div>
+  )
+}
+
+/** Background listings streaming through the outer lanes: the sense of volume. */
+function DriftCard({ d, g }: { d: Drift; g: Geo }) {
+  const s = d.side === 'l' ? -1 : 1
+  const w = g.cardW * 0.72
+  return (
+    <motion.div
+      className="sc-card sc-drift"
+      style={{ width: w, marginLeft: -w / 2, marginTop: -w * 0.4, x: s * g.sideX * 2.4, y: d.y, rotateY: -s * 42 }}
+      initial={{ z: Z0, opacity: 0 }}
+      animate={{ z: Z1, opacity: [0, 0.55, 0.55, 0] }}
+      transition={{ duration: 2.4, ease: 'linear', opacity: { duration: 2.4, times: [0, 0.35, 0.82, 1] } }}
+    >
+      <div className="sc-card-in">
+        <AdArt kind={d.ad.art} className="sc-art" />
+      </div>
+    </motion.div>
+  )
+}
 
 export function Scout({ onDone }: { onDone: () => void }) {
   const { w, h } = useViewport()
   const mobile = w < 760
-  const [district, setDistrict] = useState(0)
-  const [cards, setCards] = useState<Card[]>([])
-  const [gates, setGates] = useState<number[]>([])
-  const [ghosts, setGhosts] = useState<Ghost[]>([])
+  const [district, setDistrict] = useState(-1)
+  const [heroes, setHeroes] = useState<Hero[]>([])
+  const [drifts, setDrifts] = useState<Drift[]>([])
   const [picked, setPicked] = useState<AdSpace[]>([])
-  const [look, setLook] = useState(0)
-  const [mood, setMood] = useState<BotMood | undefined>(undefined)
-  const [thought, setThought] = useState(DISTRICTS[0].thought)
+  const [focus, setFocus] = useState<Focus | null>(null)
+  const [thought, setThought] = useState('Made it through!')
   const [finishing, setFinishing] = useState(false)
   const speed = useRef(1)
+  const rings = useRef<number[]>([]) // start times of warp rings, in canvas seconds
+  const clock = useRef(0)
   const uid = useRef(0)
-  const scanned = useCountUp(TOTAL_LISTINGS, DISTRICTS.length * DIST_MS + 400)
+  const scanned = useCountUp(TOTAL_LISTINGS, DISTRICTS.length * DIST_MS + 1200, district >= 0)
 
-  const cardW = mobile ? 180 : Math.min(300, w * 0.2)
-  const sideX = mobile ? w * 0.34 : Math.min(w * 0.3, 470)
-  const tierY = [-h * 0.13, h * 0.07]
-  const botY = h * 0.52
+  const S = mobile ? 104 : Math.min(140, h * 0.17)
+  const botY = h * 0.54
+  const headY = botY - S * 0.17
+  const cardW = mobile ? 150 : Math.min(270, w * 0.19)
+  const cardH = Math.round(cardW * 0.625 + 58)
+  const sideX = mobile ? w * 0.3 : Math.min(w * 0.27, 400)
+  const dockW = Math.min(780, w - 24)
+  const g: Geo = {
+    w,
+    h,
+    sideX,
+    cardW,
+    cardH,
+    // screen position of shortlist slot n, expressed as a translate at z = 0
+    tray: (n) => ({
+      x: w / 2 + dockW / 2 - 200 + n * 12 + TRAY_W / 2 - w / 2,
+      y: h - 62 - h * VP_Y,
+    }),
+  }
 
   // warp field
   const warp = useRef<{ a: number; d: number; s: number; p: boolean }[] | null>(null)
-  const canvasRef = useCanvas((ctx, cw, ch, dt) => {
+  const canvasRef = useCanvas((ctx, cw, ch, dt, t) => {
+    clock.current = t
     if (!warp.current) {
       const r = rng(77)
-      warp.current = Array.from({ length: 360 }, () => ({ a: r() * Math.PI * 2, d: r(), s: 0.5 + r() * 1.5, p: r() > 0.7 }))
+      warp.current = Array.from({ length: 380 }, () => ({ a: r() * Math.PI * 2, d: r(), s: 0.5 + r() * 1.5, p: r() > 0.7 }))
     }
-    const stars = warp.current
     ctx.fillStyle = 'rgba(10,10,11,0.35)'
     ctx.fillRect(0, 0, cw, ch)
     const cx = cw / 2
-    const cy = ch * 0.46
+    const cy = ch * VP_Y
     const maxD = Math.hypot(cw, ch) * 0.62
     const sp = speed.current
     ctx.globalCompositeOperation = 'lighter'
-    for (const s of stars) {
+    for (const s of warp.current) {
       s.d += dt * sp * (0.12 + s.d * 1.3)
       if (s.d > 1.05) {
         s.d = 0.02 + Math.random() * 0.05
         s.a = Math.random() * Math.PI * 2
       }
       const d = s.d * s.d * maxD
-      const len = Math.min(140, 6 + s.d * s.d * 160 * sp)
+      const len = Math.min(180, 6 + s.d * s.d * 160 * sp)
       const x = cx + Math.cos(s.a) * d
       const y = cy + Math.sin(s.a) * d
       const a = Math.min(1, s.d * 1.8)
@@ -83,98 +210,129 @@ export function Scout({ onDone }: { onDone: () => void }) {
       ctx.lineTo(cx + Math.cos(s.a) * (d + len), cy + Math.sin(s.a) * (d + len))
       ctx.stroke()
     }
+    // warp rings: one pulse per new section, drawn beneath everything else
+    rings.current = rings.current.filter((t0) => t - t0 < 1.1)
+    for (const t0 of rings.current) {
+      const a = (t - t0) / 1.1
+      const e = a * a
+      ctx.strokeStyle = rgba(PURPLE, 0.7 * (1 - a))
+      ctx.lineWidth = 2 + e * 10
+      ctx.shadowColor = rgba(PURPLE, 0.9)
+      ctx.shadowBlur = 24
+      ctx.beginPath()
+      ctx.ellipse(cx, cy, 20 + e * maxD * 1.1, 12 + e * maxD * 0.7, 0, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.shadowBlur = 0
+    }
     ctx.globalCompositeOperation = 'source-over'
-    // central glow at the vanishing point
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 220)
-    g.addColorStop(0, rgba(PURPLE, 0.22 * sp))
-    g.addColorStop(1, 'rgba(0,0,0,0)')
-    ctx.fillStyle = g
-    ctx.fillRect(cx - 220, cy - 220, 440, 440)
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 240)
+    glow.addColorStop(0, rgba(PURPLE, 0.2 * Math.min(1.5, sp)))
+    glow.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.fillStyle = glow
+    ctx.fillRect(cx - 240, cy - 240, 480, 480)
   })
 
   useSequence(async ({ wait }) => {
+    const setSpeed = (to: number, duration: number) =>
+      animate(speed.current, to, { duration, ease: 'easeInOut', onUpdate: (v) => (speed.current = v) })
 
-    const project = (side: 'l' | 'r', tier: number, t: number) => {
-      const z = Z0 + (Z1 - Z0) * t
-      const k = PERSPECTIVE / (PERSPECTIVE - z)
-      const x = w / 2 + (side === 'l' ? -sideX : sideX) * k
-      const y = h * 0.46 + tierY[tier] * k
-      return { x, y }
-    }
-
-    const spawn = (ad: AdSpace, side: 'l' | 'r', tier: number) => {
+    const spawnHero = (ad: AdSpace, side: Side, slot: number | null) => {
       const id = ++uid.current
-      setCards((c) => [...c, { uid: id, ad, side, tier }])
+      setHeroes((x) => [...x, { uid: id, ad, side, slot }])
       ;(async () => {
-        await wait(1350)
-        setLook(side === 'l' ? -1 : 1)
-        await wait(650)
-        if (ad.match >= MATCH_THRESHOLD) {
-          const pos = project(side, tier, 2 / FLY)
-          setGhosts((g) => [...g, { uid: id, ad, x: pos.x, y: pos.y }])
-          setMood('happy')
-          setThought(`Ooh — ${ad.title}!`)
-          await wait(900)
+        await wait(APPROACH * 1000)
+        setFocus({ uid: id, side, verdict: 'pending' })
+        setThought(`Checking ${ad.title}…`)
+        await wait(750)
+        setFocus({ uid: id, side, verdict: slot !== null ? 'match' : 'skip' })
+        setThought(slot !== null ? `Perfect fit · ${ad.match}%` : 'Not quite right')
+        await wait(HOLD * 1000 - 750)
+        setFocus((f) => (f?.uid === id ? null : f))
+        if (slot !== null) {
+          await wait(EXIT_MATCH * 1000 - 60)
           setPicked((p) => [...p, ad])
-          setGhosts((g) => g.filter((x) => x.uid !== id))
-          setMood(undefined)
+          await wait(200)
+        } else {
+          await wait(EXIT_SKIP * 1000 + 100)
         }
-        await wait(1600)
-        setCards((c) => c.filter((x) => x.uid !== id))
+        setHeroes((x) => x.filter((c) => c.uid !== id))
       })().catch(() => {})
     }
 
+    const spawnDrift = (ad: AdSpace, side: Side, y: number) => {
+      const id = ++uid.current
+      setDrifts((x) => [...x, { uid: id, ad, side, y }])
+      window.setTimeout(() => setDrifts((x) => x.filter((c) => c.uid !== id)), 2500)
+    }
+
+    await wait(INTRO_MS)
     const r = rng(5)
+    let slot = 0
     for (let di = 0; di < DISTRICTS.length; di++) {
       const d = DISTRICTS[di]
       setDistrict(di)
-      setThought(d.thought)
-      setGates((g) => [...g, di])
+      rings.current.push(clock.current)
+      setSpeed(2.4, 0.35).then(() => setSpeed(1, 0.9))
+
       const real = STREAM.filter((a) => a.district === d.id)
       const f = FILLERS[d.id]
-      const fill = (i: number): AdSpace => ({
+      const filler = (i: number): AdSpace => ({
         id: `f-${d.id}-${i}`,
         title: f.titles[i % f.titles.length],
         district: d.id,
         loc: '',
         art: f.art,
-        match: 18 + Math.round(r() * 50),
+        match: 20 + Math.round(r() * 45),
         reach: '',
         price: 0,
         unit: '',
         format: '',
       })
-      const order: AdSpace[] = [fill(0), real[0], fill(1), real[1] ?? fill(2), fill(2)]
-      const sides: ('l' | 'r')[] = di % 2 ? ['r', 'r', 'l', 'l', 'r'] : ['l', 'l', 'r', 'r', 'l']
-      for (let i = 0; i < order.length; i++) {
-        spawn(order[i], sides[i], (i + di) % 2)
-        await wait(DIST_MS / order.length)
+      const first: Side = 'l'
+      const other: Side = 'r'
+      const lane = (i: number) => (i % 2 ? 1 : -1) * h * (0.34 + r() * 0.04)
+
+      const heroAt = (ad: AdSpace | undefined, side: Side) => {
+        if (!ad) return
+        const isMatch = ad.match >= MATCH_THRESHOLD
+        spawnHero(ad, side, isMatch ? slot++ : null)
       }
-      window.setTimeout(() => setGates((g) => g.filter((x) => x !== di)), 2600)
+
+      if (!mobile) spawnDrift(filler(0), other, lane(0))
+      heroAt(real[0], first)
+      await wait(450)
+      if (!mobile) spawnDrift(filler(1), first, lane(1))
+      await wait(700)
+      heroAt(real[1], other)
+      await wait(450)
+      if (!mobile) spawnDrift(filler(2), other, lane(2))
+      await wait(DIST_MS - 1600)
     }
-    await wait(2200)
-    setLook(0)
+
+    await wait((APPROACH + HOLD + EXIT_MATCH) * 1000 - DIST_MS + 1300)
     setFinishing(true)
-    setThought('Found them all!')
-    setMood('happy')
-    const t0 = performance.now()
-    await new Promise<void>((res) => {
-      const tick = () => {
-        const p = Math.min(1, (performance.now() - t0) / 1200)
-        speed.current = 1 - p * 0.85
-        if (p < 1) requestAnimationFrame(tick)
-        else res()
-      }
-      tick()
-    })
-    await wait(900)
+    setThought(`Found ${slot} perfect spaces!`)
+    await setSpeed(0.15, 1.2)
+    await wait(1000)
     onDone()
   })
 
-  const S = mobile ? 110 : Math.min(150, h * 0.17)
-  const dockW = Math.min(780, w - 24)
-  const trayX = w / 2 + dockW / 2 - 110
-  const trayY = h - 64
+  // gaze beam from the visor to the card being inspected
+  const beam = (() => {
+    if (!focus) return null
+    const s = focus.side === 'l' ? -1 : 1
+    const kk = k(ZH)
+    const cx = w / 2 + s * sideX * kk
+    const half = (cardW / 2) * Math.cos((18 * Math.PI) / 180) * kk
+    const inner = cx - s * half
+    const cy = h * VP_Y
+    const hh = (cardH / 2) * kk
+    const vx = w / 2 + s * 18
+    return { d: `M ${vx} ${headY - 6} L ${inner} ${cy - hh} L ${inner} ${cy + hh} L ${vx} ${headY + 6} Z`, vx, inner, s }
+  })()
+
+  const title = finishing ? 'Every corner, checked.' : district < 0 ? 'Entering the marketplace' : DISTRICTS[district].name
+  const mood: BotMood | undefined = finishing || focus?.verdict === 'match' ? 'happy' : focus ? 'focus' : undefined
 
   return (
     <motion.div
@@ -187,148 +345,123 @@ export function Scout({ onDone }: { onDone: () => void }) {
       <canvas ref={canvasRef} className="sc-canvas" />
 
       {/* 3D corridor */}
-      <div className="sc-tunnel" style={{ perspective: PERSPECTIVE, perspectiveOrigin: '50% 46%' }}>
+      <div className="sc-tunnel" style={{ perspective: PERSPECTIVE, perspectiveOrigin: `50% ${VP_Y * 100}%` }}>
+        <div className="sc-space">
         <div className="sc-floor" />
-        {gates.map((gi) => (
-          <motion.div
-            key={`g${gi}`}
-            className="sc-gate"
-            style={{ width: Math.min(w * 0.92, 1400), height: h * 0.8, x: '-50%', y: '-50%' }}
-            initial={{ z: -3200, opacity: 0 }}
-            animate={{ z: 900, opacity: [0, 1, 1, 0] }}
-            transition={{ duration: 2.6, ease: [0.5, 0, 0.9, 0.6], opacity: { duration: 2.6, times: [0, 0.2, 0.85, 1] } }}
-          >
-            <span className="sc-gate-label">
-              <i>{String(gi + 1).padStart(2, '0')}</i>
-              {DISTRICTS[gi].name}
-            </span>
-          </motion.div>
+        {drifts.map((d) => (
+          <DriftCard key={d.uid} d={d} g={g} />
         ))}
-        {cards.map((c) => {
-          const match = c.ad.match >= MATCH_THRESHOLD
-          return (
-            <motion.div
-              key={c.uid}
-              className={`sc-card ${match ? 'is-match' : 'is-skip'}`}
-              style={{
-                width: cardW,
-                marginLeft: -cardW / 2,
-                x: c.side === 'l' ? -sideX : sideX,
-                y: tierY[c.tier],
-                rotateY: c.side === 'l' ? 38 : -38,
-              }}
-              initial={{ z: Z0, opacity: 0 }}
-              animate={{ z: Z1, opacity: [0, 1, 1, 0] }}
-              transition={{ duration: FLY, ease: 'linear', opacity: { duration: FLY, times: [0, 0.16, 0.86, 1] } }}
-            >
-              <div className="sc-card-in">
-                <AdArt kind={c.ad.art} className="sc-art" />
-                <div className="sc-meta">
-                  <b>{c.ad.title}</b>
-                  <span>{DISTRICTS.find((d) => d.id === c.ad.district)?.name}</span>
-                </div>
-                <motion.div
-                  className="sc-verdict"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 1.9, type: 'spring', stiffness: 500, damping: 22 }}
-                >
-                  {match ? <Icon name="check" size={12} stroke={3.4} /> : null}
-                  {match ? `${c.ad.match}% match` : `${c.ad.match}% · skip`}
-                </motion.div>
-                <motion.div
-                  className="sc-dim"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: match ? 0 : 1 }}
-                  transition={{ delay: 2, duration: 0.4 }}
-                />
-                {match && (
-                  <motion.div
-                    className="sc-glow"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: [0, 1, 0.6] }}
-                    transition={{ delay: 1.9, duration: 0.8 }}
-                  />
-                )}
-              </div>
-            </motion.div>
-          )
-        })}
+        {heroes.map((c) => (
+          <HeroCard key={c.uid} hero={c} g={g} />
+        ))}
+        </div>
       </div>
 
-      {/* the bot, thinking */}
-      <div className="sc-bot" style={{ left: w / 2, top: botY }}>
-        <motion.div
-          className={`sc-gaze ${look < 0 ? 'l' : look > 0 ? 'r' : ''}`}
-          animate={{ opacity: look === 0 || finishing ? 0 : 1, rotate: look < 0 ? 180 : 0 }}
-          transition={{ duration: 0.5, ease: EASE }}
-        />
-        <div className="sc-orbit" style={{ width: S * 1.9, height: S * 1.9 }}>
-          <i />
-          <i />
-          <i />
-        </div>
-        <div style={{ marginLeft: -S / 2, marginTop: -S * 0.62, position: 'relative' }}>
-          <Bot pose={finishing ? 'celebrate' : 'think'} look={look} lookY={-0.1} mood={mood} size={S} visorScan={!finishing} />
-        </div>
+      {/* gaze beam */}
+      <svg className="sc-beam" width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+        <defs>
+          {beam && (
+            <linearGradient id="sc-beam-grad" gradientUnits="userSpaceOnUse" x1={beam.vx} y1="0" x2={beam.inner} y2="0">
+              <stop offset="0" stopColor="#fff" stopOpacity="0.55" />
+              <stop offset="0.35" stopColor="var(--p)" stopOpacity="0.28" />
+              <stop offset="1" stopColor="var(--p)" stopOpacity="0.1" />
+            </linearGradient>
+          )}
+        </defs>
+        <AnimatePresence>
+          {beam && (
+            <motion.path
+              key={focus!.uid}
+              d={beam.d}
+              fill="url(#sc-beam-grad)"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0.7, 1, 0.8, 1] }}
+              exit={{ opacity: 0, transition: { duration: 0.25 } }}
+              transition={{ duration: 0.6, repeat: Infinity, repeatType: 'mirror' }}
+            />
+          )}
+        </AnimatePresence>
+      </svg>
 
-        <div className="sc-thought" style={{ left: S * 0.42, top: -S * 0.95 }}>
-          <motion.i className="t1" animate={{ scale: [1, 1.25, 1] }} transition={{ duration: 1.2, repeat: Infinity }} />
-          <motion.i className="t2" animate={{ scale: [1, 1.25, 1] }} transition={{ duration: 1.2, delay: 0.2, repeat: Infinity }} />
-          <div className="sc-cloud">
+      {/* Scout tumbles out of the wormhole, then hovers and thinks */}
+      <div className="sc-bot" style={{ left: w / 2, top: botY }}>
+        <motion.span
+          className="sc-portal"
+          initial={{ scale: 3, opacity: 0.9 }}
+          animate={{ scale: 0, opacity: 0 }}
+          transition={{ duration: 1.1, ease: [0.7, 0, 0.3, 1], delay: 0.2 }}
+        />
+        <motion.div
+          initial={{ scale: 0.05, rotate: -600, opacity: 0 }}
+          animate={{ scale: 1, rotate: 0, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 60, damping: 11, mass: 0.9, delay: 0.25 }}
+        >
+          <div className="sc-orbit" style={{ width: S * 1.9, height: S * 1.9 }}>
+            <i />
+            <i />
+          </div>
+          <div style={{ marginLeft: -S / 2, marginTop: -S * 0.62, position: 'relative' }}>
+            <Bot
+              pose={finishing ? 'celebrate' : 'think'}
+              look={focus ? (focus.side === 'l' ? -1 : 1) : 0}
+              lookY={-0.1}
+              mood={mood}
+              size={S}
+              visorScan={!!focus && focus.verdict === 'pending'}
+            />
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="sc-thought"
+          style={{ top: -S * 0.66 }}
+          initial={{ opacity: 0, y: 10, x: '-50%' }}
+          animate={{ opacity: 1, y: 0, x: '-50%' }}
+          transition={{ delay: 1.1, duration: 0.6, ease: EASE }}
+        >
+          <motion.div className={`sc-cloud ${focus?.verdict === 'match' ? 'is-match' : ''}`} layout transition={{ layout: { duration: 0.35, ease: EASE } }}>
             <span className="sc-think-ico">
-              <motion.span animate={{ rotate: 360 }} transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}>
-                <Icon name="spark" size={14} />
+              <motion.span animate={{ rotate: 360 }} transition={{ duration: focus ? 1.2 : 3, repeat: Infinity, ease: 'linear' }}>
+                <Icon name={focus?.verdict === 'match' ? 'check' : 'spark'} size={13} stroke={2.4} />
               </motion.span>
             </span>
-            <AnimatePresence mode="popLayout" initial={false}>
+            <AnimatePresence mode="wait" initial={false}>
               <motion.span
                 key={thought}
-                initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
+                className="sc-thought-txt"
+                initial={{ opacity: 0, y: 8, filter: 'blur(4px)' }}
                 animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, y: -10, filter: 'blur(4px)' }}
-                transition={{ duration: 0.35 }}
+                exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }}
+                transition={{ duration: 0.22 }}
               >
                 {thought}
               </motion.span>
             </AnimatePresence>
-          </div>
-        </div>
+          </motion.div>
+          <i className="sc-thought-dot d1" />
+          <i className="sc-thought-dot d2" />
+        </motion.div>
       </div>
 
-      {/* ghosts flying into the shortlist */}
-      {ghosts.map((g) => (
-        <motion.div
-          key={g.uid}
-          className="sc-ghost"
-          initial={{ x: g.x - 60, y: g.y - 40, scale: 1, opacity: 1, rotate: 0 }}
-          animate={{
-            x: [g.x - 60, (g.x + trayX) / 2 - 60, trayX - 60],
-            y: [g.y - 40, Math.min(g.y, trayY) - 160, trayY - 40],
-            scale: [1, 0.9, 0.35],
-            rotate: [0, -8, 0],
-            opacity: [1, 1, 0.2],
-          }}
-          transition={{ duration: 0.9, ease: [0.55, 0, 0.45, 1] }}
-        >
-          <AdArt kind={g.ad.art} />
-        </motion.div>
-      ))}
-
       {/* HUD: one title up top, one dock at the bottom */}
-      <div className="sc-hud-top">
+      <motion.div
+        className="sc-hud-top"
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8, duration: 0.7, ease: EASE }}
+      >
         <span className="sc-kicker">
           <i className="sc-live" /> Scanning platform
         </span>
-        <AnimatePresence mode="popLayout" initial={false}>
+        <AnimatePresence mode="wait" initial={false}>
           <motion.h2
-            key={finishing ? 'done' : district}
-            initial={{ opacity: 0, y: 24, filter: 'blur(10px)' }}
+            key={title}
+            initial={{ opacity: 0, y: 18, filter: 'blur(10px)' }}
             animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: -24, filter: 'blur(10px)' }}
-            transition={{ duration: 0.6, ease: EASE }}
+            exit={{ opacity: 0, y: -18, filter: 'blur(10px)' }}
+            transition={{ duration: 0.4, ease: EASE }}
           >
-            {finishing ? 'Every corner, checked.' : DISTRICTS[district].name}
+            {title}
           </motion.h2>
         </AnimatePresence>
         <div className="sc-progress">
@@ -339,14 +472,20 @@ export function Scout({ onDone }: { onDone: () => void }) {
             {scanned.toLocaleString('en-IN')} / {TOTAL_LISTINGS.toLocaleString('en-IN')} listings
           </span>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="sc-dock" style={{ width: dockW }}>
+      <motion.div
+        className="sc-dock"
+        style={{ width: dockW }}
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1, duration: 0.8, ease: EASE }}
+      >
         <div className="sc-map">
           <div className="sc-map-track">
             <motion.i
               className="sc-map-fill"
-              animate={{ scaleX: finishing ? 1 : district / (DISTRICTS.length - 1) }}
+              animate={{ scaleX: finishing ? 1 : Math.max(0, district) / (DISTRICTS.length - 1) }}
               transition={{ duration: 0.9, ease: EASE }}
             />
           </div>
@@ -365,20 +504,18 @@ export function Scout({ onDone }: { onDone: () => void }) {
         </div>
         <div className="sc-tray">
           <div className="sc-tray-stack">
-            <AnimatePresence>
-              {picked.map((p, i) => (
-                <motion.div
-                  key={p.id}
-                  className="sc-tray-item"
-                  style={{ zIndex: i }}
-                  initial={{ scale: 0.3, y: -24, opacity: 0 }}
-                  animate={{ scale: 1, y: 0, opacity: 1, x: i * 12 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-                >
-                  <AdArt kind={p.art} />
-                </motion.div>
-              ))}
-            </AnimatePresence>
+            {picked.map((p, i) => (
+              <motion.div
+                key={p.id}
+                className="sc-tray-item"
+                style={{ zIndex: i, x: i * 12 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, scale: finishing ? [1, 1.12, 1] : 1 }}
+                transition={{ opacity: { duration: 0.15 }, scale: { delay: i * 0.06, duration: 0.5 } }}
+              >
+                <AdArt kind={p.art} />
+              </motion.div>
+            ))}
           </div>
           <div className="sc-tray-count">
             <motion.b key={picked.length} initial={{ scale: 1.6 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 15 }}>
@@ -387,14 +524,9 @@ export function Scout({ onDone }: { onDone: () => void }) {
             <span>matches</span>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      <motion.div
-        className="sc-whiteout"
-        initial={{ opacity: 1 }}
-        animate={{ opacity: 0 }}
-        transition={{ duration: 1.1, ease: 'easeOut' }}
-      />
+      <motion.div className="sc-whiteout" initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: 1.1, ease: 'easeOut' }} />
     </motion.div>
   )
 }
