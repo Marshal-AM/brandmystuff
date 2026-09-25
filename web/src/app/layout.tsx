@@ -1,19 +1,23 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import ClientRoot from "./client-root";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
+const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"], weight: ["400", "500", "600"] });
 
 export const metadata: Metadata = {
-  title: "brandmystuff — rent the ad space on your stuff",
-  description: "List ad spaces on the things you own, get them scored by AI, lease them for USDC on Sui and tokenise their income. Every listing is an ENS name.",
+  title: "brandmystuff — your stuff is ad space",
+  description:
+    "List ad spaces on the things you own, get them scored by AI, lease them for USDC on Sui and tokenise their income. Every brand gets an AI agent that finds the spaces that fit it.",
+  icons: { icon: "/logo.svg" },
 };
+
+export const viewport: Viewport = { themeColor: "#0a0a0b" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="en" className={`${jakarta.variable} ${jetbrains.variable} h-full antialiased`}>
       <body className="min-h-full">
         <ClientRoot>{children}</ClientRoot>
       </body>

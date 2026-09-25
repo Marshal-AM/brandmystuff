@@ -2,8 +2,10 @@
 import Link from "next/link";
 import { use, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowLeft, ArrowUpRight, CheckCheck, Flag, Paperclip, Send, X } from "lucide-react";
 import { useSession } from "@/lib/client/session";
-import { Button, Img, Spinner, Textarea, cx, useAction } from "@/components/ui";
+import { Button, EASE, Img, PageLoader, Textarea, cx, useAction } from "@/components/ui";
 
 export default function Thread({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -26,7 +28,7 @@ export default function Thread({ params }: { params: Promise<{ id: string }> }) 
     return () => events.removeEventListener("message", h);
   }, [events, id]);
   useEffect(() => end.current?.scrollIntoView({ behavior: "smooth" }), [msgs.length]);
-  if (!data) return <div className="grid place-items-center py-24"><Spinner /></div>;
+  if (!data) return <PageLoader label="Loading conversation" />;
   const person = (uid: string) => data.people.find((p: any) => p.id === uid);
   const send = () =>
     run("send", async () => {
@@ -38,56 +40,103 @@ export default function Thread({ params }: { params: Promise<{ id: string }> }) 
       setText("");
       setFiles([]);
     });
+  const sp = data.conversation.spaces;
   return (
-    <div className="mx-auto flex h-[calc(100vh-140px)] max-w-3xl flex-col px-4 py-6">
-      <div className="mb-3 flex items-center gap-3">
-        <Img blob={data.conversation.spaces.closeup_blob_id} alt="" className="h-10 w-10 rounded-lg" />
-        <div>
-          <div className="font-semibold">{data.conversation.spaces.label}</div>
-          <Link href={`/${data.conversation.spaces.ens_name}`} className="font-mono text-xs text-brand underline">{data.conversation.spaces.ens_name}</Link>
+    <div className="mx-auto flex h-[calc(100vh-170px)] max-w-3xl flex-col px-4 sm:px-6">
+      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }} className="glass mb-3 flex items-center gap-3 rounded-3xl p-3">
+        <Link href="/messages" className="grid h-9 w-9 place-items-center rounded-full text-muted transition-colors hover:bg-white/[0.06] hover:text-white" aria-label="Back">
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+        <Img blob={sp.closeup_blob_id} alt="" className="h-11 w-11 rounded-xl" />
+        <div className="min-w-0">
+          <div className="truncate font-bold">{sp.label}</div>
+          <Link href={`/${sp.ens_name}`} className="block truncate font-mono text-[11px] text-p hover:underline">{sp.ens_name}</Link>
         </div>
-        {data.conversation.escrow_id && <Link href={`/leases/${data.conversation.escrow_id}`} className="ml-auto text-sm underline">Open lease</Link>}
-      </div>
-      <div className="flex-1 space-y-3 overflow-y-auto rounded-2xl border border-line bg-surface p-4">
-        {!msgs.length && <p className="text-center text-sm text-muted">Say hi 👋</p>}
-        {msgs.map((m) => {
-          const mine = m.sender_user_id === data.me;
-          const p = person(m.sender_user_id);
-          return (
-            <div key={m.id} className={cx("flex", mine ? "justify-end" : "justify-start")} data-testid="chat-message">
-              <div className={cx("max-w-[75%] rounded-2xl px-4 py-2 text-sm", mine ? "bg-brand text-white" : "bg-black/5")}>
-                {!mine && <div className="mb-0.5 text-xs font-semibold opacity-70">{p?.brand_name ?? p?.display_name ?? p?.handle}</div>}
-                {m.body && <div className="whitespace-pre-wrap">{m.body}</div>}
-                {(m.attachments ?? []).map((a: any) =>
-                  a.mime?.startsWith("image/") ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img key={a.path} src={a.url} alt={a.name} className="mt-2 max-h-60 rounded-lg" />
-                  ) : a.mime?.startsWith("video/") ? (
-                    <video key={a.path} src={a.url} controls className="mt-2 max-h-60 rounded-lg" />
-                  ) : (
-                    <a key={a.path} href={a.url} target="_blank" rel="noreferrer" className="mt-2 block underline">📎 {a.name}</a>
-                  ),
-                )}
-                <div className="mt-1 flex items-center gap-2 text-[10px] opacity-60">
-                  {new Date(m.created_at).toLocaleTimeString()}
-                  {mine && m.read_at && "· read"}
-                  {!mine && <button onClick={() => api(`/api/conversations/${id}`, { method: "PATCH", json: { messageId: m.id } }).then(() => refetch())} className="underline">report</button>}
-                </div>
-              </div>
+        {data.conversation.escrow_id && (
+          <Link href={`/leases/${data.conversation.escrow_id}`} className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-p/15 px-3.5 py-1.5 text-xs font-semibold text-p transition-colors hover:bg-p hover:text-ink">
+            Open lease <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
+        )}
+      </motion.div>
+
+      <div className="relative flex-1 space-y-3 overflow-y-auto rounded-3xl border border-line bg-white/[0.02] p-4">
+        {!msgs.length && (
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="grid h-full place-items-center text-center">
+            <div>
+              <motion.div animate={{ rotate: [0, 14, -8, 14, 0] }} transition={{ duration: 1.6, repeat: Infinity, repeatDelay: 1.5 }} className="text-3xl">👋</motion.div>
+              <p className="mt-2 text-sm text-muted">Say hi</p>
             </div>
-          );
-        })}
+          </motion.div>
+        )}
+        <AnimatePresence initial={false}>
+          {msgs.map((m) => {
+            const mine = m.sender_user_id === data.me;
+            const p = person(m.sender_user_id);
+            return (
+              <motion.div
+                key={m.id}
+                layout
+                initial={{ opacity: 0, y: 16, scale: 0.9, x: mine ? 24 : -24 }}
+                animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
+                transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                style={{ originX: mine ? 1 : 0 }}
+                className={cx("flex", mine ? "justify-end" : "justify-start")}
+                data-testid="chat-message"
+              >
+                <div className={cx("group max-w-[78%] rounded-3xl px-4 py-2.5 text-sm", mine ? "rounded-br-md bg-p text-ink shadow-[0_10px_30px_-12px_rgba(171,159,242,0.7)]" : "rounded-bl-md border border-line bg-white/[0.06] text-white")}>
+                  {!mine && <div className="mb-0.5 text-xs font-bold text-p">{p?.brand_name ?? p?.display_name ?? p?.handle}</div>}
+                  {m.body && <div className="whitespace-pre-wrap leading-relaxed">{m.body}</div>}
+                  {(m.attachments ?? []).map((a: any) =>
+                    a.mime?.startsWith("image/") ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={a.path} src={a.url} alt={a.name} className="mt-2 max-h-60 rounded-2xl" />
+                    ) : a.mime?.startsWith("video/") ? (
+                      <video key={a.path} src={a.url} controls className="mt-2 max-h-60 rounded-2xl" />
+                    ) : (
+                      <a key={a.path} href={a.url} target="_blank" rel="noreferrer" className={cx("mt-2 flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 font-medium", mine ? "bg-ink/10" : "bg-white/[0.06]")}>
+                        <Paperclip className="h-3.5 w-3.5" /> {a.name}
+                      </a>
+                    ),
+                  )}
+                  <div className={cx("mt-1 flex items-center gap-2 text-[10px]", mine ? "justify-end text-ink/60" : "text-white/45")}>
+                    {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {mine && m.read_at && <span className="inline-flex items-center gap-0.5"><CheckCheck className="h-3 w-3" /> read</span>}
+                    {!mine && (
+                      <button onClick={() => api(`/api/conversations/${id}`, { method: "PATCH", json: { messageId: m.id } }).then(() => refetch())} className="inline-flex items-center gap-0.5 opacity-0 transition-opacity hover:text-p group-hover:opacity-100">
+                        <Flag className="h-3 w-3" /> report
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
         <div ref={end} />
       </div>
-      <div className="mt-3 space-y-2">
-        {files.length > 0 && <div className="text-xs text-muted">📎 {files.map((f) => f.name).join(", ")}</div>}
-        <div className="flex items-end gap-2">
-          <label className="cursor-pointer rounded-xl border border-line bg-surface px-3 py-2.5 text-sm hover:border-violet-300">
-            📎
+
+      <div className="sticky bottom-0 mt-3 space-y-2 pb-2">
+        <AnimatePresence>
+          {files.length > 0 && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="flex flex-wrap gap-1.5 overflow-hidden">
+              {files.map((f, i) => (
+                <motion.span key={f.name + i} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: i * 0.04 }} className="inline-flex items-center gap-1.5 rounded-full bg-p/15 px-3 py-1 text-xs font-medium text-p">
+                  <Paperclip className="h-3 w-3" /> {f.name}
+                </motion.span>
+              ))}
+              <button onClick={() => setFiles([])} className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-muted hover:text-white"><X className="h-3 w-3" /> clear</button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <div className="glass flex items-end gap-2 rounded-3xl p-2 transition-shadow focus-within:shadow-[0_0_0_1px_rgba(171,159,242,0.5),0_0_40px_-10px_rgba(171,159,242,0.5)]">
+          <label className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-2xl text-muted transition-colors hover:bg-white/[0.06] hover:text-p">
+            <Paperclip className="h-4 w-4" />
             <input type="file" multiple accept="image/*,video/*,application/pdf" className="hidden" onChange={(e) => setFiles(Array.from(e.target.files ?? []))} data-testid="chat-files" />
           </label>
-          <Textarea rows={1} value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a message…" className="flex-1" data-testid="chat-input" onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (text || files.length) send(); } }} />
-          <Button loading={busy === "send"} disabled={!text && !files.length} onClick={send} data-testid="chat-send">Send</Button>
+          <Textarea rows={1} value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a message…" className="flex-1 border-transparent bg-transparent focus:border-transparent" data-testid="chat-input" onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (text || files.length) send(); } }} />
+          <Button loading={busy === "send"} disabled={!text && !files.length} onClick={send} data-testid="chat-send" className="h-11 shrink-0">
+            <Send className="h-4 w-4" /> Send
+          </Button>
         </div>
       </div>
     </div>

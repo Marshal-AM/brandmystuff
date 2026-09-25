@@ -1,40 +1,268 @@
 @import "tailwindcss";
 
+/*
+  Three colours only: ink, white and Phantom purple (#AB9FF2).
+  Every other value is a mix of those three.
+
+  The app runs dark. The marketing landing (wrapped in .landing) runs light,
+  by overriding the same variables for its subtree.
+*/
 :root {
-  --background: #f7f6f3;
-  --surface: #ffffff;
-  --foreground: #16151a;
-  --muted: #6b6878;
-  --line: #e7e4ee;
-  --brand: #6d28d9;
-  --brand-2: #a855f7;
-  --ok: #059669;
-  --warn: #d97706;
-  --bad: #dc2626;
+  --ink: #0a0a0b;
+  --p: #ab9ff2;
+  --p-950: #121117;
+  --p-900: #1f1d2c;
+  --p-800: #333049;
+  --p-700: #4d486d;
+  --p-600: #6f679d;
+  --p-300: #cdc5f7;
+  --p-200: #ddd9fa;
+  --p-100: #eeecfc;
+  --p-50: #f7f5fe;
+
+  /* app (dark) */
+  --background: #0a0a0b;
+  --surface: rgba(255, 255, 255, 0.035);
+  --surface-2: rgba(255, 255, 255, 0.06);
+  --foreground: #ffffff;
+  --muted: rgba(255, 255, 255, 0.55);
+  --faint: rgba(255, 255, 255, 0.32);
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.14);
+  --brand: var(--p);
+  --brand-2: var(--p-300);
+  --ok: var(--p);
+  --warn: var(--p-300);
+  --bad: #ffffff;
+
+  /* names the landing components use */
+  --card: var(--p-950);
+  --muted-foreground: rgba(255, 255, 255, 0.55);
+  --border: rgba(255, 255, 255, 0.08);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1);
+  color-scheme: dark;
+}
+
+.landing {
+  --background: #ffffff;
+  --foreground: var(--ink);
+  --card: #ffffff;
+  --muted-foreground: #5f5d6b;
+  --border: #e9e7f3;
+  color-scheme: light;
+  background: #ffffff;
+  color: var(--ink);
 }
 
 @theme inline {
+  --color-ink: var(--ink);
+  --color-p: var(--p);
+  --color-p-950: var(--p-950);
+  --color-p-900: var(--p-900);
+  --color-p-800: var(--p-800);
+  --color-p-700: var(--p-700);
+  --color-p-600: var(--p-600);
+  --color-p-300: var(--p-300);
+  --color-p-200: var(--p-200);
+  --color-p-100: var(--p-100);
+  --color-p-50: var(--p-50);
   --color-background: var(--background);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  --color-faint: var(--faint);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-brand: var(--brand);
   --color-brand-2: var(--brand-2);
   --color-ok: var(--ok);
   --color-warn: var(--warn);
   --color-bad: var(--bad);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+}
+
+@property --spin {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+* {
+  border-color: var(--line);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-jakarta), "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.grid-bg {
-  background-image: radial-gradient(circle at 1px 1px, rgba(109, 40, 217, 0.08) 1px, transparent 0);
-  background-size: 22px 22px;
+::selection {
+  background: var(--p);
+  color: var(--ink);
+}
+
+/* thin, quiet scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(171, 159, 242, 0.25) transparent;
+}
+
+input[type="checkbox"] {
+  accent-color: var(--p);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.6);
+}
+
+select option {
+  background: var(--p-950);
+  color: #fff;
+}
+
+/* ---------- shared visual bits ---------- */
+.ghost-word {
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+}
+
+.card-shadow {
+  box-shadow:
+    0 0 0 1px rgba(31, 29, 44, 0.06),
+    0 1px 1px -0.5px rgba(31, 29, 44, 0.04),
+    0 6px 6px -3px rgba(31, 29, 44, 0.05),
+    0 12px 12px -6px rgba(31, 29, 44, 0.05),
+    0 24px 24px -12px rgba(31, 29, 44, 0.06);
+}
+
+.glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--line);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+/* rotating conic border, used for the "live" / focused state */
+.ring-spin {
+  position: relative;
+  isolation: isolate;
+}
+.ring-spin::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from var(--spin), transparent 0 60%, var(--p) 80%, #fff 90%, transparent 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spin-angle 2.4s linear infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.shimmer {
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.03) 30%, rgba(171, 159, 242, 0.12) 50%, rgba(255, 255, 255, 0.03) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+.grain {
+  pointer-events: none;
+  position: fixed;
+  inset: -50%;
+  z-index: 1;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain 1.2s steps(6) infinite;
+}
+
+.checker {
+  background-color: #fff;
+  background-image: repeating-conic-gradient(var(--p-50) 0% 25%, #fff 0% 50%);
+  background-size: 16px 16px;
+}
+
+@keyframes spin-angle {
+  to { --spin: 360deg; }
+}
+@keyframes rotate {
+  to { transform: rotate(360deg); }
+}
+@keyframes shimmer {
+  to { background-position: -200% 0; }
+}
+@keyframes grain {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-3%, 2%); }
+  40% { transform: translate(2%, -3%); }
+  60% { transform: translate(-2%, -1%); }
+  80% { transform: translate(3%, 3%); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes marquee-x {
+  to { transform: translateX(-50%); }
+}
+.marquee {
+  animation: marquee-x 40s linear infinite;
+}
+.marquee:hover {
+  animation-play-state: paused;
+}
+@keyframes caret-blink {
+  50% { opacity: 0; }
+}
+@keyframes live-dot {
+  50% { opacity: 0.35; transform: scale(0.75); }
+}
+@keyframes float-y {
+  50% { transform: translateY(-8px); }
+}
+@keyframes drift {
+  to { transform: translate(6vw, 4vh) scale(1.15); }
+}
+@keyframes sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+@keyframes scan-y {
+  0%, 100% { top: 0%; }
+  50% { top: 100%; }
+}
+@keyframes grid-drift {
+  to { background-position: 0 64px; }
+}
+@keyframes drawPath {
+  from { stroke-dasharray: 1000; stroke-dashoffset: 1000; }
+  to { stroke-dasharray: 1000; stroke-dashoffset: 0; }
+}
+.animate-draw-icon path,
+.animate-draw-icon line,
+.animate-draw-icon polyline,
+.animate-draw-icon circle,
+.animate-draw-icon rect {
+  animation: drawPath 2s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee, .grain, .shimmer { animation: none; }
 }

@@ -2,12 +2,16 @@
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, Coins, Eye, Loader2, Megaphone, Pause, Play, Plus, Rocket, ScanSearch } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { addSpace, buySponsorship, setPrice, spaceStatus } from "@/lib/sui/tx";
 import { MATERIALS, PLACEMENTS } from "@/lib/categories";
 import { toAtomic } from "@/lib/deployment";
 import { AqsPanel } from "@/components/aqs";
-import { Badge, Button, Card, Empty, Field, GradeBadge, Img, Input, Modal, PhotoInput, Select, Spinner, cx, useAction, usdc } from "@/components/ui";
+import { Badge, Button, Card, EASE, Empty, Field, GradeBadge, Img, Input, Modal, PageLoader, PhotoInput, Select, cx, useAction, usdc } from "@/components/ui";
+
+const STEPS = ["Checking photo quality…", "Checking authenticity…", "Scoring the space…", "Scoring the space (second opinion)…"];
 
 function AddSpace({ objectId, onDone, onClose }: { objectId: string; onDone: () => void; onClose: () => void }) {
   const { api, run } = useSession();
@@ -15,15 +19,14 @@ function AddSpace({ objectId, onDone, onClose }: { objectId: string; onDone: () 
   const [photo, setPhoto] = useState<{ file: File; source: "camera" | "upload"; url: string } | null>(null);
   const [res, setRes] = useState<any>(null);
   const [price, setPriceV] = useState("");
-  const [step, setStep] = useState("");
+  const [step, setStep] = useState(-1);
   const { busy, run: act } = useAction();
   const analyze = () =>
     act("analyze", async () => {
       setRes(null);
-      const steps = ["Checking photo quality…", "Checking authenticity…", "Scoring the space…", "Scoring the space (second opinion)…"];
       let i = 0;
-      setStep(steps[0]);
-      const t = setInterval(() => setStep(steps[Math.min(++i, steps.length - 1)]), 6000);
+      setStep(0);
+      const t = setInterval(() => setStep(Math.min(++i, STEPS.length - 1)), 6000);
       try {
         const fd = new FormData();
         Object.entries(f).forEach(([k, v]) => fd.set(k, v));
@@ -33,7 +36,7 @@ function AddSpace({ objectId, onDone, onClose }: { objectId: string; onDone: () 
         setRes(await api<any>("/api/spaces/analyze", { method: "POST", body: fd }));
       } finally {
         clearInterval(t);
-        setStep("");
+        setStep(-1);
       }
     });
   const list = () =>
@@ -73,52 +76,74 @@ function AddSpace({ objectId, onDone, onClose }: { objectId: string; onDone: () 
           </Select>
         </Field>
       </div>
-      <div className="mt-4">
-        <PhotoInput label="Close-up of this section only (place an ID card for scale if you can)" testId="space-photo" preview={photo?.url} onChange={(file, source) => { setPhoto({ file, source, url: URL.createObjectURL(file) }); setRes(null); }} />
+      <div className="mt-5">
+        <PhotoInput label="Close-up of this section only (place an ID card for scale if you can)" testId="space-photo" preview={photo?.url} scanning={busy === "analyze"} onChange={(file, source) => { setPhoto({ file, source, url: URL.createObjectURL(file) }); setRes(null); }} />
       </div>
-      <Button className="mt-4" onClick={analyze} loading={busy === "analyze"} disabled={!photo || !f.label || !f.widthCm || !f.heightCm} data-testid="analyze">
-        Analyse space
+      <Button className="mt-5" size="lg" onClick={analyze} loading={busy === "analyze"} disabled={!photo || !f.label || !f.widthCm || !f.heightCm} data-testid="analyze">
+        <ScanSearch className="h-4 w-4" /> Analyse space
       </Button>
-      {busy === "analyze" && (
-        <p className="mt-3 flex items-center gap-2 text-sm text-muted">
-          <Spinner className="h-4 w-4" /> {step} (AI checks take ~20–60 s)
-        </p>
-      )}
-      {r && (
-        <div className={cx("mt-5 rounded-2xl p-4", r.decision === "ACCEPTED" ? "bg-emerald-50" : "bg-red-50")} data-testid="space-result">
-          <div className="mb-3 flex items-center gap-2">
-            {r.decision === "ACCEPTED" ? <Badge tone="ok">Accepted</Badge> : <Badge tone="bad">Rejected</Badge>}
-            <span className="font-medium">{r.decision === "ACCEPTED" ? `Scored ${r.aqs}/100` : r.reason}</span>
-          </div>
-          {r.decision === "ACCEPTED" ? (
-            <>
-              <AqsPanel r={r} />
-              <div className="mt-4 flex items-end gap-3">
-                <Field label="Your fixed price (USDC per week)">
-                  <Input inputMode="decimal" value={price} onChange={(e) => setPriceV(e.target.value)} placeholder="1.00" data-testid="space-price" />
-                </Field>
-                <Button onClick={list} loading={busy === "list"} disabled={!(Number(price) > 0)} data-testid="list-space">
-                  List space
-                </Button>
+      <AnimatePresence>
+        {busy === "analyze" && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+            <div className="mt-4 space-y-2.5 rounded-3xl border border-p/25 bg-p/[0.06] p-4">
+              {STEPS.map((label, k) => {
+                const state = k < step ? "done" : k === step ? "run" : "todo";
+                return (
+                  <div key={label} className={cx("flex items-center gap-3 text-sm transition-opacity", state === "todo" && "opacity-40")}>
+                    <span className={cx("grid h-7 w-7 place-items-center rounded-full", state === "done" ? "bg-p text-ink" : "bg-white/[0.06] text-p")}>
+                      {state === "done" ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : state === "run" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
+                    </span>
+                    <span className={state === "run" ? "font-semibold" : "text-white/70"}>{label}</span>
+                  </div>
+                );
+              })}
+              <div className="relative mt-1 h-1 overflow-hidden rounded-full bg-white/[0.06]">
+                <motion.div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-p-600 to-p" animate={{ width: `${((step + 1) / STEPS.length) * 100}%` }} transition={{ duration: 0.8, ease: EASE }} />
               </div>
-              <p className="mt-2 text-xs text-muted">Listing signs one Sui transaction. Your ENS name {res.tx.ensName} is registered automatically.</p>
-            </>
-          ) : (
-            <>
-              {!!r.tips?.length && (
-                <ul className="list-disc pl-5 text-sm">
-                  {r.tips.map((t: string) => (
-                    <li key={t}>{t}</li>
-                  ))}
-                </ul>
-              )}
-              <Button variant="secondary" className="mt-3" onClick={() => { setPhoto(null); setRes(null); }}>
-                Retake
-              </Button>
-            </>
-          )}
-        </div>
-      )}
+              <p className="text-xs text-muted">AI checks take about 20–60 seconds.</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {r && (
+          <motion.div initial={{ opacity: 0, y: 20, filter: "blur(8px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 0.6, ease: EASE }} className={cx("relative mt-6 overflow-hidden rounded-3xl border p-5", r.decision === "ACCEPTED" ? "border-p/40 bg-p/[0.06]" : "border-white/20 bg-white/[0.04]")} data-testid="space-result">
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              {r.decision === "ACCEPTED" ? <Badge tone="ok">Accepted</Badge> : <Badge tone="bad">Rejected</Badge>}
+              <span className="font-bold">{r.decision === "ACCEPTED" ? `Scored ${r.aqs}/100` : r.reason}</span>
+            </div>
+            {r.decision === "ACCEPTED" ? (
+              <>
+                <AqsPanel r={r} />
+                <div className="mt-5 flex flex-wrap items-end gap-3 border-t border-line pt-5">
+                  <div className="w-full max-w-xs">
+                    <Field label="Your fixed price (USDC per week)">
+                      <Input inputMode="decimal" value={price} onChange={(e) => setPriceV(e.target.value)} placeholder="1.00" data-testid="space-price" />
+                    </Field>
+                  </div>
+                  <Button size="lg" onClick={list} loading={busy === "list"} disabled={!(Number(price) > 0)} data-testid="list-space">
+                    <Rocket className="h-4 w-4" /> List space
+                  </Button>
+                </div>
+                <p className="mt-3 text-xs text-muted">Listing signs one Sui transaction. Your ENS name <span className="font-mono text-p">{res.tx.ensName}</span> is registered automatically.</p>
+              </>
+            ) : (
+              <>
+                {!!r.tips?.length && (
+                  <ul className="space-y-1 text-sm text-white/75">
+                    {r.tips.map((t: string) => (
+                      <li key={t} className="flex gap-2"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-p" />{t}</li>
+                    ))}
+                  </ul>
+                )}
+                <Button variant="secondary" className="mt-4" onClick={() => { setPhoto(null); setRes(null); }}>
+                  Retake
+                </Button>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Modal>
   );
 }
@@ -132,18 +157,22 @@ function Sponsor({ objectId, onClose, onDone }: { objectId: string; onClose: () 
   return (
     <Modal open onClose={onClose} title="Boost with a Sponsored tag">
       <p className="text-sm text-muted">Sponsored cards appear in labelled slots (1 in 6) and never change your organic ranking or score.</p>
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        {[1, 2].map((t) => (
-          <button key={t} onClick={() => setTier(t as 1 | 2)} className={cx("rounded-xl border p-3 text-left", tier === t ? "border-brand bg-violet-50" : "border-line")}>
-            <div className="font-medium">Tier {t}</div>
-            <div className="text-xs text-muted">{t === 1 ? "Category & search slots" : "Homepage sponsored rail + slots"}</div>
-          </button>
+      <div className="mt-5 grid grid-cols-2 gap-3">
+        {([1, 2] as const).map((t) => (
+          <motion.button key={t} whileTap={{ scale: 0.97 }} onClick={() => setTier(t)} className={cx("relative overflow-hidden rounded-2xl border p-4 text-left transition-colors", tier === t ? "border-p" : "border-line-strong hover:border-p/40")}>
+            {tier === t && <motion.span layoutId="tier" className="absolute inset-0 bg-p/15" transition={{ type: "spring", stiffness: 400, damping: 30 }} />}
+            <Megaphone className="relative h-5 w-5 text-p" />
+            <div className="relative mt-2 font-bold">Tier {t}</div>
+            <div className="relative text-xs text-muted">{t === 1 ? "Category & search slots" : "Homepage sponsored rail + slots"}</div>
+          </motion.button>
         ))}
       </div>
-      <Field label="Days">
-        <Input type="number" min={1} max={90} value={days} onChange={(e) => setDays(Number(e.target.value))} />
-      </Field>
-      <Button className="mt-4 w-full" loading={busy === "s"} disabled={!quote} data-testid="buy-sponsorship" onClick={() => act("s", async () => { await run(buySponsorship({ objectId, amount: BigInt(quote.amount), tier, days })); onDone(); onClose(); }, "Sponsored!")}>
+      <div className="mt-4">
+        <Field label="Days">
+          <Input type="number" min={1} max={90} value={days} onChange={(e) => setDays(Number(e.target.value))} />
+        </Field>
+      </div>
+      <Button className="mt-5 w-full" size="lg" loading={busy === "s"} disabled={!quote} data-testid="buy-sponsorship" onClick={() => act("s", async () => { await run(buySponsorship({ objectId, amount: BigInt(quote.amount), tier, days })); onDone(); onClose(); }, "Sponsored!")}>
         Pay {quote ? usdc(quote.amount) : "…"}
       </Button>
     </Modal>
@@ -161,81 +190,89 @@ export default function ObjectPage({ params }: { params: Promise<{ id: string }>
     const t = setInterval(() => refetch(), 15000);
     return () => clearInterval(t);
   }, [refetch]);
-  if (isLoading) return <div className="grid place-items-center py-20"><Spinner /></div>;
-  if (!data?.object) return <Empty title="Object not found" />;
+  if (isLoading) return <PageLoader label="Loading object" />;
+  if (!data?.object) return <div className="mx-auto max-w-xl p-10"><Empty title="Object not found" /></div>;
   const o = data.object;
   const mine = address === o.owner_address;
   const sponsored = o.sponsored_until && new Date(o.sponsored_until).getTime() > Date.now();
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="grid gap-6 md:grid-cols-[360px_1fr]">
-        <Card className="p-0 overflow-hidden">
-          <Img blob={o.hero_blob_id} alt={o.title} className="aspect-[4/3] w-full" />
-          <div className="space-y-2 p-5">
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold">{o.title}</h1>
-              {o.object_grade > 0 && <GradeBadge grade={o.object_grade} aqs={o.object_aqs} size="sm" />}
+    <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="grid gap-8 md:grid-cols-[380px_1fr]">
+        <div className="md:sticky md:top-[140px] md:self-start">
+          <Card className="overflow-hidden p-0">
+            <div className="relative">
+              <Img blob={o.hero_blob_id} alt={o.title} className="aspect-[4/3] w-full" />
+              <div className="absolute inset-0 bg-gradient-to-t from-p-950 via-transparent to-transparent" />
             </div>
-            <div className="text-sm text-muted">
-              {o.object_type ?? "object"} {o.city && `· ${o.city}`} {o.viewing_distance_m && `· seen from ~${o.viewing_distance_m} m`}
-            </div>
-            <Link href={`/${o.ens_name}`} className="block font-mono text-xs text-brand underline">
-              {o.ens_name}
-            </Link>
-            {sponsored && <Badge tone="sponsored">Sponsored until {new Date(o.sponsored_until).toLocaleString()}</Badge>}
-            {o.description && <p className="text-sm">{o.description}</p>}
-            {mine && (
-              <div className="flex gap-2 pt-2">
-                <Button onClick={() => setAdding(true)} data-testid="add-space">
-                  + Add space
-                </Button>
-                <Button variant="secondary" onClick={() => setSponsoring(true)} disabled={!data.spaces.length} data-testid="sponsor">
-                  Boost
-                </Button>
+            <div className="relative space-y-3 p-6">
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-extrabold tracking-tight">{o.title}</h1>
+                {o.object_grade > 0 && <GradeBadge grade={o.object_grade} aqs={o.object_aqs} size="sm" />}
               </div>
-            )}
-          </div>
-        </Card>
-        <div>
-          <h2 className="mb-3 text-lg font-semibold">Ad spaces</h2>
-          {!data.spaces.length && <Empty title="No spaces yet">{mine ? "Add your first ad space — each gets its own AI score." : "The owner hasn't listed spaces yet."}</Empty>}
-          <div className="grid gap-3 sm:grid-cols-2">
-            {data.spaces.map((s: any) => (
-              <Card key={s.id} className="p-0 overflow-hidden">
-                <Link href={`/${s.ens_name}`}>
-                  <Img blob={s.closeup_blob_id} alt={s.label} className="aspect-[16/10] w-full" />
-                </Link>
-                <div className="space-y-2 p-4">
-                  <div className="flex items-center justify-between">
-                    <Link href={`/${s.ens_name}`} className="font-semibold hover:underline">
-                      {s.label}
-                    </Link>
-                    {s.grade > 0 ? <GradeBadge grade={s.grade} aqs={s.aqs} size="sm" /> : <Badge tone="warn">{s.status}</Badge>}
-                  </div>
-                  <div className="text-sm text-muted">
-                    {s.width_mm / 10}×{s.height_mm / 10} cm · {s.placement} · {usdc(s.price_per_week)}/week
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    <Badge>{s.status}</Badge>
-                    {s.offering_id && <Badge tone="brand">Tokenised</Badge>}
-                    {s.active_leases > 0 && <Badge tone="ok">{s.active_leases} active lease(s)</Badge>}
-                  </div>
-                  {mine && s.status !== "removed" && (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      <Button size="sm" variant="secondary" loading={busy === `p${s.id}`} onClick={() => { const v = prompt("New price (USDC per week)", String(Number(s.price_per_week) / 1e6)); if (v) act(`p${s.id}`, () => run(setPrice({ spaceId: s.id, pricePerWeek: toAtomic(Number(v)) })).then(() => refetch()), "Price updated"); }}>
-                        Price
-                      </Button>
-                      {s.status === "available" && <Button size="sm" variant="secondary" loading={busy === `x${s.id}`} onClick={() => act(`x${s.id}`, () => run(spaceStatus({ spaceId: s.id, action: "pause_space" })).then(() => refetch()))}>Pause</Button>}
-                      {s.status === "paused" && <Button size="sm" variant="secondary" loading={busy === `x${s.id}`} onClick={() => act(`x${s.id}`, () => run(spaceStatus({ spaceId: s.id, action: "unpause_space" })).then(() => refetch()))}>Unpause</Button>}
-                      {!s.offering_id && s.grade >= 2 && s.status === "available" && (
-                        <Link href={`/spaces/${s.id}/tokenise`} className="rounded-xl border border-line px-3 py-1.5 text-sm hover:border-violet-300">
-                          Tokenise
-                        </Link>
-                      )}
-                    </div>
-                  )}
+              <div className="text-sm text-muted">
+                {o.object_type ?? "object"} {o.city && `· ${o.city}`} {o.viewing_distance_m && `· seen from ~${o.viewing_distance_m} m`}
+              </div>
+              <Link href={`/${o.ens_name}`} className="block break-all font-mono text-[11px] text-p hover:underline">
+                {o.ens_name}
+              </Link>
+              {sponsored && <Badge tone="sponsored">Sponsored until {new Date(o.sponsored_until).toLocaleString()}</Badge>}
+              {o.description && <p className="text-sm leading-relaxed text-white/75">{o.description}</p>}
+              {mine && (
+                <div className="flex gap-2 pt-2">
+                  <Button onClick={() => setAdding(true)} data-testid="add-space">
+                    <Plus className="h-4 w-4" /> Add space
+                  </Button>
+                  <Button variant="secondary" onClick={() => setSponsoring(true)} disabled={!data.spaces.length} data-testid="sponsor">
+                    <Megaphone className="h-4 w-4" /> Boost
+                  </Button>
                 </div>
-              </Card>
+              )}
+            </div>
+          </Card>
+        </div>
+        <div>
+          <div className="mb-5 flex items-end justify-between gap-3">
+            <h2 className="text-3xl font-extrabold tracking-tight">Ad spaces</h2>
+            <span className="text-sm text-muted">{data.spaces.length} listed</span>
+          </div>
+          {!data.spaces.length && <Empty title="No spaces yet">{mine ? "Add your first ad space. Each gets its own AI score." : "The owner hasn't listed spaces yet."}</Empty>}
+          <div className="grid gap-5 sm:grid-cols-2">
+            {data.spaces.map((s: any, i: number) => (
+              <motion.div key={s.id} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07, duration: 0.6, ease: EASE }}>
+                <div className="group overflow-hidden rounded-3xl border border-line bg-white/[0.03] transition-colors hover:border-p/40">
+                  <Link href={`/${s.ens_name}`} className="relative block overflow-hidden">
+                    <Img blob={s.closeup_blob_id} alt={s.label} className="aspect-[16/10] w-full transition-transform duration-700 group-hover:scale-110" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-ink/80 to-transparent" />
+                    <div className="absolute left-3 top-3">{s.grade > 0 ? <GradeBadge grade={s.grade} aqs={s.aqs} size="sm" /> : <Badge tone="warn">{s.status}</Badge>}</div>
+                    <span className="absolute bottom-3 right-3 rounded-full bg-p px-3 py-1 text-xs font-extrabold text-ink">{usdc(s.price_per_week)}/wk</span>
+                  </Link>
+                  <div className="space-y-3 p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <Link href={`/${s.ens_name}`} className="font-bold hover:text-p">{s.label}</Link>
+                      <span className="text-xs text-muted">{s.width_mm / 10}×{s.height_mm / 10} cm · {s.placement}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Badge>{s.status}</Badge>
+                      {s.offering_id && <Badge tone="brand">Tokenised</Badge>}
+                      {s.active_leases > 0 && <Badge tone="ok">{s.active_leases} active lease(s)</Badge>}
+                    </div>
+                    {mine && s.status !== "removed" && (
+                      <div className="flex flex-wrap gap-2 border-t border-line pt-3">
+                        <Button size="sm" variant="secondary" loading={busy === `p${s.id}`} onClick={() => { const v = prompt("New price (USDC per week)", String(Number(s.price_per_week) / 1e6)); if (v) act(`p${s.id}`, () => run(setPrice({ spaceId: s.id, pricePerWeek: toAtomic(Number(v)) })).then(() => refetch()), "Price updated"); }}>
+                          <Coins className="h-3.5 w-3.5" /> Price
+                        </Button>
+                        {s.status === "available" && <Button size="sm" variant="secondary" loading={busy === `x${s.id}`} onClick={() => act(`x${s.id}`, () => run(spaceStatus({ spaceId: s.id, action: "pause_space" })).then(() => refetch()))}><Pause className="h-3.5 w-3.5" /> Pause</Button>}
+                        {s.status === "paused" && <Button size="sm" variant="secondary" loading={busy === `x${s.id}`} onClick={() => act(`x${s.id}`, () => run(spaceStatus({ spaceId: s.id, action: "unpause_space" })).then(() => refetch()))}><Play className="h-3.5 w-3.5" /> Unpause</Button>}
+                        {!s.offering_id && s.grade >= 2 && s.status === "available" && (
+                          <Link href={`/spaces/${s.id}/tokenise`} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-p/15 px-3.5 text-xs font-semibold text-p transition-colors hover:bg-p hover:text-ink">
+                            <Coins className="h-3.5 w-3.5" /> Tokenise
+                          </Link>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
             ))}
           </div>
         </div>

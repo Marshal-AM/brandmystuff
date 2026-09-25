@@ -14,7 +14,7 @@ export default function Providers({ children }: { children: ReactNode }) {
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
       config={{
         loginMethods: ["email", "google", "apple", "twitter", "passkey"],
-        appearance: { theme: "light", accentColor: "#6d28d9", logo: "/logo.svg", landingHeader: "Sign in to brandmystuff", walletChainType: "ethereum-only" },
+        appearance: { theme: "dark", accentColor: "#ab9ff2", logo: "/logo.svg", landingHeader: "Sign in to brandmystuff", walletChainType: "ethereum-only" },
         embeddedWallets: { ethereum: { createOnLogin: "all-users" } },
       }}
     >
