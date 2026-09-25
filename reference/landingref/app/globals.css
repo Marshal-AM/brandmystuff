@@ -1,0 +1,177 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+html {
+  scroll-behavior: smooth;
+}
+
+/*
+  Same three colours as the Scout app: black, white and Phantom purple.
+  Every other value is a mix of those three.
+*/
+:root {
+  --ink: #0a0a0b;
+  --p: #ab9ff2;
+  --p-950: #121117;
+  --p-900: #1f1d2c;
+  --p-800: #333049;
+  --p-700: #4d486d;
+  --p-600: #6f679d;
+  --p-300: #cdc5f7;
+  --p-200: #ddd9fa;
+  --p-100: #eeecfc;
+  --p-50: #f7f5fe;
+
+  --background: #ffffff;
+  --foreground: var(--ink);
+  --card: #ffffff;
+  --card-foreground: var(--ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--ink);
+  --primary: var(--p);
+  --primary-foreground: var(--ink);
+  --secondary: var(--p-50);
+  --secondary-foreground: var(--ink);
+  --muted: var(--p-50);
+  --muted-foreground: #5f5d6b;
+  --accent: var(--p-100);
+  --accent-foreground: var(--ink);
+  --destructive: var(--ink);
+  --destructive-foreground: #ffffff;
+  --border: #e9e7f3;
+  --input: var(--p-50);
+  --ring: var(--p);
+  --chart-1: var(--p);
+  --chart-2: var(--p-600);
+  --chart-3: var(--p-300);
+  --chart-4: var(--ink);
+  --chart-5: var(--p-800);
+  --radius: 1rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--p);
+  --sidebar-primary-foreground: var(--ink);
+  --sidebar-accent: var(--p-50);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: #e9e7f3;
+  --sidebar-ring: var(--p);
+}
+
+@theme inline {
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+  --color-ink: var(--ink);
+  --color-p: var(--p);
+  --color-p-950: var(--p-950);
+  --color-p-900: var(--p-900);
+  --color-p-800: var(--p-800);
+  --color-p-700: var(--p-700);
+  --color-p-600: var(--p-600);
+  --color-p-300: var(--p-300);
+  --color-p-200: var(--p-200);
+  --color-p-100: var(--p-100);
+  --color-p-50: var(--p-50);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: var(--p);
+    color: var(--ink);
+  }
+}
+
+/* shared bits */
+.ghost-word {
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+}
+
+.card-shadow {
+  box-shadow:
+    0 0 0 1px rgba(31, 29, 44, 0.06),
+    0 1px 1px -0.5px rgba(31, 29, 44, 0.04),
+    0 6px 6px -3px rgba(31, 29, 44, 0.05),
+    0 12px 12px -6px rgba(31, 29, 44, 0.05),
+    0 24px 24px -12px rgba(31, 29, 44, 0.06);
+}
+
+@keyframes marquee-x {
+  to { transform: translateX(-50%); }
+}
+
+.marquee {
+  animation: marquee-x 40s linear infinite;
+}
+
+.marquee:hover {
+  animation-play-state: paused;
+}
+
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes caret-blink {
+  50% { opacity: 0; }
+}
+
+@keyframes live-dot {
+  50% { opacity: 0.35; transform: scale(0.75); }
+}
+
+@keyframes float-y {
+  50% { transform: translateY(-8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee { animation: none; }
+}
