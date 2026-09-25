@@ -581,10 +581,10 @@
 
 .vo-moon {
   position: absolute;
-  right: 30%;
+  right: 27%;
   top: 11%;
-  width: 76px;
-  height: 76px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 0 60px 10px rgba(255, 255, 255, 0.35), 0 0 180px 60px rgba(171, 159, 242, 0.25);
@@ -686,7 +686,7 @@
 
 @keyframes sonar {
   0% { transform: scale(0.3); opacity: 0.8; }
-  100% { transform: scale(4.6); opacity: 0; }
+  100% { transform: scale(3.2); opacity: 0; }
 }
 
 .vo-bubble-wrap {
@@ -873,38 +873,6 @@
   height: 20px;
   margin-left: -5px;
   background: var(--ink);
-}
-
-.au-flag {
-  position: absolute;
-  width: 0;
-  height: 0;
-}
-
-.au-flag i {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 2.5px;
-  height: 38px;
-  background: var(--ink);
-}
-
-.au-flag b {
-  position: absolute;
-  left: 2px;
-  bottom: 20px;
-  width: 26px;
-  height: 18px;
-  background: var(--p);
-  border: 2px solid var(--ink);
-  clip-path: polygon(0 0, 100% 50%, 0 100%);
-  transform-origin: 0 50%;
-  animation: flag 0.9s ease-in-out infinite alternate;
-}
-
-@keyframes flag {
-  to { transform: scaleX(0.75) skewY(6deg); }
 }
 
 .au-snow {

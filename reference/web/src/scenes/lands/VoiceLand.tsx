@@ -28,7 +28,7 @@ function Waves({ fill, bottom, height, dur, amp, foam }: { fill: string; bottom:
 }
 
 export function VoiceLand({ geo, phase }: LandProps) {
-  const { w, h, groundY, botX, headY } = geo
+  const { w, h, groundY, botX, headY, titleBottom } = geo
   const analyzing = phase === 'analyze'
   const r = useMemo(() => rng(42), [])
   const stars = useMemo(
@@ -39,8 +39,8 @@ export function VoiceLand({ geo, phase }: LandProps) {
   const bubbles = useMemo(
     () =>
       WORDS.map((wd, i) => {
-        const col = i % 2 === 0 ? 0.35 : 0.65
-        return { ...wd, x: (col + (r() - 0.5) * 0.04) * w, delay: 0.2 + i * 0.5, dur: 6 + r() * 1.5, drift: (r() - 0.5) * 24 }
+        const col = i % 2 === 0 ? 0.36 : 0.64
+        return { ...wd, x: col * w, delay: 0.2 + i * 0.62, dur: 4.2 + r() * 0.8, drift: (r() - 0.5) * 16 }
       }),
     [r, w],
   )
@@ -59,9 +59,9 @@ export function VoiceLand({ geo, phase }: LandProps) {
 
       <Layer depth={0.2}>
         <div className="vo-moon">
-          <i style={{ left: '22%', top: '30%', width: 18, height: 18 }} />
-          <i style={{ left: '58%', top: '52%', width: 26, height: 26 }} />
-          <i style={{ left: '40%', top: '72%', width: 12, height: 12 }} />
+          <i style={{ left: '22%', top: '30%', width: 13, height: 13 }} />
+          <i style={{ left: '58%', top: '52%', width: 19, height: 19 }} />
+          <i style={{ left: '40%', top: '72%', width: 9, height: 9 }} />
         </div>
         <div className="vo-horizon" style={{ top: horizon }} />
       </Layer>
@@ -111,9 +111,9 @@ export function VoiceLand({ geo, phase }: LandProps) {
               className="vo-bubble-wrap"
               style={{ left: b.x }}
               initial={{ y: groundY + 20, opacity: 0, scale: 0.6 }}
-              animate={{ y: h * 0.12, opacity: [0, 1, 1, 0], scale: 1, x: [0, b.drift, -b.drift * 0.4, b.drift * 0.6] }}
+              animate={{ y: titleBottom + 40, opacity: [0, 1, 1, 0], scale: 1, x: [0, b.drift, -b.drift * 0.4, b.drift * 0.6] }}
               exit={{ opacity: 0, scale: 0.8, filter: 'blur(6px)', transition: { duration: 0.4 } }}
-              transition={{ duration: b.dur, delay: b.delay, ease: 'linear', opacity: { duration: b.dur, delay: b.delay, times: [0, 0.12, 0.8, 1] } }}
+              transition={{ duration: b.dur, delay: b.delay, ease: 'linear', opacity: { duration: b.dur, delay: b.delay, times: [0, 0.14, 0.7, 1] } }}
             >
               <motion.div
                 className={`vo-bubble vo-${b.s}`}

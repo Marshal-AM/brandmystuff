@@ -361,3 +361,19 @@
   .rs-bar-txt, .rs-bar-bot { display: none; }
   .rs-pay { min-width: 0; flex: 1; }
 }
+
+/* shorter screens: tighten the cards so both rows clear the pay bar */
+@media (max-height: 860px) and (min-width: 641px) {
+  .rs-scroll { padding-top: 78px; padding-bottom: 120px; }
+  .rs-head { margin-bottom: 16px; }
+  .rs-title-main { margin: 10px 0 6px; font-size: clamp(26px, 3vw, 40px); }
+  .rs-sub { font-size: 13.5px; }
+  .rs-grid { gap: 14px; }
+  .rs-art { height: clamp(72px, 11vh, 110px); }
+  .rs-body { padding: 10px 14px 12px; }
+  .rs-title { font-size: 15px; }
+  .rs-stats { margin-top: 8px; padding-top: 8px; }
+  .rs-bar { bottom: 14px; padding: 8px 8px 8px 10px; }
+  .rs-pay { height: 48px; }
+  .rs-bar-bot { width: 48px; height: 48px; }
+}

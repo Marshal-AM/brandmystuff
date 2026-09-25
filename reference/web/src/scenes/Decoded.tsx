@@ -21,7 +21,8 @@ export function Decoded({ onDone }: { onDone: () => void }) {
   const { w, h } = useViewport()
   const mobile = w < 860
   const helixX = mobile ? w / 2 : w * 0.33
-  const helixY = h * 0.5
+  const helixH = Math.min(h * 0.46, 420)
+  const helixY = h * 0.42
   const [stage, setStage] = useState<'orbs' | 'merge' | 'card' | 'leave'>('orbs')
   const [pose, setPose] = useState<BotPose>('float')
   const confetti = useRef<Confetti[]>([])
@@ -55,7 +56,7 @@ export function Decoded({ onDone }: { onDone: () => void }) {
     reveal.current += (target - reveal.current) * Math.min(1, dt * 2.2)
     const rv = reveal.current
     const n = 26
-    const height = Math.min(ch * 0.62, 520)
+    const height = helixH
     const gap = height / n
     const R = Math.min(80, cw * 0.07)
     const cx = helixX
@@ -141,7 +142,7 @@ export function Decoded({ onDone }: { onDone: () => void }) {
     onDone()
   })
 
-  const S = Math.min(150, h * 0.17)
+  const S = Math.min(130, h * 0.15)
   const orbTargets = useMemo(
     () => ORBS.map((_, i) => ({ x: helixX + Math.cos((i / 3) * Math.PI * 2 - Math.PI / 2) * 130, y: helixY + Math.sin((i / 3) * Math.PI * 2 - Math.PI / 2) * 130 })),
     [helixX, helixY],
@@ -213,7 +214,7 @@ export function Decoded({ onDone }: { onDone: () => void }) {
             />
           ))}
 
-        <div className="dc-bot" style={{ left: helixX - S / 2 + (mobile ? 0 : -8), top: helixY + Math.min(h * 0.31, 260) - S * 0.9 }}>
+        <div className="dc-bot" style={{ left: helixX - S / 2, top: helixY + helixH / 2 + 14 }}>
           <motion.div initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 1, delay: 0.3, ease: EASE }}>
             <Bot pose={pose} size={S} look={pose === 'point' ? 1 : 0} />
           </motion.div>

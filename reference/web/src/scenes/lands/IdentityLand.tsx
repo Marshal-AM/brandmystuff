@@ -67,11 +67,15 @@ const PALETTE = [
 ]
 
 export function IdentityLand({ geo, phase }: LandProps) {
-  const { w, h, groundY, botX, headY } = geo
+  const { w, h, groundY, botX, headY, botTop, titleBottom } = geo
   const analyzing = phase !== 'arrive'
-  const markSize = Math.min(168, Math.max(110, h * 0.18))
+  // the mark (plus its selection box) lives in the gap between the title and the antenna
+  const gapTop = titleBottom + 22
+  const gapBottom = botTop - 18
+  const markSize = Math.max(84, Math.min(168, (gapBottom - gapTop) / 1.3))
   const markCx = botX
-  const markCy = Math.max(270, h * 0.37)
+  const markCy = (gapTop + gapBottom) / 2
+  const fh = Math.min(120, (h - groundY) * 0.55)
   const r = useMemo(() => rng(7), [])
   const sparkles = useMemo(
     () => Array.from({ length: 9 }, () => ({ x: r() * 100, y: r() * 40, d: r() * 4, s: 0.5 + r() })),
@@ -105,12 +109,12 @@ export function IdentityLand({ geo, phase }: LandProps) {
 
       <Layer depth={1} z={2}>
         <div className="ground id-ground" style={{ top: groundY - 10 }} />
-        <Flower x="4%" bottom={h * 0.06} h={90} d={0} />
-        <Flower x="9%" bottom={h * 0.03} h={120} d={0.6} s={1.2} />
-        <Flower x="16%" bottom={h * 0.08} h={70} d={1.1} s={0.8} />
-        <Flower x="84%" bottom={h * 0.07} h={80} d={0.3} s={0.9} />
-        <Flower x="90%" bottom={h * 0.02} h={130} d={0.9} s={1.25} />
-        <Flower x="96%" bottom={h * 0.09} h={60} d={1.4} s={0.7} />
+        <Flower x="2%" bottom={h * 0.02} h={fh * 0.8} d={0} />
+        <Flower x="6%" bottom={h * 0.01} h={fh} d={0.6} s={1.1} />
+        <Flower x="10%" bottom={h * 0.03} h={fh * 0.6} d={1.1} s={0.8} />
+        <Flower x="88%" bottom={h * 0.03} h={fh * 0.65} d={0.3} s={0.85} />
+        <Flower x="92%" bottom={h * 0.01} h={fh} d={0.9} s={1.1} />
+        <Flower x="96%" bottom={h * 0.02} h={fh * 0.7} d={1.4} s={0.75} />
       </Layer>
 
       {/* the mark the bot is scanning */}

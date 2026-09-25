@@ -1,12 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useMemo, useState } from 'react'
+import { layoutNodes } from '../../components/AnalysisNodes'
 import { rng } from '../../lib/hooks'
 import { Layer, type LandProps } from './common'
 
 const CLUSTERS = [
-  { label: 'Urban creators', pct: '41%', dx: -0.2, dy: -0.05 },
-  { label: 'Remote workers', pct: '33%', dx: 0.2, dy: -0.08 },
-  { label: 'Students', pct: '26%', dx: 0, dy: -0.26 },
+  { label: 'Urban creators', pct: '41%' },
+  { label: 'Remote workers', pct: '33%' },
+  { label: 'Students', pct: '26%' },
 ]
 
 function Pine({ left, bottom, s }: { left: string; bottom: number; s: number }) {
@@ -21,12 +22,27 @@ function Pine({ left, bottom, s }: { left: string; bottom: number; s: number }) 
 }
 
 export function AudienceLand({ geo, phase }: LandProps) {
-  const { w, h, groundY, botX, headY } = geo
+  const { w, h, groundY, botX, headY, botTop, botSize, titleBottom } = geo
   const analyzing = phase !== 'arrive'
   const r = useMemo(() => rng(1337), [])
-  const radarR = Math.min(w * 0.3, h * 0.44)
+  // radar stays below the title block
+  const radarR = Math.max(120, Math.min(w * 0.3, headY - titleBottom - 12))
   const cx = botX
   const cy = headY
+  const pineScale = Math.min(1, (h - groundY) / 230)
+
+  // group anchors sit in the free space: between the card columns and the bot, and between the title and the antenna
+  const anchors = useMemo(() => {
+    const nodes = layoutNodes(w, h)
+    const innerL = Math.max(nodes[0].x + nodes[0].w, nodes[2].x + nodes[2].w)
+    const innerR = Math.min(nodes[1].x, nodes[3].x)
+    const botHalf = botSize * 0.7
+    return [
+      { x: (innerL + botX - botHalf) / 2, y: headY - 40 },
+      { x: (innerR + botX + botHalf) / 2, y: headY - 40 },
+      { x: botX, y: Math.max(titleBottom + 86, (titleBottom + botTop) / 2 + 16) },
+    ]
+  }, [w, h, botX, headY, botSize, botTop, titleBottom])
 
   const snow = useMemo(
     () => Array.from({ length: 26 }, () => ({ x: r() * 100, d: -r() * 12, dur: 8 + r() * 8, s: 0.4 + r() * 1.1, sway: 10 + r() * 30 })),
@@ -39,13 +55,12 @@ export function AudienceLand({ geo, phase }: LandProps) {
       const a = Math.PI + r() * Math.PI // upper semicircle
       const d = radarR * (0.3 + r() * 0.68)
       const cl = i % 3
-      const c = CLUSTERS[cl]
-      const tx = cx + c.dx * w * 0.9 + (r() - 0.5) * 56
-      const ty = cy + c.dy * h - 40 + (r() - 0.5) * 40
+      const tx = anchors[cl].x + (r() - 0.5) * 56
+      const ty = anchors[cl].y + (r() - 0.5) * 34
       const ang = ((a * 180) / Math.PI + 90) % 360 // angle measured like the sweep
       return { x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, tx, ty, cl, delay: (ang / 360) * 2.4 }
     })
-  }, [r, radarR, cx, cy, w, h])
+  }, [r, radarR, cx, cy, anchors])
 
   const [clustered, setClustered] = useState(false)
   useEffect(() => {
@@ -75,25 +90,14 @@ export function AudienceLand({ geo, phase }: LandProps) {
           <path d="M880 100 L846 146 L870 154 L888 136 L906 150 L918 140 Z" fill="#fff" />
           <path d="M380 60 L520 250 L440 250 Z M880 100 L1020 300 L940 300 Z" fill="var(--p-900)" />
         </svg>
-        {/* competitor flags on the peaks */}
-        {[
-          { x: 0.16, y: 0.36 * (1 - 120 / 360) },
-          { x: 0.38, y: 0.36 * (1 - 60 / 360) },
-          { x: 0.88, y: 0.36 * (1 - 100 / 360) },
-        ].map((f, i) => (
-          <div key={i} className="au-flag" style={{ left: `${f.x * 100}%`, bottom: h - groundY + 6 + f.y * h - 2 }}>
-            <i />
-            <b />
-          </div>
-        ))}
       </Layer>
 
       <Layer depth={1} z={2}>
         <div className="ground au-ground" style={{ top: groundY - 10 }} />
-        <Pine left="5%" bottom={h * 0.05} s={1.3} />
-        <Pine left="11%" bottom={h * 0.1} s={0.9} />
-        <Pine left="86%" bottom={h * 0.08} s={1.1} />
-        <Pine left="93%" bottom={h * 0.02} s={1.45} />
+        <Pine left="2%" bottom={h * 0.02} s={1.3 * pineScale} />
+        <Pine left="8%" bottom={h * 0.04} s={0.9 * pineScale} />
+        <Pine left="88%" bottom={h * 0.04} s={1 * pineScale} />
+        <Pine left="94%" bottom={h * 0.01} s={1.35 * pineScale} />
       </Layer>
 
       <div className="au-snow">
@@ -194,7 +198,7 @@ export function AudienceLand({ geo, phase }: LandProps) {
             <motion.div
               key={c.label}
               className="au-cluster"
-              style={{ left: cx + c.dx * w * 0.9, top: cy + c.dy * h - 40 - 62 }}
+              style={{ left: anchors[i].x, top: anchors[i].y - 64 }}
               initial={{ opacity: 0, y: 12, scale: 0.8, x: '-50%' }}
               animate={{ opacity: 1, y: 0, scale: 1, x: '-50%' }}
               exit={{ opacity: 0, scale: 0.8, x: '-50%' }}

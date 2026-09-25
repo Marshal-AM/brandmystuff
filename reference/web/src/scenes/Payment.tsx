@@ -365,7 +365,7 @@ export function Payment({ onDone }: { onDone: () => void }) {
                       className="tx-status is-success"
                       initial={{ opacity: 0, y: 10, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ delay: 0.5, duration: 0.5, ease: EASE }}
+                      transition={{ delay: 0.15, duration: 0.5, ease: EASE }}
                     >
                       <b>Transaction confirmed</b>
                       <span className="mono">

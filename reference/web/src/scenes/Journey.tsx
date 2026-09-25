@@ -22,7 +22,8 @@ export function computeGeo(w: number, h: number): Geo {
   const groundY = mobile ? h * 0.82 : h * 0.76
   const botX = w / 2
   const botTop = groundY - botSize * 1.21
-  return { w, h, groundY, botX, botTop, botSize, headY: botTop + botSize * 0.45 }
+  const titleBottom = Math.max(84, h * 0.09) + 122
+  return { w, h, groundY, botX, botTop, botSize, headY: botTop + botSize * 0.45, titleBottom }
 }
 
 const fresh = (): NodeState[] => [0, 1, 2, 3].map(() => ({ status: 'pending', lines: 0 }))
@@ -280,19 +281,20 @@ export function Journey({ running, onDone }: { running: boolean; onDone: () => v
             {bubble && (
               <motion.div
                 className="say"
+                layout
                 style={{ left: S * 0.86, top: -S * 0.08 }}
                 initial={{ opacity: 0, scale: 0.4, rotate: -8 }}
                 animate={{ opacity: 1, scale: 1, rotate: 0 }}
                 exit={{ opacity: 0, scale: 0.6, filter: 'blur(6px)' }}
-                transition={{ type: 'spring', stiffness: 420, damping: 22 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 22, layout: { duration: 0.3, ease: EASE } }}
               >
-                <AnimatePresence mode="popLayout" initial={false}>
+                <AnimatePresence mode="wait" initial={false}>
                   <motion.span
                     key={bubble}
                     initial={{ opacity: 0, y: 12, filter: 'blur(4px)' }}
                     animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                     exit={{ opacity: 0, y: -12, filter: 'blur(4px)' }}
-                    transition={{ duration: 0.35 }}
+                    transition={{ duration: 0.2 }}
                   >
                     {bubble}
                   </motion.span>

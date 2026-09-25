@@ -12,6 +12,8 @@ export type Geo = {
   botSize: number
   /** antenna / head centre in screen px */
   headY: number
+  /** bottom edge of the centred land title block */
+  titleBottom: number
 }
 
 export type LandProps = { geo: Geo; phase: LandPhase }
