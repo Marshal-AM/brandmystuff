@@ -166,7 +166,8 @@ Users and advertisers never sign ENS transactions. They do **own** their names, 
 |---|---|
 | `class` | `PhysicalAsset` |
 | `description`, `avatar` (hero photo) | |
-| `eth.brandmystuff.category` | e.g. `laptop` |
+| `eth.brandmystuff.type` | AI-derived object type, e.g. `laptop` |
+| `eth.brandmystuff.tags` | AI-derived tags, comma-separated |
 | `eth.brandmystuff.make` / `.model` / `.color` | |
 | `eth.brandmystuff.city` | coarse city (optional; listing filter only) |
 | `eth.brandmystuff.attested.aqs` / `.grade` | object AQS |

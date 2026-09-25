@@ -95,7 +95,7 @@ Card or fiat payments, onramps, gas sponsorship, AI image generation, real KYC p
 ### 6.2 Objects & spaces (FR-OBJ)
 | ID | Requirement |
 |---|---|
-| OBJ-1 | Select the object type from the predefined catalogue ([AQS §6](./AD-QUALITY-SCORING.md)), with prohibited zones and tips |
+| OBJ-1 | Free-form listing: the owner gives any **name** and a **description** (≥ 10 chars). No categories. The AI derives the object profile (type, tags, viewer mode, viewing distance, prohibited zones) and shows it |
 | OBJ-2 | Object name, make, model, colour, description |
 | OBJ-3 | Hero photo via in-app camera (gallery allowed, lower provenance confidence), with a capture code written on a note |
 | OBJ-4 | Optional city (marketplace filter only; not scored) |
@@ -108,7 +108,7 @@ Card or fiat payments, onramps, gas sponsorship, AI image generation, real KYC p
 | ID | Requirement |
 |---|---|
 | SCORE-1 | P0 deterministic metrics; poor photo quality → rejected with reason "retake the photo" |
-| SCORE-2 | P1 integrity gates: capture code, C2PA, duplicates (pHash), AI/stock/screen-photo check by the model, close-up ∈ object, category, dimensions |
+| SCORE-2 | P1 integrity gates: capture code, C2PA, duplicates (pHash), AI/stock/screen-photo check by the model, close-up ∈ object, photo matches name & description (G8), dimensions |
 | SCORE-3 | P2 brand safety (GARM floor → reject) and prompt-injection defence (→ reject) |
 | SCORE-4 | P3 per-space rubric: 11 object-intrinsic criteria, anchored 0–4, N=3, median; 2 extra samples when the samples disagree |
 | SCORE-5 | P5 aggregation in code: weights, soft caps, confidence, rank score, grade; **accepted if no gate fails and AQS ≥ 40**, otherwise rejected and not listed |
@@ -121,7 +121,7 @@ Card or fiat payments, onramps, gas sponsorship, AI image generation, real KYC p
 | ID | Requirement |
 |---|---|
 | MKT-1 | Space grid sorted by `rank_score` (default) |
-| MKT-2 | Filters: category, location, grade, size, placement, price, availability, suitability tier, tokenised, sponsored |
+| MKT-2 | Filters: keyword search, AI-derived tag chips, location, grade, size, placement, price, availability, suitability tier, tokenised, sponsored |
 | MKT-3 | Object view: hero photo + list of its spaces, each with its close-up photo |
 | MKT-4 | Space detail: see §7.3 |
 | MKT-5 | Sponsored slots, labelled, never reorder organic results |
@@ -199,7 +199,7 @@ Queues:
 Tools:
 - ENS unregister / takedown
 - Sui global pause, space takedown, investor freeze/unfreeze, dispute resolution, re-score
-- config (fees, sponsor prices, category catalogue)
+- config (fees, sponsor prices, demo timescale)
 
 Every admin action is written to an audit log.
 
@@ -255,7 +255,7 @@ In-app notification centre (bell + list, stored in Supabase, pushed live via Sup
 ## 7. Marketplace presentation & ranking
 
 ### 7.1 Ranking
-- **Organic order = `rank_score` descending** ([AQS §5.4](./AD-QUALITY-SCORING.md)): AQS shrunk toward the category mean by confidence.
+- **Organic order = `rank_score` descending** ([AQS §5.4](./AD-QUALITY-SCORING.md)): AQS shrunk toward the mean of its AI-derived exposure-class cohort by confidence.
 - Tie-breakers, in order: accepted proofs, listing age.
 - Only accepted spaces exist in the marketplace (AQS ≥ 40, all gates passed).
 
@@ -268,13 +268,13 @@ In-app notification centre (bell + list, stored in Supabase, pushed live via Sup
 | Size · placement | ENS |
 | Price per week (USDC) | Sui `AdSpace` |
 | Next available week | Sui calendar via indexer |
-| City · category icon | ENS |
+| City · object type · tags | ENS |
 | Badges: Verified proofs (n), Tokenised (x% sold), **Sponsored** | Sui + ENS |
 
 ### 7.3 Space detail page
 1. **Photos:** the space close-up (primary) and the full-object hero photo.
 2. **AQS panel:** grade, AQS, confidence, 11-criterion radar, strengths and weaknesses with evidence, rubric version, full report link.
-3. **Specs:** dimensions, placement, surface, legible distance, prohibited content categories.
+3. **Specs:** dimensions, placement, surface, object type, estimated viewing distance, legible distance, zones where ads aren't allowed on this object.
 4. **Calendar + fixed weekly price;** "Lease this space" and "Message owner" CTAs; a "For agents: x402 endpoint" snippet.
 5. **Owner card:** ENS name, avatar, reputation, other spaces.
 6. **Lease history and public proof gallery.**
@@ -302,7 +302,7 @@ In-app notification centre (bell + list, stored in Supabase, pushed live via Sup
 | Tokenisation origination | 3% of raise |
 | Investor share (tokenised spaces) | `revenue_share_bps` of gross, set by the owner |
 | Secondary trades | 1% |
-| Sponsorship | Tier 1 (category slots) 3 USDC/day, Tier 2 (homepage rail) 10 USDC/day |
+| Sponsorship | Tier 1 (search/listing slots) 3 USDC/day, Tier 2 (homepage rail) 10 USDC/day |
 | Gas | Users pay SUI gas; the platform pays operator transactions and all ENS gas |
 
 All prices are **set by the owner**: a fixed price per week for leases and a price per unit for offerings. The platform never computes or suggests prices.
@@ -389,7 +389,7 @@ web (Next.js) ── api (tx builders, auth, x402 server+facilitator, MCP)
 ## 11. Policy, legal & compliance
 - **Content policy.** GARM floor categories prohibited. The owner approves every creative. The platform can take content down. The brand warrants IP rights. Leases are described as "paid placement, not endorsement".
 - **Disclosure.** Owners are prompted to label paid placements in social posts ("#ad", or "Publicité" in France), per 16 CFR 255 (https://www.ecfr.gov/current/title-16/chapter-I/subchapter-B/part-255).
-- **Vehicles.** Category rules block windows, lights and plates, with a local-rules notice. **Walls and storefronts** get a sign-permit notice.
+- **Vehicles.** The AI's prohibited zones block windows, lights and plates, with a local-rules notice. **Walls and storefronts** get a sign-permit notice.
 - **Securities.** Tokenisation runs on testnet funds only with mock legal documents and a persistent "Testnet demo — not an offer of securities" banner ([Tokenisation §1](./TOKENISATION-SPEC.md)).
 - **Anti-scam.** Never ask owners to pay upfront.
 
@@ -405,7 +405,7 @@ The admin console shows:
 ## 13. Risks & mitigations
 | Risk | Mitigation |
 |---|---|
-| Demand scarcity | AQS ranking, agent buyers via x402/MCP, focus categories |
+| Demand scarcity | AQS ranking, agent buyers via x402/MCP, tag-based discovery |
 | ENSv2 Sepolia resets or contract changes | Versioned config, `ens-reseed`, smoke tests |
 | Users lacking SUI for gas | Balance warnings, faucet links (testnet); gas costs are tiny |
 | Regulatory perception | Testnet funds only; mock documents clearly labelled; persistent demo banner |

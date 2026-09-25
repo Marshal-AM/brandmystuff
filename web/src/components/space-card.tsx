@@ -1,10 +1,8 @@
 "use client";
 import Link from "next/link";
-import { categoryByKey } from "@/lib/categories";
 import { Badge, GradeBadge, Img, usdc } from "./ui";
 
 export function SpaceCard({ s }: { s: any }) {
-  const cat = categoryByKey(s.object?.category ?? "other");
   const week = Number(s.week_ms);
   return (
     <Link href={`/${s.ens_name}`} data-testid="space-card" className="group overflow-hidden rounded-2xl border border-line bg-surface transition hover:-translate-y-0.5 hover:shadow-lg">
@@ -28,7 +26,7 @@ export function SpaceCard({ s }: { s: any }) {
           <div className="min-w-0">
             <div className="truncate font-semibold">{s.label}</div>
             <div className="truncate text-sm text-muted">
-              {cat.emoji} {s.object?.title}
+              {s.object?.title}
               {s.object?.city ? ` · ${s.object.city}` : ""}
             </div>
           </div>

@@ -3,14 +3,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "@/lib/client/session";
 import { createObject } from "@/lib/sui/tx";
-import { CATEGORIES } from "@/lib/categories";
 import { Badge, Button, Card, Field, Input, PhotoInput, Textarea, cx, useAction } from "@/components/ui";
 import { SignInButtons } from "@/components/shell";
 
 export default function ListObject() {
   const { authenticated, api, run } = useSession();
   const router = useRouter();
-  const [cat, setCat] = useState("");
   const [f, setF] = useState({ title: "", make: "", model: "", color: "", city: "", description: "" });
   const [photo, setPhoto] = useState<{ file: File; source: "camera" | "upload"; url: string } | null>(null);
   const [code, setCode] = useState<string | null>(null);
@@ -29,12 +27,10 @@ export default function ListObject() {
         </div>
       </div>
     );
-  const category = CATEGORIES.find((c) => c.key === cat);
   const doCheck = () =>
     act("check", async () => {
       const fd = new FormData();
       fd.set("image", photo!.file);
-      fd.set("category", cat);
       Object.entries(f).forEach(([k, v]) => fd.set(k, v));
       if (code) fd.set("captureCode", code);
       fd.set("captureSource", photo!.source);
@@ -52,27 +48,10 @@ export default function ListObject() {
       <h1 className="text-3xl font-semibold">List an object</h1>
       <p className="mt-1 text-muted">Step 1: the whole object. Then you&apos;ll add each ad space with its own close-up photo.</p>
 
-      <Card className="mt-6">
-        <div className="text-sm font-medium">What is it?</div>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {CATEGORIES.map((c) => (
-            <button key={c.key} data-testid={`cat-${c.key}`} onClick={() => setCat(c.key)} className={cx("rounded-xl border p-3 text-left text-sm transition", cat === c.key ? "border-brand bg-violet-50" : "border-line hover:border-violet-300")}>
-              <div className="text-xl">{c.emoji}</div>
-              <div className="mt-1 font-medium">{c.label}</div>
-            </button>
-          ))}
-        </div>
-        {category && (
-          <div className="mt-3 rounded-xl bg-black/[0.03] p-3 text-xs text-muted">
-            <b>Tip:</b> {category.tips} <b>Not allowed:</b> {category.prohibited}.
-          </div>
-        )}
-      </Card>
-
-      {cat && (
-        <Card className="mt-4 space-y-4">
+      {(
+        <Card className="mt-6 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Name">
+            <Field label="Name" hint="Anything you own: a laptop, car, helmet, guitar case, fridge, shop window…">
               <Input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="My MacBook Pro 14" data-testid="title" />
             </Field>
             <Field label="City (optional)" hint="Used for search only">
@@ -85,15 +64,15 @@ export default function ListObject() {
               <Input value={f.model} onChange={(e) => setF({ ...f, model: e.target.value })} placeholder="MacBook Pro 14, silver" />
             </Field>
           </div>
-          <Field label="Description">
-            <Textarea rows={2} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Daily driver, carried to cafés and coworking spaces." />
+          <Field label="Description" hint="What it is and how/where it's used — the AI checks your photo matches this and uses it to score your spaces.">
+            <Textarea rows={3} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Silver 14-inch laptop I carry to cafés and coworking spaces every day." data-testid="description" />
           </Field>
           <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm">
             Write this code on a note and place it in the photo: <span className="ml-1 rounded-lg bg-white px-2 py-0.5 font-mono text-lg font-bold tracking-widest">{code ?? "…"}</span>
             <div className="text-xs text-muted">It proves the photo is yours and fresh. Photos without it get lower confidence.</div>
           </div>
           <PhotoInput label="Photo of the whole object" testId="hero-photo" preview={photo?.url} onChange={(file, source) => { setPhoto({ file, source, url: URL.createObjectURL(file) }); setCheck(null); }} />
-          <Button onClick={doCheck} loading={busy === "check"} disabled={!photo || f.title.length < 2} data-testid="check-hero">
+          <Button onClick={doCheck} loading={busy === "check"} disabled={!photo || f.title.length < 2 || f.description.trim().length < 10} data-testid="check-hero">
             {busy === "check" ? "Checking photo…" : "Check photo"}
           </Button>
           {check && (
@@ -103,6 +82,15 @@ export default function ListObject() {
                 {check.reason}
               </div>
               {check.analysis && <p className="mt-2 text-sm text-muted">{check.analysis.description}</p>}
+              {check.profile && (
+                <div className="mt-3 space-y-1 text-sm" data-testid="object-profile">
+                  <div>
+                    Detected: <b>{check.profile.objectType}</b> · seen from ~{check.profile.viewingDistanceM} m ({check.profile.viewerMode})
+                  </div>
+                  <div className="flex flex-wrap gap-1">{check.profile.tags.map((t: string) => <Badge key={t}>{t}</Badge>)}</div>
+                  {check.profile.prohibitedZones.length > 0 && <div className="text-xs text-muted">Ads can&apos;t go on: {check.profile.prohibitedZones.join(", ")}</div>}
+                </div>
+              )}
               {check.tips?.length > 0 && (
                 <ul className="mt-2 list-disc pl-5 text-sm">
                   {check.tips.map((t: string) => (

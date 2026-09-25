@@ -205,7 +205,7 @@ async function main() {
     const heroCode = (await api(owner, "/api/capture-codes", { method: "POST", json: { purpose: "hero" } })).code;
     const check = await api(owner, "/api/objects/check", {
       method: "POST",
-      body: form({ image: file(await withNote(fx("laptop-hero.jpg"), heroCode), "hero.jpg"), category: "laptop", title: "E2E MacBook Pro", city: "Tokyo", make: "Apple", model: "MacBook Pro 17", description: "Carried to cafés daily", captureCode: heroCode, captureSource: "camera" }),
+      body: form({ image: file(await withNote(fx("laptop-hero.jpg"), heroCode), "hero.jpg"), title: "E2E MacBook Pro", city: "Tokyo", make: "Apple", model: "MacBook Pro 17", description: "Silver 17-inch laptop I carry to cafés daily", captureCode: heroCode, captureSource: "camera" }),
     });
     assert.equal(check.decision, "ACCEPTED", `hero accepted: ${check.reason}`);
     const created = await runTx(owner, T.createObject(check.tx));
@@ -227,7 +227,7 @@ async function main() {
     assert.equal(space.aqs, good.result.aqs);
 
     step("F5 marketplace search + public ENS page data");
-    const market = await api(null, "/api/market?q=MacBook&category=laptop");
+    const market = await api(null, "/api/market?q=MacBook");
     assert.ok(market.results.some((s: any) => s.id === space.id), "space in marketplace search");
     const page = await api(null, `/api/names/${space.ens_name}?live=0`);
     assert.equal(page.kind, "space");
@@ -370,7 +370,7 @@ async function main() {
     step("F16 MCP: tools/list, search_spaces, quote_lease");
     const tools = await api(null, "/api/mcp", { method: "POST", json: { jsonrpc: "2.0", id: 1, method: "tools/list" } });
     assert.ok(tools.result.tools.some((t: any) => t.name === "quote_lease"));
-    const found = await api(null, "/api/mcp", { method: "POST", json: { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "search_spaces", arguments: { category: "laptop" } } } });
+    const found = await api(null, "/api/mcp", { method: "POST", json: { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "search_spaces", arguments: { query: "MacBook" } } } });
     assert.ok(found.result.structuredContent.spaces.some((s: any) => s.spaceId === space.id));
     const quote = await api(null, "/api/mcp", { method: "POST", json: { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "quote_lease", arguments: { spaceId: space.id, weeks: 2 } } } });
     assert.equal(quote.result.structuredContent.amountUsdc, 1);

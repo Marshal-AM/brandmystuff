@@ -18,7 +18,7 @@ export const GET = handler(async (req, ctx: { params: Promise<{ name: string }> 
   const obj = await q(db().from("objects").select("*, owner:owner_user_id(handle, ens_name, display_name, avatar_blob_id)").eq("ens_name", name).maybeSingle());
   if (obj) {
     const spaces = await q(db().from("spaces").select("*").eq("object_id", obj.id).in("status", ["available", "paused"]).order("rank_score", { ascending: false }));
-    const v = live ? await verifyName(name, obj.id, ["class", "eth.brandmystuff.category", "eth.brandmystuff.attested.sponsored"]) : null;
+    const v = live ? await verifyName(name, obj.id, ["class", "eth.brandmystuff.type", "eth.brandmystuff.attested.sponsored"]) : null;
     return { kind: "object", ens: ensRow, verification: v, object: obj, spaces };
   }
   const user = await q(db().from("users").select("id, handle, ens_name, display_name, bio, avatar_blob_id, twitter, website, brand_name, sui_address, profile_id, created_at").eq("ens_name", name).maybeSingle());

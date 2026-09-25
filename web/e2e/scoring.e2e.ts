@@ -14,19 +14,34 @@ import { analyzeHero, analyzeSpace, type SpaceInput } from "../src/server/scorin
 
 const img = (f: string) => readFileSync(resolve(__dirname, "fixtures", f));
 const uid = randomUUID();
-const laptopSpace: SpaceInput = { label: "lid-right", widthMm: 180, heightMm: 170, placement: "rear", material: "anodised aluminium", categoryKey: "laptop", captureSource: "camera" };
+const LAPTOP = { name: "My MacBook Pro 17", description: "Silver 17-inch laptop I carry to cafés and coworking spaces every day." };
+const CAR = { name: "Honda Civic hatchback", description: "Grey hatchback I drive around the city and park on the street." };
+
+/** In-app photos include a note with the capture code. */
+async function withNote(img: Buffer, code: string) {
+  const sharp = (await import("sharp")).default;
+  const m = await sharp(img).metadata();
+  const W = m.width!, H = m.height!;
+  const note = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(W * 0.2)}" height="${Math.round(H * 0.12)}"><rect width="100%" height="100%" fill="#fff8b0" stroke="#d6c95a" stroke-width="6"/><text x="50%" y="70%" font-size="${Math.round(H * 0.075)}" font-family="Courier" font-weight="bold" text-anchor="middle" fill="#111">${code}</text></svg>`);
+  return sharp(img).composite([{ input: note, left: Math.round(W * 0.74), top: Math.round(H * 0.84) }]).jpeg({ quality: 90 }).toBuffer();
+}
 
 async function main() {
   const t0 = Date.now();
-  const hero = await analyzeHero({ image: img("laptop-hero.jpg"), mime: "image/jpeg", categoryKey: "laptop", captureCode: null, userId: uid, checkDuplicates: false });
+  const laptopHero = await withNote(img("laptop-hero.jpg"), "K7PX");
+  const hero = await analyzeHero({ image: laptopHero, mime: "image/jpeg", ...LAPTOP, captureCode: "K7PX", userId: uid, checkDuplicates: false });
+  console.log("profile:", JSON.stringify(hero.profile));
+  const laptopSpace: SpaceInput = { label: "lid-right", widthMm: 180, heightMm: 170, placement: "rear", material: "anodised aluminium", objectName: LAPTOP.name, objectDescription: LAPTOP.description, profile: hero.profile, captureSource: "camera" };
   console.log("hero:", hero.decision, hero.gate ?? "", hero.reason ?? "", `synthetic=${hero.analysis.synthetic_suspicion}`);
   assert.equal(hero.decision, "ACCEPTED", "laptop hero accepted");
 
-  const catMismatch = await analyzeHero({ image: img("car-hero.jpg"), mime: "image/jpeg", categoryKey: "laptop", captureCode: null, userId: uid, checkDuplicates: false });
-  console.log("car-as-laptop hero:", catMismatch.decision, catMismatch.gate, catMismatch.reason);
-  assert.equal(catMismatch.decision, "REJECTED", "wrong category rejected");
+  const mismatch = await analyzeHero({ image: img("car-hero.jpg"), mime: "image/jpeg", ...LAPTOP, captureCode: null, userId: uid, checkDuplicates: false });
+  console.log("car photo named as a laptop:", mismatch.decision, mismatch.gate, mismatch.reason);
+  assert.equal(mismatch.gate, "G8", "photo that doesn't match the name → G8");
+  const car = await analyzeHero({ image: img("car-hero.jpg"), mime: "image/jpeg", ...CAR, captureCode: null, userId: uid, checkDuplicates: false });
+  assert.equal(car.decision, "ACCEPTED", "car hero accepted under its own name");
 
-  const common = { hero: img("laptop-hero.jpg"), heroMime: "image/jpeg", closeupMime: "image/jpeg", heroProvenance: hero.provenance, userId: uid, checkDuplicates: false };
+  const common = { hero: laptopHero, heroMime: "image/jpeg", closeupMime: "image/jpeg", heroProvenance: hero.provenance, userId: uid, checkDuplicates: false };
   const [good, blurry, injected, mismatched, carWindow] = await Promise.all([
     analyzeSpace({ ...common, closeup: img("laptop-lid-right.jpg"), input: laptopSpace }),
     analyzeSpace({ ...common, closeup: img("laptop-lid-blurry.jpg"), input: laptopSpace }),
@@ -36,7 +51,7 @@ async function main() {
       ...common,
       hero: img("car-hero.jpg"),
       closeup: img("car-rear-window.jpg"),
-      input: { label: "rear-window", widthMm: 1100, heightMm: 500, placement: "rear", material: "glass", categoryKey: "car", captureSource: "camera" },
+      input: { label: "rear-window", widthMm: 1100, heightMm: 500, placement: "rear", material: "glass", objectName: CAR.name, objectDescription: CAR.description, profile: car.profile, captureSource: "camera" },
     }),
   ]);
 

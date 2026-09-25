@@ -5,7 +5,6 @@ import { db, q } from "@/server/db";
 import { analyzeHero } from "@/server/scoring/pipeline";
 import { storeBlob, storeJson } from "@/server/walrus";
 import { signDraft } from "@/server/drafts";
-import { categoryByKey } from "@/lib/categories";
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 28) || "object";
 
@@ -15,14 +14,14 @@ export const POST = handler(async (req) => {
   const f = await req.formData();
   const image = f.get("image");
   if (!(image instanceof File)) throw new HttpError(400, "image is required");
-  const categoryKey = String(f.get("category") ?? "");
-  const cat = categoryByKey(categoryKey);
   const title = String(f.get("title") ?? "").trim();
   if (title.length < 2) throw new HttpError(400, "Give your object a name");
+  const description = String(f.get("description") ?? "").trim();
+  if (description.length < 10) throw new HttpError(400, "Describe your object in a sentence or two (what it is and how you use it)");
   const captureCode = String(f.get("captureCode") ?? "") || null;
   const buf = Buffer.from(await image.arrayBuffer());
 
-  const r = await analyzeHero({ image: buf, mime: image.type || "image/jpeg", categoryKey: cat.key, captureCode, userId: u.id });
+  const r = await analyzeHero({ image: buf, mime: image.type || "image/jpeg", name: title, description, captureCode, userId: u.id });
   if (r.decision === "REJECTED") return { decision: r.decision, gate: r.gate, reason: r.reason, tips: r.tips };
 
   const hero = await storeBlob(buf, image.type || "image/jpeg");
@@ -37,8 +36,8 @@ export const POST = handler(async (req) => {
   const ensName = normalize(`${label}.${u.ens_name}`);
   const meta = {
     title,
-    category: cat.key,
-    description: String(f.get("description") ?? ""),
+    description,
+    profile: r.profile,
     make: String(f.get("make") ?? ""),
     model: String(f.get("model") ?? ""),
     color: String(f.get("color") ?? ""),
@@ -50,8 +49,9 @@ export const POST = handler(async (req) => {
   return {
     decision: "ACCEPTED",
     tips: r.tips,
-    analysis: { description: r.analysis.image_description, condition: r.analysis.condition_summary },
-    tx: { category: cat.code, title, city: meta.city, ensName, ensNamehash: namehash(ensName), heroBlobId: hero.blobId, manifestBlobId: manifest.blobId },
+    analysis: { description: r.analysis.image_description, condition: r.analysis.condition_summary, match: r.analysis.match_evidence },
+    profile: r.profile,
+    tx: { category: 0, title, city: meta.city, ensName, ensNamehash: namehash(ensName), heroBlobId: hero.blobId, manifestBlobId: manifest.blobId },
     draft,
   };
 });

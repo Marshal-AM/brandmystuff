@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "@/lib/client/session";
 import { addSpace, buySponsorship, setPrice, spaceStatus } from "@/lib/sui/tx";
-import { MATERIALS, PLACEMENTS, categoryByKey } from "@/lib/categories";
+import { MATERIALS, PLACEMENTS } from "@/lib/categories";
 import { toAtomic } from "@/lib/deployment";
 import { AqsPanel } from "@/components/aqs";
 import { Badge, Button, Card, Empty, Field, GradeBadge, Img, Input, Modal, PhotoInput, Select, Spinner, cx, useAction, usdc } from "@/components/ui";
@@ -165,7 +165,6 @@ export default function ObjectPage({ params }: { params: Promise<{ id: string }>
   if (!data?.object) return <Empty title="Object not found" />;
   const o = data.object;
   const mine = address === o.owner_address;
-  const cat = categoryByKey(o.category);
   const sponsored = o.sponsored_until && new Date(o.sponsored_until).getTime() > Date.now();
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -178,7 +177,7 @@ export default function ObjectPage({ params }: { params: Promise<{ id: string }>
               {o.object_grade > 0 && <GradeBadge grade={o.object_grade} aqs={o.object_aqs} size="sm" />}
             </div>
             <div className="text-sm text-muted">
-              {cat.emoji} {cat.label} {o.city && `· ${o.city}`}
+              {o.object_type ?? "object"} {o.city && `· ${o.city}`} {o.viewing_distance_m && `· seen from ~${o.viewing_distance_m} m`}
             </div>
             <Link href={`/${o.ens_name}`} className="block font-mono text-xs text-brand underline">
               {o.ens_name}

@@ -37,7 +37,16 @@ export const POST = handler(async (req) => {
     heightMm,
     placement,
     material: String(f.get("material") ?? "other"),
-    categoryKey: o.category,
+    objectName: o.title,
+    objectDescription: o.description ?? "",
+    profile: {
+      objectType: o.object_type ?? o.category ?? "object",
+      exposureClass: (o.exposure_class ?? "other") as any,
+      viewerMode: (o.viewer_mode ?? "static") as any,
+      viewingDistanceM: Number(o.viewing_distance_m ?? 5),
+      prohibitedZones: o.prohibited_zones ?? [],
+      tags: o.tags ?? [],
+    },
     captureSource: (String(f.get("captureSource") ?? "upload") === "camera" ? "camera" : "upload") as "camera" | "upload",
   };
   const result = await analyzeSpace({

@@ -148,8 +148,8 @@ async function project(e: Ev) {
           id: j.object_id,
           owner_user_id: uid,
           owner_address: j.owner,
-          category: "other",
-          category_code: n(j.category),
+          category: "object",
+          category_code: 0,
           title: j.title,
           city: j.city,
           ens_name: j.ens_name,
@@ -208,6 +208,7 @@ async function project(e: Ev) {
           weaknesses: r.weaknesses ?? null,
           tips: r.tips ?? null,
           material: a?.input?.material ?? null,
+          viewing_distance_m: r.metrics?.viewingDistanceM ?? null,
           status: "available",
         })
         .eq("id", j.space_id));

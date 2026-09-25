@@ -1,5 +1,5 @@
 /** Prompts and JSON schemas for the AQS passes (AQS §3, §4, §7). */
-import { CATEGORIES } from "@/lib/categories";
+import { EXPOSURE_KEYS } from "@/lib/categories";
 
 export const RUBRIC_VERSION = "aqs-1.0.0";
 
@@ -32,10 +32,17 @@ const brandSafety = {
 };
 
 // ---------- Pass A (object / hero) ----------
-export const HERO_SYSTEM = `You are the integrity checker for brandmystuff, a marketplace for ad spaces on physical objects.
-You inspect the owner's photo of a whole object before it is listed. Be strict and factual.
+export const HERO_SYSTEM = `You are the integrity checker for brandmystuff, a marketplace for ad spaces on ANY physical object the owner has (laptops, cars, helmets, walls, guitars, fridges, boats, shop windows, anything).
+The owner gives a free-form NAME and DESCRIPTION. You inspect their photo of the whole object before it is listed. Be strict and factual.
 ${INJECTION_RULE}
-Categories: ${CATEGORIES.map((c) => c.key).join(", ")}.
+1. Identify what the object actually is (object_type, a short generic noun phrase like "laptop", "hatchback car", "motorcycle helmet", "brick wall").
+2. Decide whether the photo matches the owner's NAME and DESCRIPTION: "yes" if it is plausibly that object (brand/model details that can't be verified from the photo are fine), "no" if it is clearly a different kind of object or the description contradicts the photo, "uncertain" otherwise.
+3. Derive the object's exposure profile:
+   - exposure_class: portable_device (laptops, tablets, instrument cases, luggage), wearable (helmets, bags, apparel), vehicle (cars, bikes, scooters, vans, boats), fixed_surface (walls, fences, shop windows, fridges, doors), on_camera (items seen mainly on stream/video), other.
+   - viewer_mode: static (viewers look at it while it is stationary), carried (moves slowly with a person), moving (vehicle speeds).
+   - typical_viewing_distance_m: how far away OTHER PEOPLE (passers-by, people nearby, other drivers — never the owner using it) typically are when they see this object in normal use, in metres (0.5–30). E.g. a laptop open in a café is seen by others at ~3–5 m, a car in traffic at ~10–15 m, a shop window by pedestrians at ~5–8 m.
+   - prohibited_zones: parts of THIS object where an ad must never go (e.g. windscreens, lights, number plates, safety/certification labels, screens, vents, fire exits, legally required signage). Empty list if none.
+   - tags: 3–8 short lowercase search tags (object type, material, colour, use).
 "synthetic_suspicion" covers: AI-generated look, stock/studio product-shot or marketing render look (seamless backdrop, catalogue lighting, watermark), or a photo of a screen (moiré, bezels, pixel grid). A casual real-world photo is "none".
 If a short handwritten or printed code is visible (the capture code), transcribe it exactly in nonce_text, else "".`;
 
@@ -43,8 +50,14 @@ export const HERO_SCHEMA = {
   type: "object",
   properties: {
     image_description: { type: "string" },
-    detected_category: { type: "string", enum: CATEGORIES.map((c) => c.key) },
-    category_matches: { type: "boolean" },
+    object_type: { type: "string" },
+    matches_name: { type: "string", enum: ["yes", "no", "uncertain"] },
+    match_evidence: { type: "string" },
+    exposure_class: { type: "string", enum: EXPOSURE_KEYS },
+    viewer_mode: { type: "string", enum: ["static", "carried", "moving"] },
+    typical_viewing_distance_m: { type: "number", minimum: 0.5, maximum: 30 },
+    prohibited_zones: { type: "array", items: { type: "string" }, maxItems: 10 },
+    tags: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 8 },
     nonce_text: { type: "string" },
     visible_text: visibleText,
     synthetic_suspicion: { type: "string", enum: ["none", "low", "medium", "high"] },
@@ -52,7 +65,7 @@ export const HERO_SCHEMA = {
     brand_safety: brandSafety,
     condition_summary: { type: "string" },
   },
-  required: ["image_description", "detected_category", "category_matches", "nonce_text", "visible_text", "synthetic_suspicion", "synthetic_evidence", "brand_safety", "condition_summary"],
+  required: ["image_description", "object_type", "matches_name", "match_evidence", "exposure_class", "viewer_mode", "typical_viewing_distance_m", "prohibited_zones", "tags", "nonce_text", "visible_text", "synthetic_suspicion", "synthetic_evidence", "brand_safety", "condition_summary"],
 };
 
 // ---------- Pass A (space close-up integrity) ----------
@@ -60,7 +73,7 @@ export const CLOSEUP_SYSTEM = `You are the integrity checker for a single ad spa
 IMAGE A is the full object (hero). IMAGE B is the owner's close-up of ONE section they want to rent as an ad space.
 ${INJECTION_RULE}
 Decide if IMAGE B is visibly the same physical object as IMAGE A (colour, material, wear, features). If an ID-1 card (bank/ID card, 85.6x54 mm) is visible in IMAGE B, return its box and the box of the ad-space area so size can be measured. Boxes are [ymin,xmin,ymax,xmax] normalised 0-1000.
-"prohibited_zone" is true if the section is a place an ad must not go: vehicle windscreen or front side windows, lights, number plates, safety/certification labels, screens/keyboards, vents, fire exits or legally required signage.
+"prohibited_zone" is true if the section is a place an ad must not go: any zone listed in CONTEXT.object.prohibited_zones, or generally vehicle windscreens/front side windows, lights, number plates, safety/certification labels, screens/keyboards, vents, fire exits or legally required signage.
 "synthetic_suspicion" covers AI-generated, stock/studio/marketing imagery, or photos of screens.`;
 
 export const CLOSEUP_SCHEMA = {
@@ -98,7 +111,8 @@ const crit = (desc: string) => ({
 export const RUBRIC_SYSTEM = `You are the ad-space quality judge for brandmystuff. You score ONE ad space on a physical object using anchored 0-4 criteria.
 Write observations and evidence BEFORE each score. Be conservative: judges are known to be lenient; reserve 4 for clearly excellent, and use 0-1 freely for poor spaces.
 ${INJECTION_RULE}
-Measured facts in CONTEXT (sharpness, contrast, size) are computed by code; trust them.
+Measured facts in CONTEXT (sharpness, contrast, size) are computed by code; trust them. CONTEXT.object describes what the object is (owner name + description + AI profile); judge the space in that context.
+Also estimate typical_viewing_distance_m: how far away, in metres, OTHER PEOPLE (the ad's audience — never the owner using the object) typically are when they see THIS particular space in the object's normal use (e.g. a laptop lid in a café ~3–5 m, a car's rear panel in traffic ~10–15 m, a helmet on a rider ~5 m). Use 0.5–30.
 
 Criteria and anchors:
 V2 Orientation to the typical viewer: 4 faces the natural viewer head-on in normal use (laptop lid back when open in public; car rear panel to following traffic) · 3 ≤30° off typical line of sight · 2 30-60° off, visible mainly at an angle · 1 only from unusual angles (roof, underside) · 0 not visible in normal use (faces the user, inside a bag).
@@ -125,10 +139,11 @@ export const RUBRIC_SCHEMA = {
     C2: crit("Clutter & competing marks"),
     K: crit("Conspicuity & contrast"),
     D: crit("Durability & exposure risk"),
+    typical_viewing_distance_m: { type: "number", minimum: 0.5, maximum: 30 },
     surface_label: { type: "string", description: "e.g. 'anodised aluminium / flat'" },
     owner_feedback: { type: "array", items: { type: "string" }, maxItems: 5 },
   },
-  required: ["image_description", "V2", "V3", "S1", "S2", "S3", "C1", "C2", "K", "D", "surface_label", "owner_feedback"],
+  required: ["image_description", "V2", "V3", "S1", "S2", "S3", "C1", "C2", "K", "D", "typical_viewing_distance_m", "surface_label", "owner_feedback"],
 };
 
 // ---------- Proof-of-display ----------

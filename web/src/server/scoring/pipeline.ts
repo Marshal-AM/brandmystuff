@@ -3,7 +3,7 @@
  *  analyzeHero  — object-level integrity checks before create_object
  *  analyzeSpace — full per-space pipeline run synchronously in the "Add space" modal
  */
-import { CRITERIA, categoryByKey, gradeOf, type Placement } from "@/lib/categories";
+import { CRITERIA, EXPOSURE_CLASSES, clampDistance, gradeOf, type ExposureClass, type ObjectProfile, type Placement, type ViewerMode } from "@/lib/categories";
 import { db, ok } from "../db";
 import { generateJson, type Part } from "../gemini";
 import { c2paScan, computeMetrics, hamming, type Metrics } from "./metrics";
@@ -17,7 +17,7 @@ import {
   RUBRIC_VERSION,
 } from "./prompts";
 
-export type Gate = "G1" | "G2" | "G3" | "G4" | "G5" | "G6" | "G7" | "MIN_SCORE";
+export type Gate = "G1" | "G2" | "G3" | "G4" | "G5" | "G6" | "G7" | "G8" | "MIN_SCORE";
 export const GATE_REASON: Record<Gate, string> = {
   G1: "Content not allowed",
   G2: "Photo must be taken by you, in the app",
@@ -26,14 +26,21 @@ export const GATE_REASON: Record<Gate, string> = {
   G5: "This area can't carry an ad",
   G6: "Retake the photo: blurry, dark or too far",
   G7: "Measured size doesn't match what you entered",
+  G8: "The photo doesn't match the name and description you entered",
   MIN_SCORE: "Score below the listing minimum (40)",
 };
 
 type VText = { text: string; image_label: string; instruction_like: boolean };
 type HeroA = {
   image_description: string;
-  detected_category: string;
-  category_matches: boolean;
+  object_type: string;
+  matches_name: "yes" | "no" | "uncertain";
+  match_evidence: string;
+  exposure_class: ExposureClass;
+  viewer_mode: ViewerMode;
+  typical_viewing_distance_m: number;
+  prohibited_zones: string[];
+  tags: string[];
   nonce_text: string;
   visible_text: VText[];
   synthetic_suspicion: "none" | "low" | "medium" | "high";
@@ -69,23 +76,25 @@ export type HeroResult = {
   analysis: HeroA;
   provenance: number;
   nonceOk: boolean;
+  profile: ObjectProfile;
 };
 
 export async function analyzeHero(p: {
   image: Buffer;
   mime: string;
-  categoryKey: string;
+  name: string;
+  description: string;
   captureCode?: string | null;
   userId: string;
   checkDuplicates?: boolean;
 }): Promise<HeroResult> {
   const metrics = await computeMetrics(p.image);
   const c2pa = c2paScan(p.image);
-  const cat = categoryByKey(p.categoryKey);
+  const ownerText = `Owner's NAME: "${p.name}". Owner's DESCRIPTION: "${p.description || "(none)"}".`;
   const analysis = await generateJson<HeroA>({
     system: HERO_SYSTEM,
     parts: [
-      { text: `The owner selected category "${cat.key}" (${cat.label}). Expected capture code: shown on a note in the photo if present.` },
+      { text: `${ownerText} A capture code may be written on a note in the photo.` },
       { text: "IMAGE A = full object (hero):" },
       { image: p.image, mime: p.mime },
     ],
@@ -93,12 +102,21 @@ export async function analyzeHero(p: {
   });
   if (analysis.synthetic_suspicion === "high") {
     // Confirm with an independent sample before rejecting (single samples are noisy).
-    const second = await generateJson<HeroA>({ system: HERO_SYSTEM, parts: [{ text: `The owner selected category "${cat.key}".` }, { text: "IMAGE A = full object (hero):" }, { image: p.image, mime: p.mime }], schema: HERO_SCHEMA });
+    const second = await generateJson<HeroA>({ system: HERO_SYSTEM, parts: [{ text: ownerText }, { text: "IMAGE A = full object (hero):" }, { image: p.image, mime: p.mime }], schema: HERO_SCHEMA });
     if (second.synthetic_suspicion !== "high") analysis.synthetic_suspicion = second.synthetic_suspicion === "none" ? "low" : second.synthetic_suspicion;
   }
   const nonceSeen = norm(analysis.nonce_text ?? "");
   const nonceOk = !!p.captureCode && nonceSeen.length > 0 && nonceSeen.includes(norm(p.captureCode));
   const provenance = nonceOk ? 1 : nonceSeen.length === 0 ? 0.5 : 0.5;
+  const cls = (EXPOSURE_CLASSES[analysis.exposure_class] ? analysis.exposure_class : "other") as ExposureClass;
+  const profile: ObjectProfile = {
+    objectType: (analysis.object_type || "object").toLowerCase().slice(0, 60),
+    exposureClass: cls,
+    viewerMode: analysis.viewer_mode ?? EXPOSURE_CLASSES[cls].viewer,
+    viewingDistanceM: clampDistance(analysis.typical_viewing_distance_m, EXPOSURE_CLASSES[cls].defaultDistanceM),
+    prohibitedZones: (analysis.prohibited_zones ?? []).slice(0, 10),
+    tags: Array.from(new Set((analysis.tags ?? []).map((t) => t.toLowerCase().trim()).filter(Boolean))).slice(0, 8),
+  };
   const reject = (gate: Gate, reason = GATE_REASON[gate], tips: string[] = []): HeroResult => ({
     decision: "REJECTED",
     gate,
@@ -108,6 +126,7 @@ export async function analyzeHero(p: {
     analysis,
     provenance,
     nonceOk,
+    profile,
   });
 
   if (analysis.brand_safety.some((b) => b.tier === "floor")) return reject("G1");
@@ -117,10 +136,9 @@ export async function analyzeHero(p: {
   const dup = p.checkDuplicates === false ? null : await duplicateOf(metrics.phash, p.userId);
   if (dup) return reject("G2", dup.sameOwner ? "You've already listed this photo." : GATE_REASON.G2);
   if (analysis.visible_text.some((t) => t.instruction_like)) return reject("G4");
-  if (!analysis.category_matches)
-    return reject("G5", `This looks like a ${categoryByKey(analysis.detected_category).label.toLowerCase()}, not a ${cat.label.toLowerCase()}. Pick the right category.`);
+  if (analysis.matches_name === "no") return reject("G8", `${GATE_REASON.G8}: this looks like ${analysis.object_type}. ${analysis.match_evidence}`.trim(), ["Use a name and description that describe this object."]);
   if (metrics.eqi < 0.35 || metrics.retakeReasons.length >= 2) return reject("G6", GATE_REASON.G6, metrics.retakeReasons);
-  return { decision: "ACCEPTED", tips: metrics.retakeReasons, metrics, analysis, provenance, nonceOk };
+  return { decision: "ACCEPTED", tips: metrics.retakeReasons, metrics, analysis, provenance, nonceOk, profile };
 }
 
 // =============================== SPACE ===============================
@@ -128,6 +146,7 @@ export async function analyzeHero(p: {
 type Crit = { observations: string; evidence: string; cannot_assess: boolean; score: number; confidence: string };
 type Rubric = Record<"V2" | "V3" | "S1" | "S2" | "S3" | "C1" | "C2" | "K" | "D", Crit> & {
   image_description: string;
+  typical_viewing_distance_m: number;
   surface_label: string;
   owner_feedback: string[];
 };
@@ -151,7 +170,9 @@ export type SpaceInput = {
   heightMm: number;
   placement: Placement;
   material: string;
-  categoryKey: string;
+  objectName: string;
+  objectDescription: string;
+  profile: ObjectProfile;
   captureSource: "camera" | "upload";
 };
 
@@ -169,7 +190,7 @@ export type SpaceResult = {
   weaknesses: { key: string; name: string; score: number; evidence: string }[];
   tips: string[];
   surface: string;
-  metrics: Metrics & { thetaDeg: number; legibleM: number };
+  metrics: Metrics & { thetaDeg: number; legibleM: number; viewingDistanceM: number };
   integrity: CloseA;
   samples: number;
   rubricVersion: string;
@@ -191,8 +212,9 @@ function legibilityScore(ratio: number) {
   return ratio >= 1.5 ? 4 : ratio >= 1 ? 3 : ratio >= 0.6 ? 2 : ratio >= 0.3 ? 1 : 0;
 }
 
-async function categoryMean(categoryKey: string) {
-  const { data } = await db().from("spaces").select("aqs, objects!inner(category)").eq("objects.category", categoryKey).limit(500);
+/** Ranking cohort = the AI-derived exposure class (internal), not a user category. */
+async function cohortMean(exposureClass: string) {
+  const { data } = await db().from("spaces").select("aqs, objects!inner(exposure_class)").eq("objects.exposure_class", exposureClass).limit(500);
   const xs = (data ?? []).map((r: any) => r.aqs as number).filter((x) => x > 0);
   return xs.length >= 10 ? xs.reduce((a, b) => a + b, 0) / xs.length : 50;
 }
@@ -207,38 +229,30 @@ export async function analyzeSpace(p: {
   userId: string;
   checkDuplicates?: boolean;
 }): Promise<SpaceResult> {
-  const cat = categoryByKey(p.input.categoryKey);
+  const prof = p.input.profile;
   const dims = { widthMm: p.input.widthMm, heightMm: p.input.heightMm };
   const metrics = await computeMetrics(p.closeup, dims);
   const c2pa = c2paScan(p.closeup);
 
-  // Code-computed criteria (V1, L)
-  const dTyp = cat.dTyp[p.input.placement] ?? cat.dTyp.default;
-  const wM = p.input.widthMm / 1000, hM = p.input.heightMm / 1000;
-  const thetaDeg = (2 * Math.atan(Math.sqrt(wM * hM) / (2 * dTyp)) * 180) / Math.PI;
-  const shortCm = Math.min(p.input.widthMm, p.input.heightMm) / 10;
-  const letterIn = (0.35 * shortCm) / 2.54;
-  const LI = cat.viewer === "static" ? 30 : 25;
-  const legibleFt = letterIn * LI;
-  const legibleM = legibleFt / 3.281;
-  const ratio = legibleM / dTyp;
-
   const context = {
-    category: cat.key,
-    category_label: cat.label,
+    object: {
+      owner_name: p.input.objectName,
+      owner_description: p.input.objectDescription,
+      object_type: prof.objectType,
+      exposure_class: prof.exposureClass,
+      viewer_mode: prof.viewerMode,
+      object_typical_viewing_distance_m: prof.viewingDistanceM,
+      prohibited_zones: prof.prohibitedZones,
+    },
     space_name: p.input.label,
     stated_dimensions_mm: dims,
     placement: p.input.placement,
     owner_stated_material: p.input.material,
-    typical_viewing_distance_m: dTyp,
-    viewer_mode: cat.viewer,
     measured: {
       sharpness_laplacian_var: Math.round(metrics.sharpness),
       clipped_pixels_pct: +(metrics.clipPct * 100).toFixed(2),
       centre_vs_surround_contrast_ratio: +metrics.contrastRatio.toFixed(2),
       centre_uniformity_std: +metrics.uniformity.toFixed(1),
-      angular_size_deg: +thetaDeg.toFixed(2),
-      legible_distance_m: +legibleM.toFixed(1),
     },
   };
   const images = (swap: boolean): Part[] => {
@@ -273,6 +287,16 @@ export async function analyzeSpace(p: {
     samples.push(...more);
   }
 
+  // ---- code-computed criteria (V1, L) from the AI-estimated viewing distance (median of samples + object prior) ----
+  const dTyp = clampDistance(med([...samples.map((x) => Math.round((x.typical_viewing_distance_m ?? prof.viewingDistanceM) * 10)), Math.round(prof.viewingDistanceM * 10)]) / 10, prof.viewingDistanceM);
+  const wM = p.input.widthMm / 1000, hM = p.input.heightMm / 1000;
+  const thetaDeg = (2 * Math.atan(Math.sqrt(wM * hM) / (2 * dTyp)) * 180) / Math.PI;
+  const shortCm = Math.min(p.input.widthMm, p.input.heightMm) / 10;
+  const letterIn = (0.35 * shortCm) / 2.54;
+  const LI = prof.viewerMode === "moving" ? 25 : 30;
+  const legibleM = (letterIn * LI) / 3.281;
+  const ratio = legibleM / dTyp;
+
   // ---- gates ----
   const base = {
     aqs: 0,
@@ -284,7 +308,7 @@ export async function analyzeSpace(p: {
     strengths: [],
     weaknesses: [],
     surface: samples[0]?.surface_label ?? "",
-    metrics: { ...metrics, thetaDeg, legibleM },
+    metrics: { ...metrics, thetaDeg, legibleM, viewingDistanceM: dTyp },
     integrity,
     samples: samples.length,
     rubricVersion: RUBRIC_VERSION,
@@ -343,7 +367,7 @@ export async function analyzeSpace(p: {
   const coverage = 1 - cannot / VLM_KEYS.length;
   const prov = p.input.captureSource === "camera" ? Math.max(0.8, p.heroProvenance) : 0.6;
   const conf = Math.pow(Math.max(0.01, Math.min(1, metrics.eqi)), 0.4) * Math.pow(Math.max(0.01, agree), 0.3) * Math.pow(Math.max(0.01, coverage), 0.2) * Math.pow(prov, 0.1);
-  const mu = await categoryMean(cat.key);
+  const mu = await cohortMean(prof.exposureClass);
   const rankScore = conf * aqs + (1 - conf) * Math.min(mu, aqs);
 
   const pick = samples[Math.floor(samples.length / 2)];

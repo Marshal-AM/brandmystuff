@@ -16,37 +16,38 @@ export const MATERIALS = [
   "other",
 ] as const;
 
-export type Category = {
-  code: number;
-  key: string;
-  label: string;
-  emoji: string;
-  /** typical viewing distance (m) per placement; `default` otherwise */
-  dTyp: Partial<Record<Placement, number>> & { default: number };
-  viewer: "static" | "moving";
-  prohibited: string;
-  tips: string;
+/**
+ * There are no user-facing categories: owners list anything with a name + description.
+ * The AI derives an object profile from the photo, name and description (AD-QUALITY-SCORING §2.2).
+ * The exposure class is internal only (scoring defaults + ranking cohort), never chosen by the user.
+ */
+export type ExposureClass = "portable_device" | "wearable" | "vehicle" | "fixed_surface" | "on_camera" | "other";
+export type ViewerMode = "static" | "carried" | "moving";
+
+export const EXPOSURE_CLASSES: Record<ExposureClass, { label: string; defaultDistanceM: number; viewer: ViewerMode }> = {
+  portable_device: { label: "Portable device", defaultDistanceM: 4, viewer: "static" },
+  wearable: { label: "Wearable / carried item", defaultDistanceM: 4, viewer: "carried" },
+  vehicle: { label: "Vehicle", defaultDistanceM: 10, viewer: "moving" },
+  fixed_surface: { label: "Fixed surface", defaultDistanceM: 10, viewer: "static" },
+  on_camera: { label: "On-camera setup", defaultDistanceM: 1.5, viewer: "static" },
+  other: { label: "Other", defaultDistanceM: 5, viewer: "static" },
+};
+export const EXPOSURE_KEYS = Object.keys(EXPOSURE_CLASSES) as ExposureClass[];
+
+export type ObjectProfile = {
+  objectType: string;
+  exposureClass: ExposureClass;
+  viewerMode: ViewerMode;
+  viewingDistanceM: number;
+  prohibitedZones: string[];
+  tags: string[];
 };
 
-export const CATEGORIES: Category[] = [
-  { code: 1, key: "laptop", label: "Laptop", emoji: "💻", dTyp: { default: 4 }, viewer: "static", prohibited: "screen bezel, keyboard deck, vents", tips: "Photograph the lid face-on in daylight; place an ID card for scale." },
-  { code: 2, key: "car", label: "Car / SUV", emoji: "🚗", dTyp: { rear: 12, left: 8, right: 8, top: 15, front: 15, default: 10 }, viewer: "moving", prohibited: "windscreen, front side windows, lights, number plates", tips: "Stand 1–2 m from the panel; avoid reflections." },
-  { code: 3, key: "motorcycle", label: "Motorcycle / scooter", emoji: "🏍️", dTyp: { default: 6 }, viewer: "moving", prohibited: "lights, number plates", tips: "Tank and fairings work best." },
-  { code: 4, key: "bicycle", label: "Bicycle", emoji: "🚲", dTyp: { default: 5 }, viewer: "moving", prohibited: "reflectors", tips: "Frame tubes are narrow — rear boxes score better." },
-  { code: 5, key: "helmet", label: "Helmet", emoji: "⛑️", dTyp: { default: 5 }, viewer: "moving", prohibited: "certification labels, visor", tips: "Back of the helmet is most visible." },
-  { code: 6, key: "backpack", label: "Backpack / bag", emoji: "🎒", dTyp: { default: 3 }, viewer: "moving", prohibited: "—", tips: "Flat back panels score best." },
-  { code: 7, key: "instrument_case", label: "Instrument case", emoji: "🎸", dTyp: { default: 4 }, viewer: "static", prohibited: "—", tips: "Hard cases print best." },
-  { code: 8, key: "board", label: "Skateboard / surfboard", emoji: "🛹", dTyp: { default: 4 }, viewer: "moving", prohibited: "grip-tape area", tips: "Deck underside is the canvas." },
-  { code: 9, key: "van", label: "Food truck / van", emoji: "🚚", dTyp: { rear: 12, default: 10 }, viewer: "moving", prohibited: "as car", tips: "Large flat sides are premium inventory." },
-  { code: 10, key: "storefront_window", label: "Storefront window", emoji: "🪟", dTyp: { default: 6 }, viewer: "static", prohibited: "fire exits, required signage", tips: "Check local sign rules." },
-  { code: 11, key: "wall", label: "Wall / fence", emoji: "🧱", dTyp: { default: 15 }, viewer: "static", prohibited: "—", tips: "Check local planning rules." },
-  { code: 12, key: "stream_setup", label: "Stream / desk setup", emoji: "🎙️", dTyp: { default: 1.5 }, viewer: "static", prohibited: "—", tips: "Items visible on camera." },
-  { code: 13, key: "apparel", label: "Apparel", emoji: "🧥", dTyp: { default: 4 }, viewer: "moving", prohibited: "—", tips: "Jacket backs work best." },
-  { code: 14, key: "other", label: "Other", emoji: "📦", dTyp: { default: 5 }, viewer: "static", prohibited: "judged case by case", tips: "Describe the object well." },
-];
-
-export const categoryByKey = (k: string) => CATEGORIES.find((c) => c.key === k) ?? CATEGORIES[CATEGORIES.length - 1];
-export const categoryByCode = (c: number) => CATEGORIES.find((x) => x.code === c) ?? CATEGORIES[CATEGORIES.length - 1];
+/** Keeps AI-estimated viewing distances in a sane, stable range. */
+export const clampDistance = (d: number | null | undefined, fallback = 5) => {
+  const v = Number.isFinite(d as number) && (d as number) > 0 ? (d as number) : fallback;
+  return Math.round(Math.min(30, Math.max(0.5, v)) * 10) / 10;
+};
 
 export const GRADE_LABEL = ["—", "C", "B", "A", "A+"] as const;
 export const gradeOf = (aqs: number) => (aqs >= 85 ? 4 : aqs >= 70 ? 3 : aqs >= 55 ? 2 : aqs >= 40 ? 1 : 0);

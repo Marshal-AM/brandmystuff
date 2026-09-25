@@ -1,7 +1,7 @@
 import { handler } from "@/server/http";
 import { db, q } from "@/server/db";
 
-const SEL = "id, label, ens_name, width_mm, height_mm, placement, material, closeup_blob_id, price_per_week, aqs, grade, confidence_bps, rank_score, status, offering_id, accepted_proofs, completed_leases, created_at, week_ms, object_id, objects!inner(id, title, category, city, ens_name, hero_blob_id, sponsored_until, sponsor_tier, owner_address, search)";
+const SEL = "id, label, ens_name, width_mm, height_mm, placement, material, closeup_blob_id, price_per_week, aqs, grade, confidence_bps, rank_score, status, offering_id, accepted_proofs, completed_leases, created_at, week_ms, object_id, objects!inner(id, title, category, object_type, tags, city, ens_name, hero_blob_id, sponsored_until, sponsor_tier, owner_address, search)";
 
 export const GET = handler(async (req) => {
   const p = new URL(req.url).searchParams;
@@ -11,7 +11,7 @@ export const GET = handler(async (req) => {
     const term = qs.split(/\s+/).map((w) => w.replace(/[^a-z0-9]/gi, "")).filter(Boolean).join(" & ");
     if (term) query = query.or(`label.ilike.%${qs}%,ens_name.ilike.%${qs}%`, {}) as any;
   }
-  if (p.get("category")) query = query.eq("objects.category", p.get("category")!);
+  if (p.get("tag")) query = query.contains("objects.tags", [p.get("tag")!.toLowerCase().trim()]);
   if (p.get("city")) query = query.ilike("objects.city", `%${p.get("city")}%`);
   if (p.get("placement")) query = query.eq("placement", p.get("placement")!);
   if (p.get("minGrade")) query = query.gte("grade", Number(p.get("minGrade")));
@@ -27,7 +27,7 @@ export const GET = handler(async (req) => {
     : query.order("rank_score", { ascending: false }).order("accepted_proofs", { ascending: false }).order("created_at", { ascending: true });
   let rows: any[] = await q(query.limit(300));
 
-  // keyword search across object title/city/category too (full text on objects.search)
+  // keyword search across object title/description/type/city too (full text on objects.search)
   if (qs) {
     const extra: any[] = await q(
       db().from("spaces").select(SEL).eq("status", "available").gte("aqs", 40).textSearch("objects.search", qs.split(/\s+/).join(" | "), { config: "simple" }).limit(300),

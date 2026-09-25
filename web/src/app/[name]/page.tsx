@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { use, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "@/lib/client/session";
-import { categoryByKey } from "@/lib/categories";
 import { AqsPanel } from "@/components/aqs";
 import { ActivityFeed } from "@/components/activity";
 import { Checkout, weekLabel } from "@/components/checkout";
@@ -19,7 +18,6 @@ function SpaceView({ d }: { d: any }) {
   const router = useRouter();
   const [checkout, setCheckout] = useState(false);
   const { busy, run } = useAction();
-  const cat = categoryByKey(o.category);
   const mine = address === s.owner_address;
   const weekMs = Number(s.week_ms);
   const current = Math.floor(Date.now() / weekMs);
@@ -94,7 +92,7 @@ function SpaceView({ d }: { d: any }) {
               <div>
                 <h1 className="text-2xl font-semibold">{s.label}</h1>
                 <div className="text-sm text-muted">
-                  {cat.emoji} {o.title}
+                  {o.title}
                   {o.city ? ` · ${o.city}` : ""}
                 </div>
               </div>
@@ -108,8 +106,12 @@ function SpaceView({ d }: { d: any }) {
               <dd>{s.placement}</dd>
               <dt className="text-muted">Surface</dt>
               <dd>{s.material ?? "—"}</dd>
-              <dt className="text-muted">Not allowed here</dt>
-              <dd>{cat.prohibited}</dd>
+              <dt className="text-muted">Object</dt>
+              <dd>{o.object_type ?? "—"}</dd>
+              <dt className="text-muted">Seen from</dt>
+              <dd>~{s.viewing_distance_m ?? o.viewing_distance_m ?? "—"} m</dd>
+              <dt className="text-muted">Not allowed on this object</dt>
+              <dd>{o.prohibited_zones?.length ? o.prohibited_zones.join(", ") : "—"}</dd>
             </dl>
             <div className="rounded-xl bg-black/[0.03] p-3">
               <div className="text-2xl font-semibold">{usdc(s.price_per_week)}</div>
@@ -171,7 +173,7 @@ function SpaceView({ d }: { d: any }) {
           </Card>
           {d.siblings.length > 0 && (
             <div>
-              <div className="mb-2 text-sm font-semibold">More spaces on this {cat.label.toLowerCase()}</div>
+              <div className="mb-2 text-sm font-semibold">More spaces on this {o.object_type ?? "object"}</div>
               <div className="grid gap-3">
                 {d.siblings.slice(0, 3).map((x: any) => (
                   <SpaceCard key={x.id} s={{ ...x, week_ms: s.week_ms, object: o, width_mm: x.width_mm ?? 0, height_mm: x.height_mm ?? 0 }} />
@@ -188,7 +190,6 @@ function SpaceView({ d }: { d: any }) {
 
 function ObjectView({ d }: { d: any }) {
   const o = d.object;
-  const cat = categoryByKey(o.category);
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="grid gap-6 md:grid-cols-[380px_1fr]">
@@ -201,10 +202,11 @@ function ObjectView({ d }: { d: any }) {
                 {o.object_grade > 0 && <GradeBadge grade={o.object_grade} aqs={o.object_aqs} size="sm" />}
               </div>
               <div className="text-sm text-muted">
-                {cat.emoji} {cat.label} {o.city && `· ${o.city}`} · by <Link className="underline" href={`/${o.owner?.ens_name}`}>{o.owner?.ens_name}</Link>
+                {o.object_type} {o.city && `· ${o.city}`} · by <Link className="underline" href={`/${o.owner?.ens_name}`}>{o.owner?.ens_name}</Link>
               </div>
               {o.sponsored_until && new Date(o.sponsored_until).getTime() > Date.now() && <Badge tone="sponsored">Sponsored</Badge>}
               {o.description && <p className="pt-2 text-sm">{o.description}</p>}
+              <div className="flex flex-wrap gap-1 pt-2">{(o.tags ?? []).map((t: string) => <Badge key={t}>{t}</Badge>)}</div>
             </div>
           </Card>
           <VerifyPanel name={o.ens_name} suiId={o.id} v={d.verification} ens={d.ens} />

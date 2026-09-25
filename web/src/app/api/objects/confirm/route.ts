@@ -4,7 +4,6 @@ import { HttpError, requireUser } from "@/server/auth";
 import { db, q, ok } from "@/server/db";
 import { readDraft } from "@/server/drafts";
 import { ingestDigest } from "@/server/indexer";
-import { categoryByKey } from "@/lib/categories";
 
 export const POST = handler(async (req) => {
   const u = await requireUser(req);
@@ -18,8 +17,14 @@ export const POST = handler(async (req) => {
     .from("objects")
     .update({
       owner_user_id: u.id,
-      category: d.category,
-      category_code: categoryByKey(d.category).code,
+      category: d.profile.objectType,
+      category_code: 0,
+      object_type: d.profile.objectType,
+      exposure_class: d.profile.exposureClass,
+      viewer_mode: d.profile.viewerMode,
+      viewing_distance_m: d.profile.viewingDistanceM,
+      prohibited_zones: d.profile.prohibitedZones,
+      tags: d.profile.tags,
       description: d.description || null,
       make: d.make || null,
       model: d.model || null,

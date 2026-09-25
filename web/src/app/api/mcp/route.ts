@@ -14,7 +14,7 @@ const TOOLS = [
   {
     name: "search_spaces",
     description: "Search listed ad spaces on physical objects, ranked by Ad-Space Quality Score. Returns id, ENS name, grade, size, weekly price (USDC) and availability.",
-    inputSchema: { type: "object", properties: { query: { type: "string" }, category: { type: "string" }, city: { type: "string" }, maxPricePerWeekUsdc: { type: "number" }, minGrade: { type: "string", enum: ["C", "B", "A", "A+"] }, limit: { type: "integer", minimum: 1, maximum: 50 } } },
+    inputSchema: { type: "object", properties: { query: { type: "string" }, tag: { type: "string", description: "AI-derived object tag, e.g. laptop, car, helmet" }, city: { type: "string" }, maxPricePerWeekUsdc: { type: "number" }, minGrade: { type: "string", enum: ["C", "B", "A", "A+"] }, limit: { type: "integer", minimum: 1, maximum: 50 } } },
   },
   { name: "get_space", description: "Get full details of one ad space (by id or ENS name), including AQS breakdown, booked weeks and lease history.", inputSchema: { type: "object", properties: { spaceId: { type: "string" }, ensName: { type: "string" } } } },
   { name: "get_object", description: "Get an object and all its ad spaces (by id or ENS name).", inputSchema: { type: "object", properties: { objectId: { type: "string" }, ensName: { type: "string" } } } },
@@ -23,7 +23,7 @@ const TOOLS = [
     description: "Quote a lease and get the exact x402 PaymentRequired object. Then POST the same JSON body to the returned endpoint; pay per x402 v2 exact scheme on sui:testnet (USDC).",
     inputSchema: { type: "object", required: ["weeks"], properties: { spaceId: { type: "string" }, ensName: { type: "string" }, weeks: { type: "integer", minimum: 1, maximum: 52 }, startWeek: { type: "integer" } } },
   },
-  { name: "quote_sponsorship", description: "Quote a Sponsored tag for an object (tier 1 category slots, tier 2 homepage rail).", inputSchema: { type: "object", required: ["tier", "days"], properties: { objectId: { type: "string" }, ensName: { type: "string" }, tier: { type: "integer", enum: [1, 2] }, days: { type: "integer", minimum: 1, maximum: 90 } } } },
+  { name: "quote_sponsorship", description: "Quote a Sponsored tag for an object (tier 1 search/listing slots, tier 2 homepage rail).", inputSchema: { type: "object", required: ["tier", "days"], properties: { objectId: { type: "string" }, ensName: { type: "string" }, tier: { type: "integer", enum: [1, 2] }, days: { type: "integer", minimum: 1, maximum: 90 } } } },
 ];
 
 const card = (s: any) => ({
@@ -31,7 +31,8 @@ const card = (s: any) => ({
   ensName: s.ens_name,
   label: s.label,
   object: s.objects?.title,
-  category: s.objects?.category,
+  objectType: s.objects?.object_type ?? s.objects?.category,
+  tags: s.objects?.tags,
   city: s.objects?.city,
   aqs: s.aqs,
   grade: GR[s.grade],
@@ -45,18 +46,18 @@ const card = (s: any) => ({
 async function call(name: string, a: any) {
   switch (name) {
     case "search_spaces": {
-      let qy = db().from("spaces").select("*, objects!inner(title, category, city)").eq("status", "available").gte("aqs", 40).order("rank_score", { ascending: false }).limit(a.limit ?? 10);
-      if (a.category) qy = qy.eq("objects.category", a.category);
+      let qy = db().from("spaces").select("*, objects!inner(title, category, object_type, tags, city)").eq("status", "available").gte("aqs", 40).order("rank_score", { ascending: false }).limit(a.limit ?? 10);
+      if (a.tag) qy = qy.contains("objects.tags", [String(a.tag).toLowerCase()]);
       if (a.city) qy = qy.ilike("objects.city", `%${a.city}%`);
       if (a.maxPricePerWeekUsdc) qy = qy.lte("price_per_week", Math.round(a.maxPricePerWeekUsdc * 1e6));
       if (a.minGrade) qy = qy.gte("grade", GR.indexOf(a.minGrade));
       if (a.query) qy = qy.or(`label.ilike.%${a.query}%,ens_name.ilike.%${a.query}%,objects.title.ilike.%${a.query}%`, { referencedTable: undefined } as any);
-      const rows = await q(qy).catch(async () => q(db().from("spaces").select("*, objects!inner(title, category, city)").eq("status", "available").order("rank_score", { ascending: false }).limit(a.limit ?? 10)));
+      const rows = await q(qy).catch(async () => q(db().from("spaces").select("*, objects!inner(title, category, object_type, tags, city)").eq("status", "available").order("rank_score", { ascending: false }).limit(a.limit ?? 10)));
       return { spaces: rows.map(card) };
     }
     case "get_space": {
       const s = await resolveSpace(a);
-      const o = await q(db().from("objects").select("title, category, city, ens_name").eq("id", s.object_id).single());
+      const o = await q(db().from("objects").select("title, category, object_type, tags, city, ens_name").eq("id", s.object_id).single());
       const booked = await q(db().from("leases").select("start_ms, week_ms, weeks, status").eq("space_id", s.id).neq("status", "cancelled"));
       return { ...card({ ...s, objects: o }), subscores: s.subscores, strengths: s.strengths, weaknesses: s.weaknesses, weekMs: Number(s.week_ms), currentWeek: Math.floor(Date.now() / Number(s.week_ms)), bookedWeeks: booked.flatMap((l: any) => Array.from({ length: l.weeks }, (_, i) => Math.floor(Number(l.start_ms) / Number(l.week_ms)) + i)) };
     }
@@ -64,7 +65,7 @@ async function call(name: string, a: any) {
       const o = a.objectId ? await q(db().from("objects").select("*").eq("id", a.objectId).maybeSingle()) : await q(db().from("objects").select("*").eq("ens_name", String(a.ensName ?? "").toLowerCase()).maybeSingle());
       if (!o) throw new Error("object not found");
       const spaces = await q(db().from("spaces").select("*").eq("object_id", o.id).eq("status", "available"));
-      return { objectId: o.id, ensName: o.ens_name, title: o.title, category: o.category, city: o.city, aqs: o.object_aqs, heroImage: blobUrl(o.hero_blob_id), spaces: spaces.map((s: any) => card({ ...s, objects: o })) };
+      return { objectId: o.id, ensName: o.ens_name, title: o.title, objectType: o.object_type, tags: o.tags, description: o.description, city: o.city, aqs: o.object_aqs, heroImage: blobUrl(o.hero_blob_id), spaces: spaces.map((s: any) => card({ ...s, objects: o })) };
     }
     case "quote_lease": {
       const s = await resolveSpace(a);

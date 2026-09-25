@@ -81,12 +81,12 @@ Each flow lists: **UX steps**, then the **system steps** that implement them, wi
 
 ### F2. List an object
 **UX (mobile-first, in-app camera):**
-1. **Pick the object type** from the catalogue (laptop, car, motorcycle, bicycle, helmet, backpack, instrument case, board, van/food truck, storefront window, wall/fence, stream setup, apparel, other). Category tips and prohibited zones are shown.
-2. **Name it** and add make, model, colour and an optional city.
+1. **Name it and describe it** — anything the owner has (laptop, car, guitar case, fridge, shop window…). There are no categories. Optional make, model, colour and city.
 3. **Hero photo** of the full object, with a 4-character capture code written on a note placed in the shot (anti-fraud, [AQS §2.3](./AD-QUALITY-SCORING.md)).
 4. The hero photo is checked:
    - authenticity (capture code, C2PA, duplicate detection, AI/stock/screen-photo check by the model);
-   - category match;
+   - the photo matches the name and description (else rejected);
+   - the AI derives the object profile: type, tags, viewer mode, typical viewing distance, prohibited zones (shown to the owner);
    - brand safety.
    **Rejected:** reason + Retake. **Accepted:** the owner signs `asset::create_object`, and the object page opens with an **"Add space"** button.
 
@@ -131,7 +131,7 @@ Full spec: [AD-QUALITY-SCORING.md](./AD-QUALITY-SCORING.md).
 
 ### F5. Browse the marketplace (advertiser)
 - **Default sort: AQS rank score.** Other sorts: price, newest.
-- **Filters:** category, city, grade, size, placement, price, availability, tokenised, sponsored.
+- **Filters:** keyword search, AI-derived tag chips, city, grade, size, placement, price, availability, tokenised, sponsored.
 - **Space card:**
   - the space's close-up photo;
   - names and ENS name;
@@ -253,7 +253,7 @@ A persistent banner reads "Testnet demo — mock legal documents, not an offer o
 - **Resale:** list units at a price. Other verified investors can buy all or part (`market::fill`, 1% fee). The seller can cancel any time.
 
 ### F14. Sponsored listing (owner)
-1. "Boost visibility": pick a tier (category slots or homepage rail) and days, then pay USDC via `sponsor::buy_sponsorship`, or via `POST /api/x402/sponsorships`.
+1. "Boost visibility": pick a tier (search/listing slots or homepage rail) and days, then pay USDC via `sponsor::buy_sponsorship`, or via `POST /api/x402/sponsorships`.
 2. The platform key writes ENS `attested.sponsored=true` and `sponsored-until`.
 3. The listing gets a "Sponsored" label. AQS and rank are unchanged.
 
@@ -320,7 +320,7 @@ A persistent banner reads "Testnet demo — mock legal documents, not an offer o
 | Investor share (tokenised spaces) | `revenue_share_bps` of gross (owner-chosen, default 60%) |
 | Tokenisation origination fee | 3% of raise |
 | Secondary market fee | 1% of trade |
-| Sponsored listings | 3 USDC/day (category slots), 10 USDC/day (homepage rail) |
+| Sponsored listings | 3 USDC/day (search/listing slots), 10 USDC/day (homepage rail) |
 
 - Owners of non-tokenised spaces net **88%**.
 - For tokenised spaces, owners get the upfront raise, the remainder after the investor share, and their retained units' share of distributions.

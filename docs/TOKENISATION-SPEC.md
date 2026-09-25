@@ -108,7 +108,7 @@ When an owner creates an offering, the server fills Markdown/HTML templates with
 ```move
 /// Shared, so the operator can write scores and statuses. Owner-gated functions check `ctx.sender() == owner`.
 public struct ListedObject has key {
-    id: UID, owner: address, category: u16, title: String,
+    id: UID, owner: address, category: u16 /* unused: always 0, listings are free-form */, title: String,
     ens_name: String, ens_namehash: vector<u8>,
     hero_blob_id: String, manifest_blob_id: String,
     object_aqs: u8, object_grade: u8,
@@ -382,7 +382,7 @@ public fun cancel<C>(o: &mut SpaceOffering<C>, l: Listing, ctx: &mut TxContext)
 public fun buy_sponsorship<C>(obj: &mut ListedObject, cfg: &Config, pay: Coin<C>, tier: u8, days: u16, clock: &Clock, ctx: &mut TxContext)
 public fun buy_sponsorship_for<C>(_: &OperatorCap, /* same */, payer: address)   // x402 path
 ```
-- Price = `cfg.sponsor_price_per_day[tier] × days`: tier 1 is 3 USDC/day (category slots), tier 2 is 10 USDC/day (homepage rail). The payment goes to the treasury.
+- Price = `cfg.sponsor_price_per_day[tier] × days`: tier 1 is 3 USDC/day (search/listing slots), tier 2 is 10 USDC/day (homepage rail). The payment goes to the treasury.
 - It sets `sponsored_until_ms = max(existing, now) + days × day_ms` (`day_ms` scales with the demo timescale) and emits `Sponsored`. The ENS relayer writes `attested.sponsored` and `sponsored-until`.
 - Eligibility: the object is `LIVE` with at least one listed space. It never changes AQS or rank.
 

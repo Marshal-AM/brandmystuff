@@ -1,18 +1,19 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { CATEGORIES, PLACEMENTS } from "@/lib/categories";
+import { PLACEMENTS } from "@/lib/categories";
 import { SpaceCard } from "@/components/space-card";
 import { Empty, Input, LinkButton, Select, Spinner } from "@/components/ui";
 
 export default function Home() {
-  const [f, setF] = useState({ q: "", category: "", minGrade: "", maxPrice: "", placement: "", city: "", tokenised: false, sponsored: false, sort: "rank" });
+  const [f, setF] = useState({ q: "", tag: "", minGrade: "", maxPrice: "", placement: "", city: "", tokenised: false, sponsored: false, sort: "rank" });
   const qs = useMemo(() => {
     const p = new URLSearchParams();
     Object.entries(f).forEach(([k, v]) => v && p.set(k, v === true ? "1" : String(v)));
     return p.toString();
   }, [f]);
   const { data, isLoading } = useQuery({ queryKey: ["market", qs], queryFn: () => fetch(`/api/market?${qs}`).then((r) => r.json()) });
+  const { data: tags } = useQuery({ queryKey: ["tags"], queryFn: () => fetch("/api/tags").then((r) => r.json()) });
   const set = (k: string, v: any) => setF((x) => ({ ...x, [k]: v }));
   return (
     <div>
@@ -46,14 +47,7 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-4 py-8">
         <div className="mb-6 grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-8">
           <Input className="col-span-2" placeholder="Search spaces, objects, cities…" value={f.q} onChange={(e) => set("q", e.target.value)} data-testid="search" />
-          <Select value={f.category} onChange={(e) => set("category", e.target.value)}>
-            <option value="">All categories</option>
-            {CATEGORIES.map((c) => (
-              <option key={c.key} value={c.key}>
-                {c.emoji} {c.label}
-              </option>
-            ))}
-          </Select>
+          <Input placeholder="Tag (e.g. laptop, car)" value={f.tag} onChange={(e) => set("tag", e.target.value.toLowerCase())} />
           <Select value={f.minGrade} onChange={(e) => set("minGrade", e.target.value)}>
             <option value="">Any grade</option>
             <option value="4">A+</option>
@@ -75,6 +69,15 @@ export default function Home() {
             <option value="newest">Newest</option>
           </Select>
         </div>
+        {tags?.tags?.length > 0 && (
+          <div className="mb-4 flex flex-wrap gap-1.5">
+            {tags.tags.map((t: any) => (
+              <button key={t.tag} onClick={() => set("tag", f.tag === t.tag ? "" : t.tag)} className={`rounded-full border px-3 py-1 text-xs ${f.tag === t.tag ? "border-brand bg-violet-50 font-medium" : "border-line bg-surface hover:border-violet-300"}`}>
+                {t.tag} <span className="text-muted">{t.count}</span>
+              </button>
+            ))}
+          </div>
+        )}
         <div className="mb-4 flex gap-4 text-sm">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={f.tokenised} onChange={(e) => set("tokenised", e.target.checked)} /> Tokenised only
