@@ -1,0 +1,18 @@
+{
+  "platformResolver": "0x74F61f74Dce90068f35d1B3D4f7b4a3886BDE54c",
+  "rootRegistry": "0xeF15c35f03215bAdE4A054F034382534D8f1f30f",
+  "network": "sepolia",
+  "parentName": "brandmystuff.eth",
+  "platformKey": "0x2514844F312c02Ae3C9d4fEb40db4eC8830b6844",
+  "contracts": {
+    "rootRegistry": "0x9703dbd26dab89504490994138cf2c575251a9ce",
+    "ethRegistry": "0x657ea849311d3d5823348dded7c2aaafb3ede09e",
+    "ethRegistrar": "0xabe76f6c8dfced81aa5a2bb8034202a7136b94ca",
+    "verifiableFactory": "0x9e726eb570beb6bceb495ab8cda7df517d4e841c",
+    "permissionedResolverImpl": "0x14f09fd05d4585759e54844dc9b00147131cf243",
+    "userRegistryImpl": "0xa80338aaa8d23831cea25e858d1774534abb0263",
+    "universalResolver": "0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe",
+    "mockUsdc": "0x16f95d91dba7da3aca778ec053df0ff6c6a8aa8e"
+  },
+  "updatedAt": "2026-09-25T15:33:50.473Z"
+}

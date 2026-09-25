@@ -1,0 +1,18 @@
+{
+  "network": "testnet",
+  "packageId": "0x926603f13f1a32f95057f50203dddb01bc24f1f799005cc40486fdf6969d201b",
+  "configId": "0x9486d765ff202d4531a02f19b133ca198b989b61c9ac5193f3f654e48b5c4082",
+  "kycRegistryId": "0xcf5585232728b0688cc83a7b21a851db7e0377a9f5044348d6ad77eb7ecb6202",
+  "adminCapId": "0x3f7e222ae88bd1715b1da113930905c66f63be0b9aeca3c00c32613d6a23ecaa",
+  "operatorCapId": "0x4359cc4198760c344e5e7b3530f279861469c4345d97799eda92b982845a5ffc",
+  "upgradeCapId": "0x5e18b998b6c1efff895ac1bee725d558338afce491bf227b4c8f071bf5a6253e",
+  "publisherId": "0x5205d293cacdcf1be0b7219493cedbbbb9ff5a7a1bb04ce5a747b871cc98cc3b",
+  "platformAddress": "0xc01af55e5dd68d924bd50e9c1556e07cd07cc1582e0f14cc0fdea17017c03848",
+  "usdcType": "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",
+  "weekMs": 600000,
+  "displays": {
+    "AdSpace": "0xa4c8b5c1a2e73adda32b673d063e3f1f24867b656bf70d4959d9eb2447aa5b65",
+    "AdLease": "0xb3a596174e94791c6b7aa16ae3e334ed85d0a182836df76bf9dd78e2ff01fa57",
+    "ListedObject": "0xf61535fd6fcdee7db04d561eb8fb692eb44cbb77ff68b0ad5ca3d14d02fcb53f"
+  }
+}
