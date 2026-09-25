@@ -1,0 +1,51 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n web,worker -c magenta,cyan \"next dev -p 3010\" \"tsx watch scripts/worker.ts\"",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "dev:web": "next dev -p 3010",
+    "worker": "tsx scripts/worker.ts",
+    "db:migrate": "tsx scripts/db-migrate.ts",
+    "ens:bootstrap": "tsx scripts/ens-bootstrap.ts",
+    "e2e:scoring": "tsx e2e/scoring.e2e.ts",
+    "e2e:flows": "tsx e2e/flows.e2e.ts",
+    "e2e:ui": "playwright test"
+  },
+  "dependencies": {
+    "@mysten/dapp-kit-react": "^2.1.35",
+    "@mysten/sui": "^2.33.1",
+    "@privy-io/node": "^0.35.0",
+    "@privy-io/react-auth": "^3.45.0",
+    "@supabase/supabase-js": "^2.117.2",
+    "@tanstack/react-query": "^5.103.2",
+    "jose": "^6.2.12",
+    "next": "16.3.6",
+    "pdf-lib": "^1.17.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "sharp": "^0.35.4",
+    "viem": "^2.56.9",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "concurrently": "^10.0.5",
+    "dotenv": "^18.0.4",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.6",
+    "postgres": "^3.4.9",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
