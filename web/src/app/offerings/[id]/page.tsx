@@ -7,7 +7,7 @@ import { ExternalLink, FileText, Sparkles } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { buyPrimary, claim, closeOffering, refundOffering } from "@/lib/sui/tx";
 import { WALRUS } from "@/lib/deployment";
-import { AnimatedNumber, Badge, Button, Card, EASE, Empty, Field, GradeBadge, Img, Input, PageLoader, Stat, shortAddr, suiscan, useAction, usdc } from "@/components/ui";
+import { AnimatedNumber, Badge, Button, Card, EASE, Empty, Field, GradeBadge, Img, Input, PageLoader, ScrollArea, Stat, Unit, FitText, shortAddr, suiscan, useAction, usdc } from "@/components/ui";
 import { MyOrders, OrderBook, PriceChart, TradeTicket, px } from "@/components/trading";
 import { SignInButtons } from "@/components/shell";
 
@@ -39,6 +39,7 @@ export default function Offering({ params }: { params: Promise<{ id: string }> }
     }, "Units purchased");
   const pack = o.legal_pack;
   const held = mine ? mine.units + mine.listed : 0;
+  const liveHolders = data.holders.filter((h: any) => h.units + h.listed_units > 0).sort((x: any, y: any) => y.units + y.listed_units - (x.units + x.listed_units));
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6">
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
@@ -68,10 +69,28 @@ export default function Offering({ params }: { params: Promise<{ id: string }> }
               </div>
             </div>
           </motion.div>
+          {o.status === "tokenised" && data.market && (
+            <Card className="space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="flex items-center gap-2 text-lg font-bold"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-p opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-p" /></span>Market</h2>
+                <span className="text-xs text-muted">Secondary trading between verified investors · 1% fee</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                <Stat label="Last price" value={`${px(data.market.lastPrice)}`} sub={<span className={data.market.change24hPct >= 0 ? "text-p" : "text-white/80"}>{data.market.change24hPct >= 0 ? "+" : ""}{data.market.change24hPct.toFixed(1)}% 24h</span>} />
+                <Stat label="Best bid / ask" value={`${px(data.market.bestBid)} / ${px(data.market.bestAsk)}`} sub={data.market.spread != null ? `spread ${px(data.market.spread)}` : "no spread yet"} delay={0.05} />
+                <Stat label="24h volume" value={usdc(data.market.volume24h, 4)} sub={`${data.market.units24h.toLocaleString()} units traded`} delay={0.1} />
+                <Stat label="Income / unit" value={`${px(data.market.incomePerUnit)}`} sub={`${data.market.incomeYieldPct.toFixed(2)}% of issue price`} delay={0.15} />
+                <Stat label="Market cap" value={usdc(data.market.marketCap, 2)} sub="10,000 units × last" delay={0.2} />
+                <Stat label="Trades" value={<AnimatedNumber value={data.market.trades} />} sub="all-time fills" delay={0.25} />
+              </div>
+              <PriceChart history={data.market.history} />
+              <OrderBook bids={data.bids} asks={data.listings} me={address} />
+            </Card>
+          )}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Stat label="Revenue share" value={`${(o.revenue_share_bps / 100).toFixed(0)}%`} sub="of gross lease revenue" delay={0.05} />
             <Stat label="Price / unit" value={usdc(o.price_per_unit, 4)} sub={`${o.offered_units.toLocaleString()} offered`} delay={0.1} />
-            <Stat label="Sold" value={<><AnimatedNumber value={o.sold_units} /> units</>} sub={`min raise ${o.min_raise_units.toLocaleString()}`} delay={0.15} />
+            <Stat label="Sold" value={<><AnimatedNumber value={o.sold_units} /><Unit>units</Unit></>} sub={`min raise ${o.min_raise_units.toLocaleString()}`} delay={0.15} />
             <Stat label="Distributed" value={usdc(o.total_distributed)} sub={`${data.stats.completed} completed leases`} delay={0.2} />
           </div>
           <Card>
@@ -95,46 +114,39 @@ export default function Offering({ params }: { params: Promise<{ id: string }> }
               </div>
             )}
           </Card>
-          {o.status === "tokenised" && data.market && (
-            <Card className="space-y-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="flex items-center gap-2 text-lg font-bold"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-p opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-p" /></span>Market</h2>
-                <span className="text-xs text-muted">Secondary trading between verified investors · 1% fee</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-                <Stat label="Last price" value={`${px(data.market.lastPrice)}`} sub={<span className={data.market.change24hPct >= 0 ? "text-p" : "text-white/80"}>{data.market.change24hPct >= 0 ? "+" : ""}{data.market.change24hPct.toFixed(1)}% 24h</span>} />
-                <Stat label="Best bid / ask" value={`${px(data.market.bestBid)} / ${px(data.market.bestAsk)}`} sub={data.market.spread != null ? `spread ${px(data.market.spread)}` : "no spread yet"} delay={0.05} />
-                <Stat label="24h volume" value={usdc(data.market.volume24h, 4)} sub={`${data.market.units24h.toLocaleString()} units · ${data.market.trades} trades total`} delay={0.1} />
-                <Stat label="Income / unit" value={`${px(data.market.incomePerUnit)}`} sub={`${data.market.incomeYieldPct.toFixed(2)}% of issue price`} delay={0.15} />
-                <Stat label="Market cap" value={usdc(data.market.marketCap, 2)} sub="10,000 units × last" delay={0.2} />
-              </div>
-              <PriceChart history={data.market.history} />
-              <OrderBook bids={data.bids} asks={data.listings} me={address} />
-            </Card>
-          )}
           <Card>
             <h2 className="mb-4 text-lg font-bold">Holders & activity</h2>
             <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2 text-sm">
-                {data.holders.filter((h: any) => h.units + h.listed_units > 0).map((h: any, i: number) => {
-                  const hu = h.units + h.listed_units;
-                  return (
-                    <div key={h.address}>
-                      <div className="flex justify-between"><span className="font-mono text-xs">{shortAddr(h.address)}{h.address === o.owner && <span className="ml-1 text-p">(owner)</span>}</span><span>{hu.toLocaleString()} units</span></div>
-                      <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/[0.06]">
-                        <motion.div className="h-full rounded-full bg-p/70" initial={{ width: 0 }} whileInView={{ width: `${(hu / 10000) * 100}%` }} viewport={{ once: true }} transition={{ delay: i * 0.05, duration: 0.8, ease: EASE }} />
-                      </div>
-                    </div>
-                  );
-                })}
+              <div>
+                <div className="mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.12em] text-muted"><span>Holders</span><span>{liveHolders.length}</span></div>
+                <ScrollArea max={300}>
+                  <div className="space-y-3 text-sm">
+                    {liveHolders.map((h: any, i: number) => {
+                      const hu = h.units + h.listed_units;
+                      return (
+                        <div key={h.address}>
+                          <div className="flex justify-between gap-2"><span className="truncate font-mono text-xs">{shortAddr(h.address)}{h.address === o.owner && <span className="ml-1 text-p">(owner)</span>}</span><span className="shrink-0 tabular-nums">{hu.toLocaleString()} units</span></div>
+                          <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/[0.06]">
+                            <motion.div className="h-full rounded-full bg-p/70" initial={{ width: 0 }} whileInView={{ width: `${(hu / 10000) * 100}%` }} viewport={{ once: true }} transition={{ delay: Math.min(i, 8) * 0.05, duration: 0.8, ease: EASE }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
               </div>
-              <div className="space-y-1 text-xs">
-                {data.events.slice(0, 20).map((e: any, i: number) => (
-                  <motion.div key={e.id} initial={{ opacity: 0, y: 6 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.025 }} className="flex justify-between gap-2 rounded-lg px-2 py-1 hover:bg-white/[0.03]">
-                    <span><span className="font-semibold text-p">{e.kind}</span>{e.units ? ` · ${e.units}u` : ""}{e.amount ? ` · ${usdc(e.amount)}` : ""}</span>
-                    <a className="inline-flex items-center gap-1 text-p hover:text-white" href={suiscan("tx", e.digest)} target="_blank" rel="noreferrer">tx <ExternalLink className="h-3 w-3" /></a>
-                  </motion.div>
-                ))}
+              <div>
+                <div className="mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.12em] text-muted"><span>Activity</span><span>{data.events.length}</span></div>
+                <ScrollArea max={300}>
+                  <div className="space-y-1 text-xs">
+                    {data.events.map((e: any, i: number) => (
+                      <motion.div key={e.id} initial={{ opacity: 0, y: 6 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: Math.min(i, 10) * 0.025 }} className="flex justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-white/[0.03]">
+                        <span className="truncate"><span className="font-semibold text-p">{e.kind}</span>{e.units ? ` · ${e.units}u` : ""}{e.amount ? ` · ${usdc(e.amount)}` : ""}</span>
+                        <a className="inline-flex shrink-0 items-center gap-1 text-p hover:text-white" href={suiscan("tx", e.digest)} target="_blank" rel="noreferrer">tx <ExternalLink className="h-3 w-3" /></a>
+                      </motion.div>
+                    ))}
+                  </div>
+                </ScrollArea>
               </div>
             </div>
           </Card>
@@ -151,8 +163,8 @@ export default function Offering({ params }: { params: Promise<{ id: string }> }
                     <div className="text-sm text-muted">{mine.listed > 0 && `${mine.listed} listed · `}{(held / 100).toFixed(2)}% of the series</div>
                     {data.market && held > 0 && (
                       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                        <div className="rounded-xl bg-white/[0.04] p-2.5 text-muted">Cost basis<div className="mt-0.5 font-bold text-white">{usdc(mine.costBasis, 4)}</div></div>
-                        <div className="rounded-xl bg-white/[0.04] p-2.5 text-muted">Market value<div className="mt-0.5 font-bold text-white">{usdc(held * data.market.lastPrice, 4)}</div></div>
+                        <div className="rounded-xl bg-white/[0.04] p-2.5 text-muted">Cost basis<FitText max={14} min={10} className="mt-0.5 font-bold text-white">{usdc(mine.costBasis, 4)}</FitText></div>
+                        <div className="rounded-xl bg-white/[0.04] p-2.5 text-muted">Market value<FitText max={14} min={10} className="mt-0.5 font-bold text-white">{usdc(held * data.market.lastPrice, 4)}</FitText></div>
                       </div>
                     )}
                     <div className="mt-4 flex items-center justify-between rounded-2xl border border-p/30 bg-p/10 p-3.5">

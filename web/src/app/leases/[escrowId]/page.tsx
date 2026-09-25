@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Bot, Check, Clock, Download, ExternalLink, Fingerprint, MessageCircle, Plus, ScanSearch, X } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { approveCreative, extendLease, openDispute, rejectCreative } from "@/lib/sui/tx";
-import { Badge, Button, Card, EASE, Empty, Img, PageLoader, PhotoInput, Stat, cx, suiscan, useAction, usdc } from "@/components/ui";
+import { Badge, Button, Card, EASE, Empty, Img, PageLoader, PhotoInput, Stat, cx, suiscan, useAction, usdc, ScrollArea } from "@/components/ui";
 
 const STATUS: Record<string, { label: string; tone: any }> = {
   pending_approval: { label: "Waiting for owner approval", tone: "warn" },
@@ -156,7 +156,7 @@ export default function LeasePage({ params }: { params: Promise<{ escrowId: stri
               <h3 className="text-lg font-bold">Periods</h3>
               <span className="text-xs text-muted">{released}/{data.periods.length} released</span>
             </div>
-            <div className="relative space-y-2 pl-6">
+            <ScrollArea max={360}><div className="relative space-y-2 pl-6">
               <div className="absolute bottom-3 left-[9px] top-3 w-px bg-gradient-to-b from-p via-p/30 to-transparent" />
               {data.periods.map((p: any, i: number) => (
                 <motion.div key={p.period} initial={{ opacity: 0, x: -12 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05, duration: 0.45, ease: EASE }} className="relative flex items-center justify-between gap-2 rounded-2xl border border-line bg-white/[0.02] px-4 py-2.5 text-sm">
@@ -170,13 +170,13 @@ export default function LeasePage({ params }: { params: Promise<{ escrowId: stri
                   </span>
                 </motion.div>
               ))}
-            </div>
+            </div></ScrollArea>
           </Card>
           {role === "owner" && data.next && ["awaiting_install", "live"].includes(l.status) && <ProofUpload escrowId={escrowId} next={data.next} onDone={() => refetch()} />}
           <Card>
             <h3 className="mb-4 text-lg font-bold">Proof photos</h3>
             {!data.proofs.length && <p className="text-sm text-muted">No proofs yet.</p>}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <ScrollArea max={520}><div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {data.proofs.map((p: any, i: number) => (
                 <motion.div key={p.id} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.06, duration: 0.5, ease: EASE }} className="group overflow-hidden rounded-2xl border border-line bg-white/[0.02]">
                   <div className="overflow-hidden"><Img blob={p.photo_blob_id} alt="proof" className="aspect-square w-full transition-transform duration-700 group-hover:scale-110" /></div>
@@ -187,7 +187,7 @@ export default function LeasePage({ params }: { params: Promise<{ escrowId: stri
                   </div>
                 </motion.div>
               ))}
-            </div>
+            </div></ScrollArea>
           </Card>
         </div>
         <div className="space-y-4 lg:sticky lg:top-[140px] lg:self-start">

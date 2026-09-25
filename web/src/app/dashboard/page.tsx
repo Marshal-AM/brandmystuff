@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUpRight, BellRing, Camera, Clock, Plus } from "lucide-react";
 import { useSession } from "@/lib/client/session";
-import { AnimatedNumber, Badge, Card, EASE, Empty, GradeBadge, Img, LinkButton, PageHeader, PageLoader, SectionTitle, Stat, Tabs, cx, suiscan, usdc } from "@/components/ui";
+import { AnimatedNumber, Badge, Card, EASE, Empty, GradeBadge, Img, LinkButton, PageHeader, PageLoader, SectionTitle, Stat, Tabs, cx, suiscan, usdc, ScrollArea, FitText } from "@/components/ui";
 import { SignInButtons } from "@/components/shell";
 
 const leaseTone = (s: string) => (s === "live" || s === "completed" ? "ok" : s === "pending_approval" || s === "awaiting_install" ? "warn" : s === "disputed" ? "bad" : "neutral");
@@ -123,7 +123,7 @@ export default function Dashboard() {
               <Card>
                 <SectionTitle>Earnings history</SectionTitle>
                 {!o.earnings.length && <p className="text-sm text-muted">Payouts appear here as proofs are accepted.</p>}
-                <div className="space-y-1.5">
+                <ScrollArea max={340}><div className="space-y-1.5">
                   {o.earnings.map((t: any, i: number) => (
                     <motion.div key={t.id} initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.03 }} className="grid grid-cols-[1fr_auto_auto] items-center gap-4 rounded-2xl px-3 py-2.5 text-sm transition-colors hover:bg-white/[0.03] md:grid-cols-[170px_90px_1fr_auto_auto]">
                       <span className="text-muted">{new Date(t.created_at).toLocaleString()}</span>
@@ -133,19 +133,19 @@ export default function Dashboard() {
                       <a className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-bold text-white/70 hover:bg-p hover:text-ink" href={suiscan("tx", t.digest)} target="_blank" rel="noreferrer">tx</a>
                     </motion.div>
                   ))}
-                </div>
+                </div></ScrollArea>
               </Card>
               <Card>
                 <SectionTitle>All leases on your spaces</SectionTitle>
                 {!o.leases.length && <p className="text-sm text-muted">No leases yet.</p>}
-                <div className="space-y-2">
+                <ScrollArea max={360}><div className="space-y-2">
                   {o.leases.map((l: any) => (
                     <Row key={l.escrow_id} href={`/leases/${l.escrow_id}`}>
                       <span className="min-w-0 truncate">{l.spaces.label} · {l.brand} · {l.weeks}w</span>
                       <Badge tone={leaseTone(l.status) as any}>{l.status}</Badge>
                     </Row>
                   ))}
-                </div>
+                </div></ScrollArea>
               </Card>
             </div>
           )}
@@ -160,7 +160,7 @@ export default function Dashboard() {
               <Card>
                 <SectionTitle action={<LinkButton href="/explore" variant="secondary" size="sm">Find spaces</LinkButton>}>Your leases</SectionTitle>
                 {!a.leases.length && <p className="text-sm text-muted">No leases yet. Explore the marketplace.</p>}
-                <div className="space-y-2">
+                <ScrollArea max={380}><div className="space-y-2">
                   {a.leases.map((l: any) => (
                     <Row key={l.escrow_id} href={`/leases/${l.escrow_id}`} testId="adv-lease">
                       <span className="flex min-w-0 items-center gap-3">
@@ -170,12 +170,12 @@ export default function Dashboard() {
                       <Badge tone={leaseTone(l.status) as any}>{l.status}</Badge>
                     </Row>
                   ))}
-                </div>
+                </div></ScrollArea>
               </Card>
               <Card>
                 <SectionTitle><span className="flex items-center gap-2"><Clock className="h-4 w-4 text-p" /> Proof timeline</span></SectionTitle>
                 {!a.proofs.length && <p className="text-sm text-muted">Owners&apos; proof photos appear here.</p>}
-                <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+                <ScrollArea max={300}><div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
                   {a.proofs.map((p: any, i: number) => (
                     <motion.div key={p.id} initial={{ opacity: 0, scale: 0.85 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.04 }}>
                       <Link href={`/leases/${p.escrow_id}`} className="group block">
@@ -184,7 +184,7 @@ export default function Dashboard() {
                       </Link>
                     </motion.div>
                   ))}
-                </div>
+                </div></ScrollArea>
               </Card>
               <Card>
                 <SectionTitle action={<LinkButton href="/brand-kit" variant="secondary" size="sm">Manage</LinkButton>}>Brand kit</SectionTitle>
@@ -232,11 +232,11 @@ export default function Dashboard() {
                             <div className="text-[11px] text-muted">claimable</div>
                           </span>
                         </div>
-                        <div className="mt-4 grid grid-cols-4 gap-2 text-xs">
+                        <div className="mt-4 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
                           {[["Cost", usdc(h.pnl.cost, 4)], ["Value", usdc(h.pnl.value, 4)], ["Income", usdc(h.pnl.income, 4)]].map(([k, v]) => (
-                            <div key={k} className="rounded-xl bg-white/[0.03] p-2.5"><div className="text-muted">{k}</div><div className="mt-0.5 font-bold">{v}</div></div>
+                            <div key={k} className="rounded-xl bg-white/[0.03] p-2.5"><div className="text-muted">{k}</div><FitText max={14} min={10} className="mt-0.5 font-bold tabular-nums">{v}</FitText></div>
                           ))}
-                          <div className="rounded-xl bg-white/[0.03] p-2.5"><div className="text-muted">Net</div><div className={`mt-0.5 font-bold ${h.pnl.net >= 0 ? "text-p" : "text-white"}`}>{usdc(h.pnl.net, 4)}{h.pnl.netPct != null && ` (${h.pnl.netPct.toFixed(1)}%)`}</div></div>
+                          <div className="rounded-xl bg-white/[0.03] p-2.5"><div className="text-muted">Net</div><FitText max={14} min={10} className={`mt-0.5 font-bold tabular-nums ${h.pnl.net >= 0 ? "text-p" : "text-white"}`}>{usdc(h.pnl.net, 4)}{h.pnl.netPct != null && ` (${h.pnl.netPct.toFixed(1)}%)`}</FitText></div>
                         </div>
                       </Link>
                     </motion.div>
@@ -244,14 +244,14 @@ export default function Dashboard() {
                   {(pf.openOrders.bids.length > 0 || pf.openOrders.asks.length > 0) && (
                     <Card>
                       <SectionTitle>Open orders</SectionTitle>
-                      <div className="space-y-2">
+                      <ScrollArea max={300}><div className="space-y-2">
                         {[...pf.openOrders.bids.map((b: any) => ({ ...b, side: "Bid" })), ...pf.openOrders.asks.map((x: any) => ({ ...x, side: "Ask" }))].map((x: any) => (
                           <Row key={x.id} href={`/offerings/${x.offering_id}`}>
                             <span className="flex min-w-0 items-center gap-2 truncate"><Badge tone={x.side === "Bid" ? "ok" : "neutral"}>{x.side}</Badge> {x.offerings?.spaces?.label} · {x.units} units @ {(Number(x.price_per_unit) / 1e6).toFixed(6)}</span>
                             <span className="shrink-0 text-xs text-muted">{Number(x.expires_ms) > 0 ? `expires ${new Date(Number(x.expires_ms)).toLocaleString()}` : "good till cancelled"}</span>
                           </Row>
                         ))}
-                      </div>
+                      </div></ScrollArea>
                     </Card>
                   )}
                 </>

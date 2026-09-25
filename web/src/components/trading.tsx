@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowDownRight, ArrowUpRight, ExternalLink, ShieldAlert } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { buyOrder, cancelBid, cancelListing, cancelListingV2, planFills, sellOrder, transferUnits } from "@/lib/sui/tx";
-import { Badge, Button, Card, EASE, Field, Input, Select, Tabs, cx, shortAddr, suiscan, useAction, usdc } from "./ui";
+import { Badge, Button, Card, EASE, Field, Input, Select, Tabs, cx, shortAddr, suiscan, useAction, usdc, ScrollArea } from "./ui";
 
 export const px = (atomic: number | string | null | undefined) => (atomic == null ? "—" : `${(Number(atomic) / 1e6).toFixed(6).replace(/0+$/, "").replace(/\.$/, "")}`);
 
@@ -129,12 +129,12 @@ export function OrderBook({ bids, asks, me }: { bids: any[]; asks: any[]; me: st
       <div>
         <div className="mb-1.5 flex justify-between px-2 text-[10px] font-semibold uppercase tracking-widest text-muted"><span>Bid (USDC)</span><span>Units</span></div>
         {!b.length && <p className="px-2 text-xs text-faint">No bids</p>}
-        <div className="space-y-0.5">{b.map(([p, v], i) => <Row key={p} price={p} v={v} side="bid" i={i} />)}</div>
+        <ScrollArea max={240}><div className="space-y-0.5">{b.map(([p, v], i) => <Row key={p} price={p} v={v} side="bid" i={i} />)}</div></ScrollArea>
       </div>
       <div>
         <div className="mb-1.5 flex justify-between px-2 text-[10px] font-semibold uppercase tracking-widest text-muted"><span>Ask (USDC)</span><span>Units</span></div>
         {!a.length && <p className="px-2 text-xs text-faint">No asks</p>}
-        <div className="space-y-0.5">{a.map(([p, v], i) => <Row key={p} price={p} v={v} side="ask" i={i} />)}</div>
+        <ScrollArea max={240}><div className="space-y-0.5">{a.map(([p, v], i) => <Row key={p} price={p} v={v} side="ask" i={i} />)}</div></ScrollArea>
       </div>
     </div>
   );
@@ -257,7 +257,7 @@ export function MyOrders({ offeringId, bids, asks, onDone }: { offeringId: strin
   return (
     <Card>
       <h3 className="mb-3 font-bold">Your open orders</h3>
-      <div className="space-y-2 text-sm">
+      <ScrollArea max={280}><div className="space-y-2 text-sm">
         <AnimatePresence initial={false}>
           {bids.map((b) => (
             <motion.div key={b.id} layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20, height: 0 }} className="flex items-center justify-between gap-2 rounded-2xl border border-line bg-white/[0.02] p-2.5" data-testid="my-bid">
@@ -272,7 +272,7 @@ export function MyOrders({ offeringId, bids, asks, onDone }: { offeringId: strin
             </motion.div>
           ))}
         </AnimatePresence>
-      </div>
+      </div></ScrollArea>
     </Card>
   );
 }
@@ -280,7 +280,7 @@ export function MyOrders({ offeringId, bids, asks, onDone }: { offeringId: strin
 export function Tape({ events }: { events: any[] }) {
   const trades = events.filter((e) => ["trade", "purchase", "transfer"].includes(e.kind)).slice(0, 15);
   return (
-    <div className="space-y-1 text-xs">
+    <ScrollArea max={280}><div className="space-y-1 text-xs">
       {!trades.length && <p className="text-muted">No trades yet.</p>}
       {trades.map((e, i) => (
         <motion.div key={e.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="flex justify-between gap-2 rounded-lg px-2 py-1 font-mono hover:bg-white/[0.03]">
@@ -288,6 +288,6 @@ export function Tape({ events }: { events: any[] }) {
           <a className="inline-flex items-center gap-1 text-p hover:text-white" href={suiscan("tx", e.digest)} target="_blank" rel="noreferrer">tx <ExternalLink className="h-3 w-3" /></a>
         </motion.div>
       ))}
-    </div>
+    </div></ScrollArea>
   );
 }

@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Activity, Flag, Gavel, RotateCcw, ScrollText, Server, ShieldBan } from "lucide-react";
 import { useSession } from "@/lib/client/session";
-import { Badge, Button, Card, EASE, Empty, Input, PageHeader, PageLoader, Stat, cx, etherscanTx, suiscan, useAction, usdc } from "@/components/ui";
+import { Badge, Button, Card, EASE, Empty, Input, PageHeader, PageLoader, Stat, cx, etherscanTx, suiscan, useAction, usdc, ScrollArea } from "@/components/ui";
 
 function Head({ icon: Icon, children, count }: { icon: any; children: React.ReactNode; count?: number }) {
   return (
@@ -137,7 +137,7 @@ export default function Admin() {
 
       <Card delay={0.05}>
         <Head icon={Activity}>Jobs</Head>
-        <div className="space-y-1 text-xs">
+        <ScrollArea max={340}><div className="space-y-1 text-xs">
           {data.recentJobs.map((j: any) => (
             <div key={j.id} className={cx("flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 hover:bg-white/[0.04]", j.status === "failed" && "bg-white/[0.03]")}>
               <span className="shrink-0 font-mono">#{j.id} {j.kind}</span>
@@ -152,7 +152,7 @@ export default function Admin() {
               </span>
             </div>
           ))}
-        </div>
+        </div></ScrollArea>
       </Card>
     </div>
   );

@@ -8,6 +8,7 @@ import {
   useContext,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type ButtonHTMLAttributes,
@@ -156,7 +157,11 @@ export function StaggerItem({ children, className }: { children: ReactNode; clas
 }
 
 /** Counts up to a number when it scrolls into view. */
-export function AnimatedNumber({ value, format = (n) => n.toLocaleString(), duration = 1200 }: { value: number; format?: (n: number) => string; duration?: number }) {
+const decimalsOf = (v: number) => (Number.isInteger(v) ? 0 : Math.min(4, (String(v).split(".")[1] ?? "").length));
+
+export function AnimatedNumber({ value, format, duration = 1200 }: { value: number; format?: (n: number) => string; duration?: number }) {
+  const d = decimalsOf(value);
+  const fmt = format ?? ((n: number) => n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }));
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true });
   const [n, setN] = useState(0);
@@ -173,7 +178,7 @@ export function AnimatedNumber({ value, format = (n) => n.toLocaleString(), dura
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [inView, value, duration]);
-  return <span ref={ref}>{format(inView ? n : 0)}</span>;
+  return <span ref={ref} className="tabular-nums">{fmt(inView ? n : 0)}</span>;
 }
 
 export function Kicker({ children, className }: { children: ReactNode; className?: string }) {
@@ -431,6 +436,44 @@ export function Empty({ title, children }: { title: string; children?: ReactNode
   );
 }
 
+/** Keeps its content on one line, shrinking the font until it fits the box. */
+export function FitText({ children, max = 26, min = 13, className }: { children: ReactNode; max?: number; min?: number; className?: string }) {
+  const box = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const b = box.current, i = inner.current;
+    if (!b || !i) return;
+    const fit = () => {
+      i.style.fontSize = `${max}px`;
+      const w = i.scrollWidth, avail = b.clientWidth;
+      i.style.fontSize = `${w > avail ? Math.max(min, Math.floor(((max * avail) / w) * 10) / 10) : max}px`;
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(b);
+    const mo = new MutationObserver(fit);
+    mo.observe(i, { subtree: true, childList: true, characterData: true });
+    return () => { ro.disconnect(); mo.disconnect(); };
+  }, [max, min]);
+  return (
+    <div ref={box} className={cx("min-w-0 overflow-hidden", className)}>
+      <span ref={inner} className="inline-block whitespace-nowrap leading-tight" style={{ fontSize: max }}>{children}</span>
+    </div>
+  );
+}
+
+/** A small muted unit after a figure, e.g. 12.50 <Unit>USDC</Unit>. */
+export function Unit({ children }: { children: ReactNode }) {
+  return <span className="ml-1 text-[0.55em] font-bold tracking-normal text-muted">{children}</span>;
+}
+
+/** Splits "12.5 USDC" / "300 units" so the unit renders small. */
+function withUnit(v: ReactNode) {
+  if (typeof v !== "string") return v;
+  const m = v.match(/^(.*\d)\s+(USDC|SUI|units?)$/);
+  return m ? <>{m[1]}<Unit>{m[2]}</Unit></> : v;
+}
+
 export function Stat({ label, value, sub, delay = 0 }: { label: string; value: ReactNode; sub?: ReactNode; delay?: number }) {
   return (
     <motion.div
@@ -439,15 +482,38 @@ export function Stat({ label, value, sub, delay = 0 }: { label: string; value: R
       viewport={{ once: true }}
       transition={{ duration: 0.6, delay, ease: EASE }}
       whileHover={{ y: -3 }}
-      className="glass group relative overflow-hidden rounded-3xl p-5"
+      className="glass group relative min-w-0 overflow-hidden rounded-3xl p-5"
     >
       <div aria-hidden className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-p/0 blur-2xl transition-colors duration-500 group-hover:bg-p/20" />
-      <div className="relative text-[11px] font-bold uppercase tracking-[0.12em] text-muted">{label}</div>
-      <motion.div className="relative mt-2 break-words text-xl font-extrabold leading-tight tracking-tight xl:text-2xl" initial={{ opacity: 0, filter: "blur(6px)" }} whileInView={{ opacity: 1, filter: "blur(0px)" }} viewport={{ once: true }} transition={{ duration: 0.8, delay: delay + 0.15 }}>
-        {value}
+      <div className="relative truncate text-[11px] font-bold uppercase tracking-[0.12em] text-muted" title={label}>{label}</div>
+      <motion.div className="relative mt-2" initial={{ opacity: 0, filter: "blur(6px)" }} whileInView={{ opacity: 1, filter: "blur(0px)" }} viewport={{ once: true }} transition={{ duration: 0.8, delay: delay + 0.15 }}>
+        <FitText className="font-extrabold tabular-nums tracking-tight">{withUnit(value)}</FitText>
       </motion.div>
-      {sub && <div className="relative mt-1 text-xs text-muted">{sub}</div>}
+      {sub && <div className="relative mt-1 truncate text-xs text-muted">{sub}</div>}
     </motion.div>
+  );
+}
+
+/** Fixed-height list that scrolls inside itself, with soft fades at the edges while there is more to see. */
+export function ScrollArea({ children, className, max = 320 }: { children: ReactNode; className?: string; max?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [edge, setEdge] = useState({ top: false, bottom: false });
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const upd = () => setEdge({ top: el.scrollTop > 2, bottom: el.scrollTop + el.clientHeight < el.scrollHeight - 2 });
+    upd();
+    el.addEventListener("scroll", upd, { passive: true });
+    const ro = new ResizeObserver(upd);
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    return () => { el.removeEventListener("scroll", upd); ro.disconnect(); };
+  }, []);
+  const mask = `linear-gradient(to bottom, ${edge.top ? "transparent" : "#000"} 0, #000 28px, #000 calc(100% - 28px), ${edge.bottom ? "transparent" : "#000"} 100%)`;
+  return (
+    <div ref={ref} className={cx("overflow-y-auto overscroll-contain pr-1", className)} style={{ maxHeight: max, maskImage: mask, WebkitMaskImage: mask }}>
+      <div>{children}</div>
+    </div>
   );
 }
 

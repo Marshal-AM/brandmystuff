@@ -11,7 +11,7 @@ import { ActivityFeed } from "@/components/activity";
 import { Checkout, weekLabel } from "@/components/checkout";
 import { VerifyPanel } from "@/components/verify";
 import { SpaceCard } from "@/components/space-card";
-import { Badge, Button, Card, EASE, Empty, GradeBadge, Img, LinkButton, PageLoader, SectionTitle, cx, shortAddr, usdc, useAction } from "@/components/ui";
+import { Badge, Button, Card, EASE, Empty, GradeBadge, Img, LinkButton, PageLoader, SectionTitle, cx, shortAddr, usdc, useAction, ScrollArea } from "@/components/ui";
 import { SignInButtons } from "@/components/shell";
 
 function Crumbs({ items }: { items: { href?: string; label: string }[] }) {
@@ -130,19 +130,19 @@ function SpaceView({ d }: { d: any }) {
           {d.proofs.length > 0 && (
             <Card>
               <SectionTitle><span className="flex items-center gap-2"><Camera className="h-4 w-4 text-p" /> Proof of display</span></SectionTitle>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              <ScrollArea max={260}><div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                 {d.proofs.map((p: any, i: number) => (
                   <motion.div key={p.photo_blob_id} initial={{ opacity: 0, scale: 0.85 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }} whileHover={{ scale: 1.06, zIndex: 2 }} className="overflow-hidden rounded-xl border border-line">
                     <Img blob={p.photo_blob_id} alt={`proof ${p.period}`} className="aspect-square w-full" />
                   </motion.div>
                 ))}
-              </div>
+              </div></ScrollArea>
             </Card>
           )}
           {d.leases.length > 0 && (
             <Card>
               <SectionTitle>Lease history</SectionTitle>
-              <div className="space-y-2 text-sm">
+              <ScrollArea max={320}><div className="space-y-2 text-sm">
                 {d.leases.map((l: any) => (
                   <Link key={l.escrow_id} href={`/leases/${l.escrow_id}`} className="group flex items-center justify-between gap-3 rounded-2xl border border-line bg-white/[0.02] p-3 transition-colors hover:border-p/40">
                     <span className="flex min-w-0 items-center gap-3">
@@ -152,7 +152,7 @@ function SpaceView({ d }: { d: any }) {
                     <Badge>{l.status.replace("_", " ")}</Badge>
                   </Link>
                 ))}
-              </div>
+              </div></ScrollArea>
             </Card>
           )}
           <ActivityFeed items={d.activity} />

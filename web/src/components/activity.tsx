@@ -1,7 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
-import { Card, EASE, etherscanTx, suiscan, usdc } from "./ui";
+import { Card, EASE, etherscanTx, suiscan, usdc, ScrollArea } from "./ui";
 
 const LABEL: Record<string, string> = {
   object_listed: "Object listed",
@@ -40,7 +40,7 @@ export function ActivityFeed({ items }: { items: any[] }) {
         Activity
       </h3>
       {!items?.length && <p className="text-sm text-muted">No on-chain activity yet.</p>}
-      <ol className="relative space-y-1">
+      <ScrollArea max={380}><ol className="relative space-y-1">
         {!!items?.length && <span aria-hidden className="absolute bottom-3 left-[7px] top-3 w-px bg-gradient-to-b from-p/60 via-line-strong to-transparent" />}
         {items?.map((a, i) => (
           <motion.li
@@ -75,7 +75,7 @@ export function ActivityFeed({ items }: { items: any[] }) {
             </div>
           </motion.li>
         ))}
-      </ol>
+      </ol></ScrollArea>
     </Card>
   );
 }
