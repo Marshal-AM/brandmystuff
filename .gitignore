@@ -32,6 +32,13 @@ desktop.ini
 *.swp
 *.swo
 
+# Next.js / Playwright
+.next/
+out/
+test-results/
+playwright-report/
+coverage/
+
 # Logs and temp files
 *.log
 npm-debug.log*
