@@ -421,7 +421,7 @@ The platform's `OperatorCap` holder (the backend) writes scores, proof results, 
 - **Wallet panel:**
   - SUI and USDC balances, and a copy-address button;
   - a **Send** screen (SUI or USDC to any address, signed by the user);
-  - a **"Get test funds"** button: the platform key transfers configurable testnet amounts (default 0.2 SUI + 5 USDC) to the user. Limited to once per user per 24 h, tracked in Supabase, and only while the treasury holds a configurable reserve;
+  - a **"Get test funds"** button: the platform key transfers configurable testnet amounts (default 0.2 SUI + 1 USDC) to the user. Limited to once per user per 24 h, tracked in Supabase, and only while the treasury holds a configurable reserve;
   - links to https://faucet.sui.io and https://faucet.circle.com as fallbacks.
 - **Payments:** USDC only. Humans pay inside Move calls; agents pay via x402.
 - **Client:** `@mysten/sui` 2.x `SuiGrpcClient` (JSON-RPC on public nodes is deprecated — https://docs.sui.io/develop/accessing-data/json-rpc-migration).

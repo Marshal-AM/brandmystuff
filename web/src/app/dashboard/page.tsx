@@ -165,23 +165,51 @@ export default function Dashboard() {
       {tab === "investor" && (
         <div className="space-y-4">
           {!pf ? <Spinner /> : !pf.holdings.length ? (
-            <Empty title="No holdings yet">Browse <Link className="underline" href="/offerings">offerings</Link> to invest in ad income.</Empty>
+            <Empty title="No holdings yet">Browse <Link className="underline" href="/offerings">offerings</Link> or the <Link className="underline" href="/trade">market</Link> to invest in ad income.</Empty>
           ) : (
-            pf.holdings.map((h: any) => (
-              <Link key={h.offering_id} href={`/offerings/${h.offering_id}`} className="flex items-center justify-between rounded-2xl border border-line bg-surface p-4 hover:border-violet-300" data-testid="holding">
-                <span className="flex items-center gap-3">
-                  <Img blob={h.offerings.spaces.closeup_blob_id} alt="" className="h-12 w-12 rounded-lg" />
-                  <span>
-                    <div className="font-semibold">{h.offerings.spaces.label}</div>
-                    <div className="text-sm text-muted">{h.onchain?.units ?? h.units} units · {h.onchain?.listed ?? h.listed_units} listed · paid {usdc(h.paid)} · claimed {usdc(h.claimed)}</div>
-                  </span>
-                </span>
-                <span className="text-right">
-                  <div className="font-semibold text-emerald-700">{usdc(h.onchain?.claimable ?? 0)}</div>
-                  <div className="text-xs text-muted">claimable</div>
-                </span>
-              </Link>
-            ))
+            <>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+                <Stat label="Invested (cost)" value={usdc(pf.totals.cost, 4)} />
+                <Stat label="Market value" value={usdc(pf.totals.value, 4)} />
+                <Stat label="Income earned" value={usdc(pf.totals.income, 4)} sub={`${usdc(pf.totals.claimable, 4)} claimable`} />
+                <Stat label="Net P&L" value={<span className={pf.totals.value + pf.totals.income - pf.totals.cost >= 0 ? "text-emerald-700" : "text-bad"}>{usdc(pf.totals.value + pf.totals.income - pf.totals.cost, 4)}</span>} />
+                <Stat label="Open orders" value={pf.openOrders.bids.length + pf.openOrders.asks.length} sub={`${pf.openOrders.bids.length} bids · ${pf.openOrders.asks.length} asks`} />
+              </div>
+              {pf.holdings.map((h: any) => (
+                <Link key={h.offering_id} href={`/offerings/${h.offering_id}`} className="block rounded-2xl border border-line bg-surface p-4 hover:border-violet-300" data-testid="holding">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-3">
+                      <Img blob={h.offerings.spaces.closeup_blob_id} alt="" className="h-12 w-12 rounded-lg" />
+                      <span>
+                        <div className="font-semibold">{h.offerings.spaces.label}</div>
+                        <div className="text-sm text-muted">{(h.onchain?.units ?? h.units) + (h.onchain?.listed ?? h.listed_units)} units{(h.onchain?.listed ?? h.listed_units) > 0 && ` (${h.onchain?.listed ?? h.listed_units} listed)`} · last {(h.pnl.lastPrice / 1e6).toFixed(6)} USDC</div>
+                      </span>
+                    </span>
+                    <span className="text-right">
+                      <div className="font-semibold text-emerald-700">{usdc(h.onchain?.claimable ?? 0, 4)}</div>
+                      <div className="text-xs text-muted">claimable</div>
+                    </span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-4 gap-2 text-xs">
+                    <div>Cost<div className="font-medium">{usdc(h.pnl.cost, 4)}</div></div>
+                    <div>Value<div className="font-medium">{usdc(h.pnl.value, 4)}</div></div>
+                    <div>Income<div className="font-medium">{usdc(h.pnl.income, 4)}</div></div>
+                    <div>Net<div className={`font-medium ${h.pnl.net >= 0 ? "text-emerald-700" : "text-bad"}`}>{usdc(h.pnl.net, 4)}{h.pnl.netPct != null && ` (${h.pnl.netPct.toFixed(1)}%)`}</div></div>
+                  </div>
+                </Link>
+              ))}
+              {(pf.openOrders.bids.length > 0 || pf.openOrders.asks.length > 0) && (
+                <Card>
+                  <h2 className="mb-2 font-semibold">Open orders</h2>
+                  {[...pf.openOrders.bids.map((b: any) => ({ ...b, side: "Bid" })), ...pf.openOrders.asks.map((a: any) => ({ ...a, side: "Ask" }))].map((o: any) => (
+                    <Link key={o.id} href={`/offerings/${o.offering_id}`} className="flex justify-between border-b border-line py-2 text-sm last:border-0">
+                      <span><Badge tone={o.side === "Bid" ? "ok" : "bad"}>{o.side}</Badge> {o.offerings?.spaces?.label} · {o.units} units @ {(Number(o.price_per_unit) / 1e6).toFixed(6)}</span>
+                      <span className="text-xs text-muted">{Number(o.expires_ms) > 0 ? `expires ${new Date(Number(o.expires_ms)).toLocaleString()}` : "good till cancelled"}</span>
+                    </Link>
+                  ))}
+                </Card>
+              )}
+            </>
           )}
         </div>
       )}

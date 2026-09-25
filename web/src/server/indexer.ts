@@ -39,7 +39,7 @@ export async function ingestDigest(digest: string) {
   const t = r.Transaction ?? r.FailedTransaction;
   const evs: Ev[] = (t?.events ?? [])
     .map((e: any, i: number) => ({ digest, seq: i, type: e.eventType, module: e.module, json: e.json }))
-    .filter((e: Ev) => e.type.startsWith(SUI.packageId));
+    .filter((e: Ev) => e.type.startsWith(SUI.packageId) || e.type.startsWith(SUI.latestPackageId));
   await store(evs);
   await processPending();
   return evs;
@@ -48,13 +48,13 @@ export async function ingestDigest(digest: string) {
 /** One polling pass over every module's events since the stored cursor. */
 export async function pollOnce() {
   const c = sui();
-  for (const mod of MODULES) {
-    const name = `events:${mod}`;
+  for (const [pkg, mod] of [SUI.packageId, SUI.latestPackageId].flatMap((p) => MODULES.map((m) => [p, m] as const))) {
+    const name = pkg === SUI.packageId ? `events:${mod}` : `events:v2:${mod}`;
     const cur = await q(db().from("cursors").select("cursor").eq("name", name).maybeSingle());
     let after: any = cur?.cursor ?? undefined;
     for (let page = 0; page < 10; page++) {
       const res: any = await c.listEvents({
-        filter: { emitModule: `${SUI.packageId}::${mod}` },
+        filter: { emitModule: `${pkg}::${mod}` },
         ...(after ? { after } : {}),
         order: "ascending",
         limit: 50,
@@ -419,6 +419,7 @@ async function project(e: Ev) {
       const o = await q(db().from("offerings").select("sold_units, raised, space_id, owner").eq("id", j.offering_id).single());
       await ok(db().from("offerings").update({ sold_units: o.sold_units + n(j.units), raised: String(n(o.raised) + n(j.paid)) }).eq("id", j.offering_id));
       await unitEvent(j.offering_id, "purchase", j.buyer, null, n(j.units), j.paid, d, null);
+      await trade(j.offering_id, "primary", j.buyer, o.owner, n(j.units), Math.round(n(j.paid) / Math.max(1, n(j.units))), 0, d);
       await activity({ kind: "units_purchased", space_id: o.space_id, offering_id: j.offering_id, actor: j.buyer, amount: j.paid, sui_digest: d, data: { units: n(j.units) } });
       await notifyAddress(o.owner, { kind: "offering", title: `An investor bought ${n(j.units)} units`, link: `/offerings/${j.offering_id}` });
       return;
@@ -478,6 +479,8 @@ async function project(e: Ev) {
       const b = await holding(j.offering_id, j.buyer);
       await ok(db().from("holdings").upsert({ offering_id: j.offering_id, address: j.buyer, units: b.units + n(j.units), listed_units: b.listed_units, paid: String(n(b.paid) + n(j.units) * n(j.price_per_unit)), claimed: String(b.claimed) }));
       await unitEvent(j.offering_id, "trade", j.buyer, j.seller, n(j.units), String(n(j.units) * n(j.price_per_unit)), d, { listing_id: j.listing_id, fee: String(j.fee) });
+      await trade(j.offering_id, "ask", j.buyer, j.seller, n(j.units), n(j.price_per_unit), n(j.fee), d);
+      await notifyAddress(j.buyer, { kind: "trade", title: `You bought ${n(j.units)} units`, link: `/offerings/${j.offering_id}` });
       const o = await q(db().from("offerings").select("space_id").eq("id", j.offering_id).single());
       await activity({ kind: "units_traded", space_id: o.space_id, offering_id: j.offering_id, actor: j.buyer, amount: String(n(j.units) * n(j.price_per_unit)), sui_digest: d, data: { units: n(j.units) } });
       await notifyAddress(j.seller, { kind: "trade", title: `You sold ${n(j.units)} units`, link: `/offerings/${j.offering_id}` });
@@ -488,6 +491,51 @@ async function project(e: Ev) {
       const h = await holding(j.offering_id, j.seller);
       await ok(db().from("holdings").upsert({ offering_id: j.offering_id, address: j.seller, units: h.units + n(j.units), listed_units: Math.max(0, h.listed_units - n(j.units)), paid: String(h.paid), claimed: String(h.claimed) }));
       await unitEvent(j.offering_id, "cancel", j.seller, null, n(j.units), null, d, { listing_id: j.listing_id });
+      return;
+    }
+    case "ListingExpiry": {
+      await ok(db().from("listings").update({ expires_ms: String(j.expires_ms), v2: true }).eq("id", j.listing_id));
+      return;
+    }
+    case "BidPlaced": {
+      await ok(
+        db().from("bids").upsert(
+          { id: j.bid_id, offering_id: j.offering_id, buyer: j.buyer, units: n(j.units), units_initial: n(j.units), price_per_unit: String(j.price_per_unit), expires_ms: String(j.expires_ms) },
+          { onConflict: "id", ignoreDuplicates: true },
+        ),
+      );
+      await unitEvent(j.offering_id, "bid", j.buyer, null, n(j.units), j.price_per_unit, d, { bid_id: j.bid_id });
+      const o = await q(db().from("offerings").select("owner").eq("id", j.offering_id).single());
+      await notifyAddress(o.owner, { kind: "trade", title: `New buy order: ${n(j.units)} units at ${n(j.price_per_unit) / 1e6} USDC`, link: `/offerings/${j.offering_id}` });
+      return;
+    }
+    case "BidFilled": {
+      const b = await q(db().from("bids").select("units").eq("id", j.bid_id).single());
+      const left = b.units - n(j.units);
+      await ok(db().from("bids").update({ units: left, status: left === 0 ? "filled" : "open" }).eq("id", j.bid_id));
+      const s0 = await holding(j.offering_id, j.seller);
+      await ok(db().from("holdings").upsert({ offering_id: j.offering_id, address: j.seller, units: s0.units - n(j.units), listed_units: s0.listed_units, paid: String(s0.paid), claimed: String(s0.claimed) }));
+      const b0 = await holding(j.offering_id, j.buyer);
+      await ok(db().from("holdings").upsert({ offering_id: j.offering_id, address: j.buyer, units: b0.units + n(j.units), listed_units: b0.listed_units, paid: String(n(b0.paid) + n(j.units) * n(j.price_per_unit)), claimed: String(b0.claimed) }));
+      await unitEvent(j.offering_id, "trade", j.buyer, j.seller, n(j.units), String(n(j.units) * n(j.price_per_unit)), d, { bid_id: j.bid_id, fee: String(j.fee) });
+      await trade(j.offering_id, "bid", j.buyer, j.seller, n(j.units), n(j.price_per_unit), n(j.fee), d);
+      const o = await q(db().from("offerings").select("space_id").eq("id", j.offering_id).single());
+      await activity({ kind: "units_traded", space_id: o.space_id, offering_id: j.offering_id, actor: j.seller, amount: String(n(j.units) * n(j.price_per_unit)), sui_digest: d, data: { units: n(j.units), via: "bid" } });
+      await notifyAddress(j.buyer, { kind: "trade", title: `Your buy order filled: ${n(j.units)} units`, link: `/offerings/${j.offering_id}` });
+      return;
+    }
+    case "BidClosed": {
+      await ok(db().from("bids").update({ status: j.expired ? "expired" : "cancelled", units: n(j.units_left) }).eq("id", j.bid_id));
+      await unitEvent(j.offering_id, j.expired ? "bid_expired" : "bid_cancelled", j.buyer, null, n(j.units_left), j.refunded, d, { bid_id: j.bid_id });
+      return;
+    }
+    case "UnitsTransferred": {
+      const f = await holding(j.offering_id, j.from);
+      await ok(db().from("holdings").upsert({ offering_id: j.offering_id, address: j.from, units: f.units - n(j.units), listed_units: f.listed_units, paid: String(f.paid), claimed: String(f.claimed) }));
+      const t2 = await holding(j.offering_id, j.to);
+      await ok(db().from("holdings").upsert({ offering_id: j.offering_id, address: j.to, units: t2.units + n(j.units), listed_units: t2.listed_units, paid: String(t2.paid), claimed: String(t2.claimed) }));
+      await unitEvent(j.offering_id, "transfer", j.from, j.to, n(j.units), null, d, null);
+      await notifyAddress(j.to, { kind: "trade", title: `You received ${n(j.units)} revenue units`, link: `/offerings/${j.offering_id}` });
       return;
     }
     // ---------------- sponsor ----------------
@@ -525,6 +573,14 @@ async function proofCount(spaceId: string) {
 async function holding(offeringId: string, address: string) {
   const h = await q(db().from("holdings").select("*").eq("offering_id", offeringId).eq("address", address).maybeSingle());
   return { units: h?.units ?? 0, listed_units: h?.listed_units ?? 0, paid: h?.paid ?? "0", claimed: h?.claimed ?? "0" };
+}
+async function trade(offeringId: string, kind: string, buyer: string, seller: string | null, units: number, price: number, fee: number, digest: string) {
+  await ok(
+    db().from("trades").upsert(
+      { offering_id: offeringId, kind, buyer, seller, units, price_per_unit: String(price), fee: String(fee), digest },
+      { onConflict: "digest,offering_id,kind,buyer,units", ignoreDuplicates: true },
+    ),
+  );
 }
 async function unitEvent(offeringId: string, kind: string, address: string | null, counterparty: string | null, units: number | null, amount: any, digest: string, data: any) {
   await ok(db().from("unit_events").insert({ offering_id: offeringId, kind, address, counterparty, units, amount: amount == null ? null : String(amount), digest, data }));

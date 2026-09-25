@@ -403,6 +403,61 @@ public(package) fun transfer_listed<C>(o: &mut SpaceOffering<C>, seller: address
     b.reward_debt = ((b.units + b.listed_units) as u128) * acc;
 }
 
+/// Moves free (unlisted) units between holders, settling both first. Used by bids and transfers.
+public(package) fun transfer_free<C>(o: &mut SpaceOffering<C>, from: address, to: address, units: u64) {
+    assert!(units > 0, EZeroUnits);
+    assert!(o.holders.contains(from), ENoHolding);
+    ensure_holding(o, to);
+    let acc = o.acc_per_unit;
+    let max = o.per_investor_max;
+    let to_is_owner = to == o.owner;
+    {
+        let s = o.holders.borrow_mut(from);
+        assert!(s.units >= units, ENotEnoughUnits);
+        settle(s, acc);
+        s.units = s.units - units;
+        s.reward_debt = ((s.units + s.listed_units) as u128) * acc;
+    };
+    let b = o.holders.borrow_mut(to);
+    settle(b, acc);
+    b.units = b.units + units;
+    if (!to_is_owner) {
+        assert!(b.units + b.listed_units <= max, EOverInvestorMax);
+    };
+    b.reward_debt = ((b.units + b.listed_units) as u128) * acc;
+}
+
+public struct UnitsTransferred has copy, drop { offering_id: ID, from: address, to: address, units: u64 }
+
+/// Verified-to-verified transfer of revenue units (restricted security transfer).
+public fun transfer_units<C>(
+    cfg: &Config,
+    o: &mut SpaceOffering<C>,
+    reg: &KycRegistry,
+    to: address,
+    units: u64,
+    clock: &Clock,
+    ctx: &TxContext,
+) {
+    admin::assert_active(cfg);
+    assert!(o.status == STATUS_TOKENISED, ENotOpen);
+    let from = ctx.sender();
+    assert!(from != to, EZeroUnits);
+    kyc::assert_verified(reg, to, clock);
+    transfer_free(o, from, to, units);
+    event::emit(UnitsTransferred { offering_id: object::id(o), from, to, units });
+}
+
+/// (free units, listed units) held by `who`.
+public fun units_of<C>(o: &SpaceOffering<C>, who: address): (u64, u64) {
+    if (!o.holders.contains(who)) return (0, 0);
+    let h = o.holders.borrow(who);
+    (h.units, h.listed_units)
+}
+
+public fun offering_owner_addr<C>(o: &SpaceOffering<C>): address { o.owner }
+public fun max_per_investor<C>(o: &SpaceOffering<C>): u64 { o.per_investor_max }
+
 fun ensure_holding<C>(o: &mut SpaceOffering<C>, who: address) {
     if (!o.holders.contains(who)) {
         o.holders.add(who, Holding { units: 0, listed_units: 0, reward_debt: 0, claimable: 0, paid: 0 });

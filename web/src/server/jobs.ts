@@ -165,6 +165,25 @@ export async function runScheduler() {
       }
     }
   }
+  // Expired market orders: return escrowed USDC / locked units to their owners.
+  const bids = await q(db().from("bids").select("id, expires_ms").eq("status", "open").gt("expires_ms", 0).lt("expires_ms", now - 5_000));
+  for (const b of bids) {
+    try {
+      const r = await execute(T.expireBid({ bidId: b.id }));
+      await ingestDigest(r.digest);
+    } catch (e: any) {
+      console.warn("[scheduler] expire bid", b.id, String(e?.message ?? e).slice(0, 160));
+    }
+  }
+  const asks = await q(db().from("listings").select("id, offering_id, expires_ms").eq("status", "open").eq("v2", true).gt("expires_ms", 0).lt("expires_ms", now - 5_000));
+  for (const l of asks) {
+    try {
+      const r = await execute(T.expireListingV2({ offeringId: l.offering_id, listingId: l.id }));
+      await ingestDigest(r.digest);
+    } catch (e: any) {
+      console.warn("[scheduler] expire listing", l.id, String(e?.message ?? e).slice(0, 160));
+    }
+  }
   const expired = await q(db().from("objects").select("id").not("sponsor_tier", "is", null).lt("sponsored_until", new Date().toISOString()));
   for (const o of expired) {
     await ok(db().from("objects").update({ sponsor_tier: null }).eq("id", o.id));

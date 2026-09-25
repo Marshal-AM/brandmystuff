@@ -45,4 +45,4 @@ Demo timing: a lease "week" is 10 minutes on this deployment (`Config.week_ms`, 
 ## Operations
 
 - Make someone an admin: `update users set is_admin = true where handle = '<handle>';` then use `/admin` (disputes, takedowns, investor freeze, week length, demo mode, pause, job retries, ENS relayer log).
-- Platform wallet `0xc01a…3848` pays operator gas, the "Get test funds" button (0.2 SUI + 5 USDC per user per 24 h) and is the x402 `payTo` treasury.
+- Platform wallet `0xc01a…3848` pays operator gas, the "Get test funds" button (0.2 SUI + 1 USDC per user per 24 h) and is the x402 `payTo` treasury.

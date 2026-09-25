@@ -76,7 +76,7 @@ export const POST = handler(async (req) => {
   };
   const cfgCall = (fn: string, args: (tx: Transaction) => any[]) => {
     const tx = new Transaction();
-    tx.moveCall({ target: `${SUI.packageId}::admin::${fn}`, arguments: [tx.object(SUI.adminCapId), tx.object(SUI.configId), ...args(tx)] });
+    tx.moveCall({ target: `${SUI.latestPackageId}::admin::${fn}`, arguments: [tx.object(SUI.adminCapId), tx.object(SUI.configId), ...args(tx)] });
     return tx;
   };
   switch (a.action) {

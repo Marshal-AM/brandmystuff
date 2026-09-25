@@ -157,6 +157,8 @@ async function main() {
         const offs = (await tx`select id from offerings where space_id in ${tx(spaces)}`).map((x: any) => x.id);
         if (offs.length) {
           await tx`delete from unit_events where offering_id in ${tx(offs)}`;
+          await tx`delete from trades where offering_id in ${tx(offs)}`;
+          await tx`delete from bids where offering_id in ${tx(offs)}`;
           await tx`delete from listings where offering_id in ${tx(offs)}`;
           await tx`delete from holdings where offering_id in ${tx(offs)}`;
           await tx`delete from acceptances where offering_id in ${tx(offs)}`;
@@ -186,7 +188,7 @@ async function main() {
     await fund(agent.address, 60_000_000n, 1_100_000n);
     for (const a of [owner, adv, inv]) await signIn(a);
 
-    step("F1 wallet: test funds for the advertiser (0.2 SUI + 5 USDC)");
+    step("F1 wallet: test funds for the advertiser (0.2 SUI + 1 USDC)");
     const tf = await api(adv, "/api/wallet/test-funds", { method: "POST" });
     assert.ok(tf.digest);
     const again = await http(adv, "/api/wallet/test-funds", { method: "POST" });
@@ -338,6 +340,63 @@ async function main() {
     await runTx(inv, T.cancelListing({ offeringId, listingId }));
     const off2 = await api(owner, `/api/offerings/${offeringId}`);
     assert.equal(off2.mine.units, 2500, "owner now holds 2000 + 500 units");
+
+    step("F13+ trading: limit bid → market sell into it (partial fill)");
+    const bidTx = await runTx(owner, T.buyOrder({ offeringId, fills: [], rest: { units: 1000, pricePerUnit: 150n, expiresMs: BigInt(Date.now() + 86400_000) } }));
+    const bidId = ev(bidTx, "BidPlaced").bid_id;
+    let mkt = await api(inv, `/api/offerings/${offeringId}`);
+    assert.equal(mkt.market.bestBid, 150, "best bid shows");
+    const invBefore2 = (await balances(inv.address)).usdc;
+    await runTx(inv, T.sellOrder({ offeringId, fills: [{ bidId, units: 600 }] }));
+    assert.equal((await balances(inv.address)).usdc - invBefore2, 89_100n, "seller receives 600×150 minus 1% fee");
+
+    step("F13+ trading: limit ask with expiry → market sweep-buy");
+    const askTx = await runTx(inv, T.sellOrder({ offeringId, fills: [], rest: { units: 1000, pricePerUnit: 300n, expiresMs: BigInt(Date.now() + 86400_000) } }));
+    const askId = ev(askTx, "Listed").listing_id;
+    mkt = await api(owner, `/api/offerings/${offeringId}`);
+    assert.equal(mkt.market.bestAsk, 300);
+    const askRow = mkt.listings.find((l: any) => l.id === askId);
+    assert.ok(askRow?.v2 && Number(askRow.expires_ms) > Date.now(), "v2 listing with expiry indexed");
+    await runTx(owner, T.buyOrder({ offeringId, fills: [{ listingId: askId, units: 700, pricePerUnit: 300n, v2: true }] }));
+
+    step("F13+ trading: crossing limit buy fills the rest of the ask and rests the remainder as a bid (one tx)");
+    const cross = await runTx(owner, T.buyOrder({ offeringId, fills: [{ listingId: askId, units: 300, pricePerUnit: 300n, v2: true }], rest: { units: 200, pricePerUnit: 300n, expiresMs: 0n } }));
+    assert.ok(ev(cross, "Trade") && ev(cross, "BidPlaced"), "fill + resting bid in one transaction");
+    const restBidId = ev(cross, "BidPlaced").bid_id;
+
+    step("F13+ transfers: to a verified investor succeeds, to an unverified address is rejected");
+    const ownerUnitsBefore = (await api(owner, `/api/offerings/${offeringId}`)).mine.units;
+    await runTx(inv, T.transferUnits({ offeringId, to: owner.address, units: 100 }));
+    assert.equal((await api(owner, `/api/offerings/${offeringId}`)).mine.units, ownerUnitsBefore + 100);
+    await assert.rejects(() => execute(T.transferUnits({ offeringId, to: agent.address, units: 1 }), inv.kp), /not a verified investor|ENotVerified|MoveAbort/);
+
+    step("F13+ cancel bids → USDC refunded");
+    const ownerBeforeCancel = (await balances(owner.address)).usdc;
+    await runTx(owner, T.cancelBid({ bidId }));
+    await runTx(owner, T.cancelBid({ bidId: restBidId }));
+    assert.equal((await balances(owner.address)).usdc - ownerBeforeCancel, 400n * 150n + 200n * 300n, "escrowed USDC for remaining bid units refunded");
+
+    step("F13+ expiring ask is returned automatically by the scheduler");
+    const exp = await runTx(inv, T.listUnitsV2({ offeringId, units: 50, pricePerUnit: 500n, expiresMs: BigInt(Date.now() + 45_000) }));
+    const expId = ev(exp, "Listed").listing_id;
+    let expired = false;
+    for (let i = 0; i < 12 && !expired; i++) {
+      await sleep(15_000);
+      const r = await sql`select status from listings where id = ${expId}`;
+      expired = r[0]?.status === "cancelled";
+    }
+    assert.ok(expired, "scheduler expired the listing and returned the units");
+
+    step("F13+ market data: trade hub, price history, portfolio P&L");
+    const hub = await api(null, "/api/trade");
+    const row = hub.offerings.find((o: any) => o.id === offeringId);
+    assert.ok(row.market.volume24h > 0 && row.market.trades >= 4, "hub shows volume and trade count");
+    assert.equal(row.market.lastPrice, 300, "last price = last fill");
+    const off3 = await api(owner, `/api/offerings/${offeringId}`);
+    assert.ok(off3.market.history.length >= 5, "price history includes primary + secondary trades");
+    const pf2 = await api(owner, "/api/portfolio");
+    const hold = pf2.holdings.find((x: any) => x.offering_id === offeringId);
+    assert.ok(hold.pnl.value > 0 && hold.pnl.cost > 0, "portfolio has cost basis and market value");
 
     step("F10 dispute on lease 2 → admin refunds the remainder");
     await runTx(adv, T.openDispute({ escrowId: escrow2 }));

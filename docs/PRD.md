@@ -89,7 +89,7 @@ Card or fiat payments, onramps, gas sponsorship, AI image generation, real KYC p
 | AUTH-3 | Silently create an Ethereum embedded wallet that owns the user's ENS names (never signs in v1) | `embeddedWallets.ethereum.createOnLogin` |
 | AUTH-4 | Sign Sui transactions with the Privy wallet | `PrivySuiSigner` (custom `Signer`) over `useSignRawHash` with `blake2b256(intent‖bytes)` — https://docs.privy.io/recipes/tier-2-wallet-integration |
 | AUTH-5 | Connect an external Sui wallet (Slush, Suiet, Phantom) | `@mysten/dapp-kit-react` — https://sdk.mystenlabs.com/dapp-kit |
-| AUTH-6 | Wallet panel: SUI and USDC balances, copy address, **Send** (SUI/USDC to any address), **"Get test funds"** (the platform key sends 0.2 SUI + 5 USDC, once per user per 24 h), faucet links as fallback | `SuiGrpcClient`; [Tokenisation §12](./TOKENISATION-SPEC.md) |
+| AUTH-6 | Wallet panel: SUI and USDC balances, copy address, **Send** (SUI/USDC to any address), **"Get test funds"** (the platform key sends 0.2 SUI + 1 USDC, once per user per 24 h), faucet links as fallback | `SuiGrpcClient`; [Tokenisation §12](./TOKENISATION-SPEC.md) |
 | AUTH-7 | Choose a handle → `handle.brandmystuff.eth` | [ENS §2–3](./ENS-INTEGRATION.md) |
 
 ### 6.2 Objects & spaces (FR-OBJ)

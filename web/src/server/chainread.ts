@@ -7,7 +7,7 @@ import { sui } from "./sui";
 export async function holdingOf(offeringId: string, address: string) {
   const tx = new Transaction();
   tx.setSender(SUI.platformAddress);
-  tx.moveCall({ target: `${SUI.packageId}::offering::holding_of`, typeArguments: [SUI.usdcType], arguments: [tx.object(offeringId), tx.pure.address(address)] });
+  tx.moveCall({ target: `${SUI.latestPackageId}::offering::holding_of`, typeArguments: [SUI.usdcType], arguments: [tx.object(offeringId), tx.pure.address(address)] });
   const r: any = await sui().simulateTransaction({ transaction: tx, include: { commandResults: true }, checksEnabled: false } as any);
   const t = r.Transaction ?? r.FailedTransaction;
   const rv = t?.commandResults?.[0]?.returnValues ?? r.commandResults?.[0]?.returnValues;

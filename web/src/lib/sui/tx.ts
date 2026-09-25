@@ -5,7 +5,7 @@
 import { Transaction } from "@mysten/sui/transactions";
 import { SUI } from "../deployment";
 
-const t = (m: string, f: string) => `${SUI.packageId}::${m}::${f}`;
+const t = (m: string, f: string) => `${SUI.latestPackageId}::${m}::${f}`;
 const U = SUI.usdcType;
 const bytes = (tx: Transaction, v: Uint8Array | number[]) => tx.pure.vector("u8", Array.from(v));
 const hexBytes = (hex: string) => {
@@ -324,3 +324,132 @@ export function sendCoin(p: { coinType: string; amount: bigint; to: string }) {
 
 export const EVENT = (module: string, name: string) => `${SUI.packageId}::${module}::${name}`;
 export const MODULES = ["admin", "profile", "asset", "kyc", "lease", "offering", "market", "sponsor"] as const;
+
+// === trading v2 (package upgrade 2) ===
+export function listUnitsV2(p: { offeringId: string; units: number; pricePerUnit: bigint; expiresMs: bigint }) {
+  const tx = new Transaction();
+  tx.moveCall({ target: t("market", "list_v2"), typeArguments: [U], arguments: [tx.object(SUI.configId), tx.object(p.offeringId), tx.pure.u64(p.units), tx.pure.u64(p.pricePerUnit), tx.pure.u64(p.expiresMs), tx.object.clock()] });
+  return tx;
+}
+
+export function cancelListingV2(p: { offeringId: string; listingId: string }) {
+  const tx = new Transaction();
+  tx.moveCall({ target: t("market", "cancel_v2"), typeArguments: [U], arguments: [tx.object(p.offeringId), tx.object(p.listingId)] });
+  return tx;
+}
+
+export function expireListingV2(p: { offeringId: string; listingId: string }) {
+  const tx = new Transaction();
+  tx.moveCall({ target: t("market", "expire_listing_v2"), typeArguments: [U], arguments: [tx.object(p.offeringId), tx.object(p.listingId), tx.object.clock()] });
+  return tx;
+}
+
+export type AskFill = { listingId: string; units: number; pricePerUnit: bigint; v2: boolean };
+
+/** Market/limit buy: fills several asks (cheapest first) atomically in one transaction. */
+export function sweepBuy(p: { offeringId: string; fills: AskFill[] }) {
+  const tx = new Transaction();
+  for (const f of p.fills) {
+    tx.moveCall({
+      target: t("market", f.v2 ? "fill_v2" : "fill"),
+      typeArguments: [U],
+      arguments: [
+        tx.object(SUI.configId), tx.object(p.offeringId), tx.object(f.listingId), tx.object(SUI.kycRegistryId),
+        tx.coin({ type: U, balance: f.pricePerUnit * BigInt(f.units) }), tx.pure.u64(f.units), tx.object.clock(),
+      ],
+    });
+  }
+  return tx;
+}
+
+export function placeBid(p: { offeringId: string; units: number; pricePerUnit: bigint; expiresMs: bigint }) {
+  const tx = new Transaction();
+  tx.moveCall({
+    target: t("market", "place_bid"),
+    typeArguments: [U],
+    arguments: [
+      tx.object(SUI.configId), tx.object(p.offeringId), tx.object(SUI.kycRegistryId), tx.coin({ type: U, balance: p.pricePerUnit * BigInt(p.units) }),
+      tx.pure.u64(p.units), tx.pure.u64(p.pricePerUnit), tx.pure.u64(p.expiresMs), tx.object.clock(),
+    ],
+  });
+  return tx;
+}
+
+/** Market/limit sell: sells into several bids (highest first) atomically in one transaction. */
+export function sweepSell(p: { offeringId: string; fills: { bidId: string; units: number }[] }) {
+  const tx = new Transaction();
+  for (const f of p.fills) {
+    tx.moveCall({
+      target: t("market", "sell_into_bid"),
+      typeArguments: [U],
+      arguments: [tx.object(SUI.configId), tx.object(p.offeringId), tx.object(f.bidId), tx.object(SUI.kycRegistryId), tx.pure.u64(f.units), tx.object.clock()],
+    });
+  }
+  return tx;
+}
+
+export function cancelBid(p: { bidId: string }) {
+  const tx = new Transaction();
+  tx.moveCall({ target: t("market", "cancel_bid"), typeArguments: [U], arguments: [tx.object(p.bidId)] });
+  return tx;
+}
+
+export function expireBid(p: { bidId: string }) {
+  const tx = new Transaction();
+  tx.moveCall({ target: t("market", "expire_bid"), typeArguments: [U], arguments: [tx.object(p.bidId), tx.object.clock()] });
+  return tx;
+}
+
+export function transferUnits(p: { offeringId: string; to: string; units: number }) {
+  const tx = new Transaction();
+  tx.moveCall({
+    target: t("offering", "transfer_units"),
+    typeArguments: [U],
+    arguments: [tx.object(SUI.configId), tx.object(p.offeringId), tx.object(SUI.kycRegistryId), tx.pure.address(p.to), tx.pure.u64(p.units), tx.object.clock()],
+  });
+  return tx;
+}
+
+/**
+ * Buy order: fills crossing asks (cheapest first) and, for a limit order, rests the remainder as a bid —
+ * all in one atomic transaction.
+ */
+export function buyOrder(p: { offeringId: string; fills: AskFill[]; rest?: { units: number; pricePerUnit: bigint; expiresMs: bigint } | null }) {
+  const tx = p.fills.length ? sweepBuy({ offeringId: p.offeringId, fills: p.fills }) : new Transaction();
+  if (p.rest && p.rest.units > 0) {
+    tx.moveCall({
+      target: t("market", "place_bid"),
+      typeArguments: [U],
+      arguments: [
+        tx.object(SUI.configId), tx.object(p.offeringId), tx.object(SUI.kycRegistryId), tx.coin({ type: U, balance: p.rest.pricePerUnit * BigInt(p.rest.units) }),
+        tx.pure.u64(p.rest.units), tx.pure.u64(p.rest.pricePerUnit), tx.pure.u64(p.rest.expiresMs), tx.object.clock(),
+      ],
+    });
+  }
+  return tx;
+}
+
+/** Sell order: sells into crossing bids (highest first) and, for a limit order, lists the remainder. */
+export function sellOrder(p: { offeringId: string; fills: { bidId: string; units: number }[]; rest?: { units: number; pricePerUnit: bigint; expiresMs: bigint } | null }) {
+  const tx = p.fills.length ? sweepSell({ offeringId: p.offeringId, fills: p.fills }) : new Transaction();
+  if (p.rest && p.rest.units > 0) {
+    tx.moveCall({ target: t("market", "list_v2"), typeArguments: [U], arguments: [tx.object(SUI.configId), tx.object(p.offeringId), tx.pure.u64(p.rest.units), tx.pure.u64(p.rest.pricePerUnit), tx.pure.u64(p.rest.expiresMs), tx.object.clock()] });
+  }
+  return tx;
+}
+
+/** Plans fills against a price-sorted book for `units`, optionally bounded by a limit price. */
+export function planFills<T extends { units: number; price_per_unit: string | number }>(book: T[], units: number, limit: bigint | null, side: "buy" | "sell") {
+  const fills: { order: T; units: number }[] = [];
+  let left = units;
+  for (const o of book) {
+    if (left <= 0) break;
+    const px = BigInt(o.price_per_unit);
+    if (limit != null && (side === "buy" ? px > limit : px < limit)) break;
+    const take = Math.min(left, o.units);
+    fills.push({ order: o, units: take });
+    left -= take;
+  }
+  const cost = fills.reduce((a, f) => a + BigInt(f.order.price_per_unit) * BigInt(f.units), 0n);
+  return { fills, filled: units - left, left, cost, avg: units - left > 0 ? Number(cost) / (units - left) : 0 };
+}

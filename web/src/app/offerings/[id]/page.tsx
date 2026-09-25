@@ -6,6 +6,7 @@ import { useSession } from "@/lib/client/session";
 import { buyPrimary, cancelListing, claim, closeOffering, fillListing, listUnits, refundOffering } from "@/lib/sui/tx";
 import { WALRUS } from "@/lib/deployment";
 import { Badge, Button, Card, Empty, Field, GradeBadge, Img, Input, Spinner, Stat, shortAddr, suiscan, useAction, usdc } from "@/components/ui";
+import { MyOrders, OrderBook, PriceChart, TradeTicket, px } from "@/components/trading";
 import { SignInButtons } from "@/components/shell";
 
 export default function Offering({ params }: { params: Promise<{ id: string }> }) {
@@ -81,26 +82,23 @@ export default function Offering({ params }: { params: Promise<{ id: string }> }
               </div>
             )}
           </Card>
-          <Card>
-            <h2 className="mb-3 font-semibold">Order book</h2>
-            {!data.listings.length ? <p className="text-sm text-muted">No units for sale on the secondary market.</p> : (
-              <div className="space-y-2">
-                {data.listings.map((l: any) => (
-                  <div key={l.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line p-3 text-sm" data-testid="listing">
-                    <span>{l.units.toLocaleString()} units @ {usdc(l.price_per_unit, 4)} · by {shortAddr(l.seller)}</span>
-                    {l.seller === address ? (
-                      <Button size="sm" variant="secondary" loading={busy === `c${l.id}`} onClick={() => act(`c${l.id}`, () => run(cancelListing({ offeringId: id, listingId: l.id })).then(() => refetch()), "Listing cancelled")}>Cancel</Button>
-                    ) : mine?.verified ? (
-                      <span className="flex gap-2">
-                        <Input className="w-24" placeholder="units" value={fillU[l.id] ?? ""} onChange={(e) => setFillU({ ...fillU, [l.id]: e.target.value })} />
-                        <Button size="sm" loading={busy === `f${l.id}`} disabled={!(Number(fillU[l.id]) > 0 && Number(fillU[l.id]) <= l.units)} onClick={() => act(`f${l.id}`, () => run(fillListing({ offeringId: id, listingId: l.id, units: Number(fillU[l.id]), amount: BigInt(l.price_per_unit) * BigInt(Number(fillU[l.id])) })).then(() => refetch()), "Bought")} data-testid="fill">Buy</Button>
-                      </span>
-                    ) : null}
-                  </div>
-                ))}
+          {o.status === "tokenised" && data.market && (
+            <Card className="space-y-4" >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-semibold">Market</h2>
+                <span className="text-xs text-muted">Secondary trading between verified investors · 1% fee</span>
               </div>
-            )}
-          </Card>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+                <Stat label="Last price" value={`${px(data.market.lastPrice)}`} sub={<span className={data.market.change24hPct >= 0 ? "text-emerald-700" : "text-bad"}>{data.market.change24hPct >= 0 ? "+" : ""}{data.market.change24hPct.toFixed(1)}% 24h</span>} />
+                <Stat label="Best bid / ask" value={`${px(data.market.bestBid)} / ${px(data.market.bestAsk)}`} sub={data.market.spread != null ? `spread ${px(data.market.spread)}` : "no spread yet"} />
+                <Stat label="24h volume" value={usdc(data.market.volume24h, 4)} sub={`${data.market.units24h.toLocaleString()} units · ${data.market.trades} trades total`} />
+                <Stat label="Income / unit" value={`${px(data.market.incomePerUnit)}`} sub={`${data.market.incomeYieldPct.toFixed(2)}% of issue price`} />
+                <Stat label="Market cap" value={usdc(data.market.marketCap, 2)} sub="10,000 units × last" />
+              </div>
+              <PriceChart history={data.market.history} />
+              <OrderBook bids={data.bids} asks={data.listings} me={address} />
+            </Card>
+          )}
           <Card>
             <h2 className="mb-3 font-semibold">Holders & activity</h2>
             <div className="grid gap-4 md:grid-cols-2">
@@ -125,6 +123,12 @@ export default function Offering({ params }: { params: Promise<{ id: string }> }
                   <div className="text-sm text-muted">Your position</div>
                   <div className="mt-1 text-2xl font-semibold">{(mine.units + mine.listed).toLocaleString()} units</div>
                   <div className="text-sm text-muted">{mine.listed > 0 && `${mine.listed} listed · `}{((mine.units + mine.listed) / 100).toFixed(2)}% of the series</div>
+                  {data.market && (mine.units + mine.listed) > 0 && (
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                      <div>Cost basis<div className="font-semibold">{usdc(mine.costBasis, 4)}</div></div>
+                      <div>Market value<div className="font-semibold">{usdc((mine.units + mine.listed) * data.market.lastPrice, 4)}</div></div>
+                    </div>
+                  )}
                   <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-50 p-3">
                     <div><div className="text-xs text-emerald-800">Claimable</div><div className="font-semibold text-emerald-900" data-testid="claimable">{usdc(mine.claimable)}</div></div>
                     <Button size="sm" disabled={BigInt(mine.claimable) === 0n} loading={busy === "claim"} onClick={() => act("claim", () => run(claim({ offeringId: id })).then(() => refetch()), "Claimed")} data-testid="claim">Claim</Button>
@@ -157,17 +161,11 @@ export default function Offering({ params }: { params: Promise<{ id: string }> }
                   <Button className="mt-2 w-full" loading={busy === "close"} onClick={() => act("close", () => run(closeOffering({ offeringId: id, spaceId: o.space_id })).then(() => refetch()), "Offering closed")} data-testid="close-offering">Close offering</Button>
                 </Card>
               )}
-              {o.status === "tokenised" && mine && mine.units > 0 && (
-                <Card className="space-y-3">
-                  <h3 className="font-semibold">Sell units</h3>
-                  {!mine.verified && <p className="text-xs text-muted">Buyers must be verified investors.</p>}
-                  <div className="grid grid-cols-2 gap-2">
-                    <Field label="Units"><Input inputMode="numeric" value={listU} onChange={(e) => setListU(e.target.value.replace(/\D/g, ""))} data-testid="list-units" /></Field>
-                    <Field label="USDC / unit"><Input inputMode="decimal" value={listP} onChange={(e) => setListP(e.target.value)} data-testid="list-price" /></Field>
-                  </div>
-                  <Button className="w-full" loading={busy === "list"} disabled={!(Number(listU) > 0 && Number(listU) <= mine.units && Number(listP) > 0)} onClick={() => act("list", () => run(listUnits({ offeringId: id, units: Number(listU), pricePerUnit: BigInt(Math.round(Number(listP) * 1e6)) })).then(() => { setListU(""); refetch(); }), "Listed")} data-testid="list">List for sale</Button>
-                  <p className="text-xs text-muted">1% market fee on fills. Listed units keep earning until sold.</p>
-                </Card>
+              {o.status === "tokenised" && (
+                <>
+                  <TradeTicket offering={o} bids={data.bids} asks={data.listings} mine={mine} onDone={() => refetch()} />
+                  <MyOrders offeringId={id} bids={mine?.myBids ?? []} asks={mine?.myListings ?? []} onDone={() => refetch()} />
+                </>
               )}
             </>
           )}

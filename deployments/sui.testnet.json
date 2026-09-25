@@ -14,5 +14,16 @@
     "AdSpace": "0xa4c8b5c1a2e73adda32b673d063e3f1f24867b656bf70d4959d9eb2447aa5b65",
     "AdLease": "0xb3a596174e94791c6b7aa16ae3e334ed85d0a182836df76bf9dd78e2ff01fa57",
     "ListedObject": "0xf61535fd6fcdee7db04d561eb8fb692eb44cbb77ff68b0ad5ca3d14d02fcb53f"
-  }
+  },
+  "latestPackageId": "0x82cf2dff74c32618ca6cfeb8223b710933dce573514011e30ffe84bda9132a46",
+  "upgrades": [
+    {
+      "version": 2,
+      "packageId": "0x82cf2dff74c32618ca6cfeb8223b710933dce573514011e30ffe84bda9132a46",
+      "adds": [
+        "market v2 (expiring listings, bids)",
+        "offering::transfer_units"
+      ]
+    }
+  ]
 }

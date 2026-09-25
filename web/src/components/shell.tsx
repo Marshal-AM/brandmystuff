@@ -136,6 +136,7 @@ export default function Shell({ children }: { children: ReactNode }) {
   const nav = [
     ["/", "Explore"],
     ["/offerings", "Invest"],
+    ["/trade", "Trade"],
     ["/list", "List your stuff"],
     ["/dashboard", "Dashboard"],
     ["/messages", "Messages"],

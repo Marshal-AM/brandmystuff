@@ -73,7 +73,7 @@ Each flow lists: **UX steps**, then the **system steps** that implement them, wi
 4. **Wallet panel:**
    - SUI and USDC balances and a copy-address button;
    - **Send** (SUI or USDC to any address);
-   - **"Get test funds"**: the platform key sends 0.2 SUI + 5 USDC, once per user per 24 h;
+   - **"Get test funds"**: the platform key sends 0.2 SUI + 1 USDC, once per user per 24 h;
    - faucet links as a fallback.
    Users pay their own (tiny) SUI gas.
 5. The user signs `profile::create`.
