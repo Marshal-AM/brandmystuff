@@ -53,7 +53,7 @@ export async function payScout(userId: string, runId: string, origin: string, em
     const ba = await q(db().from("brand_agents").select("ens_name, ens_status").eq("user_id", userId).single());
     const idHeaders: Record<string, string> = ba.ens_status === "registered" && ba.ens_name ? { "x-agent-ens": ba.ens_name } : {};
     const creativeUrl = u.brand_logo_blob_id ? blobUrl(u.brand_logo_blob_id) : `${origin}/api/agent/creative/${userId}`;
-    const body = JSON.stringify({ spaceId: pick.id, weeks: 1, creativeUrl, landingUrl: u.website || `${origin}/${u.ens_name ?? ""}`, brand: (u.brand_name ?? u.handle ?? "brand").slice(0, 60) });
+    const body = JSON.stringify({ spaceId: pick.id, weeks: 1, creativeUrl, landingUrl: u.website || `${process.env.APP_URL ?? origin}/${u.ens_name ?? ""}`, brand: (u.brand_name ?? u.handle ?? "brand").slice(0, 60) });
     const first = await fetch(url, { method: "POST", headers: { "content-type": "application/json", ...idHeaders }, body });
     if (first.status !== 402) throw new Error(`Expected 402 from the x402 gate, got ${first.status}: ${(await first.text()).slice(0, 200)}`);
     const prHeader = first.headers.get("payment-required");
