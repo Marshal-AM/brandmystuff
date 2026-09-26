@@ -172,7 +172,7 @@ The chain events that took the protocol from nothing to a working marketplace, a
    - [4.7 The AI judge: Ad-Space Quality Score](#47-the-ai-judge-ad-space-quality-score)
    - [4.8 Proof of display](#48-proof-of-display)
    - [4.9 Tokenisation, legal pack and KYC](#49-tokenisation-legal-pack-and-kyc)
-   - [4.10 Agentic commerce: x402, MCP and the Scout agent](#410-agentic-commerce-x402-mcp-and-the-scout-agent)
+   - [4.10 Agentic commerce (summary)](#410-agentic-commerce-summary)
    - [4.11 Communication: chat, notifications, activity](#411-communication-chat-notifications-activity)
    - [4.12 End-to-end journeys](#412-end-to-end-journeys)
    - [4.13 Testing](#413-testing)
@@ -202,13 +202,25 @@ The chain events that took the protocol from nothing to a working marketplace, a
    - [7.2 Bootstrapping brandmystuff.eth on ENSv2](#72-bootstrapping-brandmystuffeth-on-ensv2)
    - [7.3 The naming tree](#73-the-naming-tree)
    - [7.4 Records: the public face of on-chain state](#74-records-the-public-face-of-on-chain-state)
-   - [7.5 The Sui-to-ENS relayer](#75-the-sui-to-ens-relayer)
-   - [7.6 Reading and verifying](#76-reading-and-verifying)
-   - [7.7 ENS for agents](#77-ens-for-agents)
-   - [7.8 ENS in the interface](#78-ens-in-the-interface)
-   - [7.9 A name's life, end to end](#79-a-names-life-end-to-end)
-8. [Roadmap](#8-roadmap)
-9. [Conclusion](#9-conclusion)
+   - [7.5 Enhanced Access Control: split write rights](#75-enhanced-access-control-split-write-rights)
+   - [7.6 Leases: expiring names the advertiser holds](#76-leases-expiring-names-the-advertiser-holds)
+   - [7.7 Brand agents as namespaces](#77-brand-agents-as-namespaces)
+   - [7.8 The Sui-to-ENS relayer](#78-the-sui-to-ens-relayer)
+   - [7.9 Reading, verifying and proving permissions](#79-reading-verifying-and-proving-permissions)
+   - [7.10 ENS for outside agents](#710-ens-for-outside-agents)
+   - [7.11 ENS in the interface](#711-ens-in-the-interface)
+   - [7.12 A name's life, end to end](#712-a-names-life-end-to-end)
+8. [Agents](#8-agents)
+   - [8.1 The agents at a glance](#81-the-agents-at-a-glance)
+   - [8.2 Scout, the brand's ad-buying agent](#82-scout-the-brands-ad-buying-agent)
+   - [8.3 Scout's on-chain leash: the budget mandate](#83-scouts-on-chain-leash-the-budget-mandate)
+   - [8.4 Scout's ENS identity, permissions and receipts](#84-scouts-ens-identity-permissions-and-receipts)
+   - [8.5 External AI agents: MCP, x402 and ENS discovery](#85-external-ai-agents-mcp-x402-and-ens-discovery)
+   - [8.6 The AI judges](#86-the-ai-judges)
+   - [8.7 The platform's autonomous operators](#87-the-platforms-autonomous-operators)
+   - [8.8 Guardrails that apply to every agent](#88-guardrails-that-apply-to-every-agent)
+9. [Roadmap](#9-roadmap)
+10. [Conclusion](#10-conclusion)
 
 ---
 
@@ -667,49 +679,16 @@ The operator then writes a record to the on-chain [`KycRegistry`](https://github
 
 [`marketStats`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/marketdata.ts#L21) computes last price, spread, 24-hour volume, income per unit, income yield and market cap for every offering.
 
-### 4.10 Agentic commerce: x402, MCP and the Scout agent
+### 4.10 Agentic commerce (summary)
 
-brandmystuff treats AI agents as first-class buyers.
+brandmystuff treats AI agents as first-class participants:
 
-**x402 on Sui.** A self-hosted facilitator implements the x402 v2 `exact` scheme on `sui:testnet` ([`x402.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/x402.ts)).
+- a brand-owned buying agent, **Scout**, with an on-chain budget mandate and its own ENS identity;
+- an **MCP server** and **x402 payments on Sui**, so any outside agent can discover, quote and buy;
+- **AI judges** that check objects, spaces and proofs;
+- **autonomous operators** that keep Sui, ENS and four EVM chains in sync.
 
-1. An agent calls a paid endpoint and receives **HTTP 402** with payment requirements.
-2. It signs a USDC transfer transaction and retries with a `PAYMENT-SIGNATURE` header.
-3. The server verifies the signature, rejects replays, and **simulates** the transaction to confirm the treasury receives exactly the quoted amount ([`verifyPayment`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/x402.ts#L63)).
-4. It settles, then fulfils the order through the operator ([`fulfil`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/x402flows.ts#L114)), which calls `lease::book_for` or `sponsor::buy_sponsorship_for` on the agent's behalf.
-5. If fulfilment fails, the USDC is refunded automatically.
-
-The details are in [section 5.6](#56-x402-on-sui).
-
-**MCP server.** [`/api/mcp`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/mcp/route.ts#L13-L27) speaks JSON-RPC 2.0 and exposes five tools:
-
-- `search_spaces`,
-- `get_space`,
-- `get_object`,
-- `quote_lease`,
-- `quote_sponsorship`.
-
-Every quote comes back with the exact x402 endpoint and body to pay with.
-
-**Scout, the brand agent.** Every brand account gets exactly one agent ([`agentFor`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/keys.ts#L33)). Its Ed25519 key is generated server-side and sealed with AES-256-GCM at rest ([`seal`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/keys.ts#L19)).
-
-The brand funds an on-chain **budget mandate** ([`mandate.move`](https://github.com/Marshal-AM/brandmystuff/blob/main/move/mandate/sources/mandate.move)) that names the agent as the only spender and the platform treasury as the only payee, with a per-payment cap, a total budget and an expiry. [`attachMandate`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/keys.ts#L77) refuses any mandate that doesn't meet those conditions.
-
-A Scout run ([`runScout`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/scout.ts#L168)) has four steps:
-
-1. **Decode the brand.** Gemini reads the brand's name, story, location and logo and produces a "brand DNA" across three lands: Identity, Voice and Audience ([`decodeBrand`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/scout.ts#L94)).
-2. **Discover through ENS.** For each candidate space, it reads the live ENS text records (AQS, grade, price, placement, dimensions) through the Sepolia Universal Resolver and verifies each ENS name against its Sui object ([lines 219–235](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/scout.ts#L219-L235)).
-3. **Score the fit.** One Gemini call rates every space on audience (30%), context (20%), visibility (20%), safety (15%) and value (15%) ([`FACTORS`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/scout.ts#L103)).
-4. **Pick exactly one.** It chooses the best space that is both affordable under the mandate and ENS-verified, and explains why ([line 288](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/scout.ts#L288)).
-
-Payment follows ([`payScout`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/pay.ts#L24)):
-
-1. The agent requests a quote and receives a 402.
-2. It checks the offer against its mandate.
-3. It signs `mandate::spend` with its own key.
-4. It submits over x402 and gets the booking back.
-
-A failed booking returns the funds to the mandate. The whole run is rendered as a cinematic journey in [`components/scout`](https://github.com/Marshal-AM/brandmystuff/tree/main/web/src/components/scout), from brand decoding through a black hole, a platform scan, the results and the payment.
+Each one is covered in depth in [section 8, Agents](#8-agents).
 
 ### 4.11 Communication: chat, notifications, activity
 
@@ -1263,131 +1242,195 @@ The UI only offers chains that can deliver, and the engine only releases to chai
 
 ### 7.1 Why ENS
 
-A marketplace of physical things needs names people can say out loud. `lid-center.macbook-pro-14.sam.brandmystuff.eth` tells you at a glance whose object this is, which object it is and which spot on it. Behind that name, public records carry the listing's quality score, price, placement and status, all mirrored from Sui and all readable by any ENS-aware wallet, app or agent without asking our API.
+A marketplace of physical things needs names people can say out loud. `lid-center.macbook-pro-14.sam.brandmystuff.eth` tells you at a glance whose object it is, which object and which spot on it. Behind that name, public records carry the listing's quality score, price, placement and status, all mirrored from Sui and all readable by any ENS-aware wallet, app or agent without asking our API.
 
-brandmystuff uses **ENSv2 on Sepolia**, the new registry architecture with per-name subregistries, permissioned resolvers and role-based access, and builds the whole naming tree on it. The design document is [docs/ENS-INTEGRATION.md](https://github.com/Marshal-AM/brandmystuff/blob/main/docs/ENS-INTEGRATION.md).
+brandmystuff is built on **ENSv2 on Sepolia** and uses the parts of ENSv2 that matter most for a marketplace:
+
+- **Hierarchical registries.** Every parent name gets its own subregistry.
+- **Permissioned Resolvers.** Each identity gets its own resolver.
+- **Enhanced Access Control.** A shared, role-based permission system for registries and resolvers, used to delegate precise rights.
+
+The result can be summed up in one line: **you can edit your description, but you can't edit your score**, and the ENS contracts enforce that, not our API. The design document is [docs/ENS-INTEGRATION.md](https://github.com/Marshal-AM/brandmystuff/blob/main/docs/ENS-INTEGRATION.md).
 
 ### 7.2 Bootstrapping brandmystuff.eth on ENSv2
 
-[`scripts/ens-bootstrap.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-bootstrap.ts) is idempotent and stands the whole namespace up from scratch:
+[`scripts/ens-bootstrap.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-bootstrap.ts) is idempotent and stands the namespace up from scratch:
 
-1. **Deploys the platform resolver**, a PermissionedResolver proxy created through the ENSv2 VerifiableFactory with a deterministic salt ([`deployProxy`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/client.ts#L72-L87)).
+1. **Deploys the platform resolver**, a PermissionedResolver proxy created through the ENSv2 VerifiableFactory with a deterministic salt ([`deployProxy`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/client.ts#L72)).
 2. **Deploys the root registry** for the children of `brandmystuff.eth`, a UserRegistry proxy.
-3. **Registers `brandmystuff.eth`** through the ETHRegistrar's commit-reveal flow: commitment, price quote in the registrar's mock USDC, a wait, then registration for five years pointing at our registry and resolver ([lines 59–87](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-bootstrap.ts#L59-L87)).
-4. **Sets the canonical parent** so ENSv2 can discover the name's place in the tree ([line 94](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-bootstrap.ts#L94)).
+3. **Registers `brandmystuff.eth`** through the ETHRegistrar's commit-reveal flow: commitment, price quote in the registrar's mock USDC, a wait, then a five-year registration pointing at our registry and resolver ([lines 59–87](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-bootstrap.ts#L59-L87)).
+4. **Sets the canonical parent** so ENSv2 can place the name in the tree ([line 94](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-bootstrap.ts#L94)).
 5. **Writes platform records** on `brandmystuff.eth`: description, URL, class `Platform`, the Sui package ID and network, the AQS rubric version, a Sui address (coin type 784) and an Ethereum address ([lines 96–106](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-bootstrap.ts#L96-L106)).
-6. **Registers `agent.brandmystuff.eth`** and writes its agent-discovery records ([lines 108–118](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-bootstrap.ts#L108-L118)).
+6. **Registers `agent.brandmystuff.eth`** with its agent-discovery records ([lines 108–118](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-bootstrap.ts#L108-L118)).
 
-The ENSv2 contracts and role bitmaps used throughout are in [`server/ens/contracts.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/contracts.ts#L7-L55), with ABIs taken from `ensdomains/contracts-v2`.
+The ENSv2 contracts, registry roles, resolver roles and the key sets each identity may write are all in [`server/ens/contracts.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/contracts.ts), with ABIs from `ensdomains/contracts-v2`.
 
 ### 7.3 The naming tree
 
-| Level | Example | Created by |
-|---|---|---|
-| Platform | `brandmystuff.eth` | [bootstrap](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-bootstrap.ts#L82-L87) |
-| Agent | `agent.brandmystuff.eth` | [bootstrap](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-bootstrap.ts#L109) |
-| Account | `sam.brandmystuff.eth` | [`ensureAccountName`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L135-L162) |
-| Object | `macbook-pro-14.sam.brandmystuff.eth` | [`ensureObjectName`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L164-L195) |
-| Ad space | `lid-center.macbook-pro-14.sam.brandmystuff.eth` | [`ensureSpaceName`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L197-L213) |
-| Lease | `l-19.lid-center.macbook-pro-14.sam.brandmystuff.eth` | [`registerLeaseName`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L244-L270) |
+| Level | Example | Held by | Created by |
+|---|---|---|---|
+| Platform | `brandmystuff.eth` | Platform key | [bootstrap](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-bootstrap.ts#L82-L87) |
+| Discovery agent | `agent.brandmystuff.eth` | Platform key | [bootstrap](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-bootstrap.ts#L109) |
+| Account | `sam.brandmystuff.eth` | User's wallet | [`ensureAccountName`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L171) |
+| Object | `macbook-pro-14.sam.brandmystuff.eth` | Owner's wallet | [`ensureObjectName`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L200) |
+| Ad space | `lid-center.macbook-pro-14.sam.brandmystuff.eth` | Owner's wallet | [`ensureSpaceName`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L233) |
+| Lease | `l-19.lid-center.macbook-pro-14.sam.brandmystuff.eth` | Advertiser's wallet, until the lease ends | [`registerLeaseName`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L280) |
+| Brand agent | `scout.apple.brandmystuff.eth` | Brand's wallet (the agent has its own key) | [`ensureAgentIdentity`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/permissions.ts#L167) |
+| Agent receipt | `buy-3.scout.apple.brandmystuff.eth` | Brand's wallet (registered by the agent itself) | [`writeAgentReceipt`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/permissions.ts#L273) |
 
-**Labels.**
+**How labels are chosen:**
 
-- Handles are chosen at onboarding, and names such as `admin`, `agent` and `lease` are reserved ([profile route](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/me/profile/route.ts)).
+- Handles are picked at onboarding, and names such as `admin`, `agent` and `lease` are reserved ([profile route](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/me/profile/route.ts)).
 - Object labels are slugged from the object's name, with collision suffixes ([`objects/check`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/objects/check/route.ts)).
 - Space labels come from the space name ([`spaces/analyze`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/spaces/analyze/route.ts)).
 - The **lease label is minted on-chain**: `lease::book_internal` builds `"l-" + sequence` inside Move, so Sui and ENS agree on the name by construction.
+- Profiles, objects and spaces store `ens_name` and `ens_namehash` inside their Move objects.
 
-Each name is written into the Sui transaction that creates its object. Profiles, objects and spaces store `ens_name` and `ens_namehash` on-chain.
+**Subregistries on demand.** ENSv2 gives every parent its own registry. [`childRegistry`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L46) deploys a UserRegistry proxy the first time a parent gets a child, wires it into the grandparent with `setSubregistry` and caches the address.
 
-**Subregistries on demand.** ENSv2 gives every parent its own registry. [`childRegistry`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L46-L58) deploys a UserRegistry proxy for a parent the first time it gets a child, wires it into the grandparent with `setSubregistry` and caches the address.
-
-**Ownership.** Every name is owned by its user's **Privy Ethereum wallet**. Leases are owned by the advertiser's wallet, and agents without an EVM account fall back to platform custody. Names get only the `SET_RESOLVER` role and never `CAN_TRANSFER_ADMIN`, so they can't be detached from the marketplace that gives them meaning.
-
-**Lifecycle.** Names follow their on-chain objects:
-
-- a lease label is **reserved** at booking ([`reserveName`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/client.ts#L147-L156));
-- it is **registered** when the creative is approved;
-- it is **renewed** when the lease is extended;
-- it is **unregistered** when the lease is rejected, expires or is refunded after a dispute.
-
-The lease name's expiry equals the lease's end.
+**Nothing is transferable.** No name is ever granted `CAN_TRANSFER_ADMIN`, so a name can't be detached from the marketplace that gives its records meaning.
 
 ### 7.4 Records: the public face of on-chain state
 
-All records live on the platform resolver. Each write is a single `multicall` of text, data and address records ([`setRecords`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/client.ts#L174-L185)). Sui addresses are stored under **coin type 784** ([`suiAddr`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/client.ts#L187)), so an ENS name resolves to a Sui address natively.
+Each write is a single `multicall` of text, data and address records ([`setRecords`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/client.ts#L174)). Sui addresses are stored under **coin type 784** ([`suiAddr`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/client.ts#L187)), so an ENS name resolves to a Sui address natively. Every record is either **set by the holder** or **attested by brandmystuff**. [Section 7.5](#75-enhanced-access-control-split-write-rights) explains how the contracts enforce the difference.
 
-| Name kind | Text records | Data / address records |
+| Name kind | Set by the holder | Attested by brandmystuff |
 |---|---|---|
-| **Account** | `class` (Person or Organization), `name`, `description`, `location`, `com.twitter`, `url`, `avatar` (a Walrus URL), `eth.brandmystuff.role`, `eth.brandmystuff.attested.verified` | Sui address (784), Ethereum address (60), the Sui profile ID |
-| **Object** | `class` = PhysicalAsset, `description`, `avatar` (the hero photo), type, tags, make, model, color, city, status, `attested.sponsored`, `attested.sponsored-until` | The Sui `ListedObject` ID, the owner's Sui address |
-| **Ad space** | `class` = AdSpace, `description`, `avatar` (the close-up), dimensions, placement, **`attested.aqs`**, **`attested.grade`**, **`attested.confidence`**, **`attested.rank`**, **`price`**, status, `token` (when tokenised) | The Sui `AdSpace` ID, the hash of the Walrus **score report** |
-| **Lease** | `class` = AdLease, `avatar` (the creative), `url` (the tracked landing link), brand, **`attested.state`**, **`attested.proofs`** | The Sui `LeaseEscrow` ID, the creative hash, the advertiser's Sui address |
-| **Agent** | `class` = Agent, `description`, `agent-context`, **`agent-endpoint[mcp]`** (ENSIP-26), **`eth.brandmystuff.x402`** | — |
+| **Account** | `name`, `description`, `avatar`, `url`, `com.twitter`, `location`, `eth.brandmystuff.brand` | `class`, `eth.brandmystuff.role`, `attested.verified`, Sui address (784), Ethereum address (60), the Sui profile ID |
+| **Object** | `description`, `avatar` | `class = PhysicalAsset`, type, tags, make, model, city, status, `attested.sponsored`, `attested.sponsored-until`, the Sui `ListedObject` ID |
+| **Ad space** | `description`, `avatar` | `class = AdSpace`, dimensions, placement, **`attested.aqs`**, **`attested.grade`**, **`attested.confidence`**, **`attested.rank`**, **`price`**, status, `token`, the Sui `AdSpace` ID, the **score-report** hash |
+| **Lease** | `url` (landing page), `avatar` (creative), `brand` | `class = AdLease`, **`attested.state`**, **`attested.proofs`**, `attested.creative`, `booked-by` (for Scout bookings), the Sui `LeaseEscrow` ID |
+| **Brand agent** | `agent-context`, `agent-endpoint[x402]`, `agent-endpoint[mcp]`, `agent.last-run`, `agent.last-pick` (written by the agent's key) | `class = Agent`, `attested.agent.status`, `attested.mandate.{budget,remaining,cap,expires}`, the mandate ID, Sui and EVM addresses |
+| **Agent receipt** | `receipt.pick`, `receipt.reason` (written by the agent's key) | `class = AgentReceipt`, `attested.payment`, `attested.amount`, `attested.lease` |
 
-The space records ([`spaceRecords`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L215-L237)) are essentially the **ad-quality datasheet** on a public, permissionless rail. The `attested.*` keys are copied only from verified on-chain events, never from user input.
+The space records ([`spaceRecords`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L251)) are effectively the **ad-quality datasheet** on a public, permissionless rail. Attested keys are copied only from verified on-chain events, never from user input.
 
-### 7.5 The Sui-to-ENS relayer
+### 7.5 Enhanced Access Control: split write rights
 
-Users never sign an ENS transaction and never pay Sepolia gas. The platform key relays every write, driven by Sui events:
+This is the core of the ENS integration, added in [`server/ens/permissions.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/permissions.ts).
 
-| Sui event | ENS job | Effect |
+**Why one resolver per identity.** ENSv2 PermissionedResolver roles are scoped per **record key** (for example `ROLE_SET_TEXT` on `description`) and apply **resolver-wide**. They are never scoped to a single name. Granting a user `description` on the shared platform resolver would let them edit `description` on every name it serves. So each identity gets its **own PermissionedResolver**, deployed through the VerifiableFactory, which is the pattern ENSv2 recommends:
+
+| Resolver | Serves | Who holds key-scoped `ROLE_SET_TEXT` | Keys they may write |
+|---|---|---|---|
+| `user:<id>` | That user's account, object, space and lease names | The user's Privy Ethereum wallet | [`OWNER_TEXT_KEYS`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/contracts.ts#L56): name, description, avatar, url, com.twitter, location, brand |
+| `agent:<id>` | `scout.<brand>` and its `buy-<n>` receipts | The agent's own EVM key | [`AGENT_TEXT_KEYS`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/contracts.ts#L58): ENSIP-26 records, run log, receipt pick and reason |
+
+**What the platform keeps:**
+
+- It keeps every root and admin role on every resolver, so **only it** can write `eth.brandmystuff.attested.*`, `price`, `status` and `sui.object`, and only it can grant or revoke roles.
+- No user or agent is ever given an admin role. ENSv2 can't scope admin rights to a single key.
+- Grants are batched into one resolver `multicall` ([`grantTextKeys`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/client.ts#L202)), and revocations are per key ([`revokeTextKeys`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/client.ts#L213)).
+
+**Moving a user onto their own resolver.** [`delegateUser`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/permissions.ts#L109) runs as the `ens_delegate` job once a user's account name is registered, for any user with an Ethereum wallet. Every step is idempotent:
+
+1. **Deploy and grant.** Deploy the resolver and grant the owner their keys.
+2. **Move every live name.** For each name the wallet holds, **copy its full record set onto the new resolver first**, then call `setResolver` on the parent registry ([`moveName`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/permissions.ts#L88)). There is never a moment where the name resolves to nothing.
+3. **Lock the name.** Revoke the holder's registry `ROLE_SET_RESOLVER`. The name then carries **no registry roles at all**, so it can't be repointed at a resolver serving a forged score, and it still can't be transferred.
+
+New names for a delegated user are registered straight onto their resolver with no roles ([`registerNameFor`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L72)). The relayer never overwrites keys the identity manages ([`writeRecords`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L124)); it only seeds them at registration. So a new AQS or a price change can never clobber an owner's own edit.
+
+**Users sign their own edits.** When a delegated user saves their profile, Settings signs the text-record writes with **their own embedded wallet** on Sepolia ([`useEnsSigner`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/lib/client/ens-signer.ts#L15)), and the resolver rejects any key they don't hold. A small ETH top-up for gas comes from [`/api/ens/gas`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/ens/gas/route.ts), rate-limited per user.
+
+**Scope.** Users who sign in only with a Sui wallet have no Ethereum key, so they stay platform-managed on the shared resolver, unchanged. This is *delegated, verifiable* control rather than full self-custody: the platform keeps admin so it can grant, revoke and moderate. Resolvers and their managed keys are tracked in migration [`0009`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/supabase/migrations/0009_ens_permissions.sql).
+
+### 7.6 Leases: expiring names the advertiser holds
+
+- The lease name `l-<n>.<space>` is minted to the **advertiser's wallet**. For a lease Scout booked, the brand's wallet holds it and `eth.brandmystuff.booked-by` names the agent.
+- It lives on the advertiser's resolver, with **expiry equal to the lease end** and no registry roles, so it is time-boxed, non-transferable and can't be repointed.
+- During the campaign the advertiser can update their landing `url`, creative `avatar` and `brand` themselves. `attested.state`, `attested.proofs` and `attested.creative` stay platform-only.
+- The platform releases the name on rejection, expiry or refund, using its root `UNREGISTER` role.
+
+A lease name is effectively a **revocable, expiring delegation**: for exactly as long as the brand has paid for the space, it controls how its campaign appears on ENS.
+
+### 7.7 Brand agents as namespaces
+
+Every brand's Scout is an ENS namespace with its own identity and permissions. [Section 8.4](#84-scouts-ens-identity-permissions-and-receipts) covers this in full; in short:
+
+- **`scout.<brand>.brandmystuff.eth`**, on its own resolver.
+  - The brand's wallet holds the name, with no roles.
+  - The agent's own EVM key may write only its ENSIP-26 records and run log.
+  - `addr(784)` is the agent's Sui address.
+- **The mandate as attested facts.** [`syncAgent`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/permissions.ts#L244) mirrors the Sui budget mandate: status, budget, remaining, cap and expiry.
+- **Revocation.** [`applyAgentStatus`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/permissions.ts#L224) **strips the agent's roles** the moment the brand revokes the mandate or it expires.
+- **Receipts it registers itself.** The agent holds `REGISTRAR` only on its own subregistry. After each purchase it registers `buy-<n>`, recording its choice and reasoning, and the platform attests the payment.
+- **A payer identity for x402.** An agent can send `x-agent-ens`. Before any money moves, [`checkAgentIdentity`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/permissions.ts#L323) resolves it through the Universal Resolver ([`strictAgentRecords`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/read.ts#L57)). It requires the name to resolve to the **paying Sui address** and not be revoked or expired.
+
+### 7.8 The Sui-to-ENS relayer
+
+The platform key relays every attested write, driven by Sui events, and pays the Sepolia gas:
+
+| Trigger | ENS job | Effect |
 |---|---|---|
 | `ProfileCreated`, profile edits | `ens_account` | Register the account and write its records |
+| Account registered (wallet users) | `ens_delegate` | Give the user their own resolver and move their names onto it |
 | `ObjectCreated` | `ens_object` | Register the object name |
 | `SpaceScored` | `ens_space` | Register the space with its AQS datasheet |
 | `PriceChanged`, `SpaceStatusChanged`, offering opened or closed | `ens_space_records` | Refresh price, status and token records |
 | `LeaseBooked` | `ens_lease_reserve` | Reserve the `l-<seq>` label |
-| `CreativeApproved` | `ens_lease_register` | Register the lease name |
+| `CreativeApproved` | `ens_lease_register` | Register the lease name to the advertiser |
 | `ProofAccepted`, `DisputeOpened`, `DisputeResolved`, `LeaseCompleted` | `ens_lease_state` | Update `attested.state` and `attested.proofs` |
 | `CreativeRejected`, `LeaseExpired`, dispute refund | `ens_lease_unregister` | Remove the lease name |
 | `LeaseExtended` | `ens_lease_renew` | Extend the name's expiry |
 | `InvestorVerified`, `InvestorFrozen` | `ens_verified` | Write `attested.verified` |
 | `Sponsored`, sponsorship expiry | `ens_sponsored` | Write the sponsorship records |
+| Brand agent created or mandate attached | `ens_agent` | Create `scout.<brand>` with its resolver and roles |
+| Mandate paused, resumed, revoked, periodic | `ens_agent_sync` | Mirror the mandate and grant or strip the agent's roles |
+| Paid Scout run | `ens_agent_receipt` | The agent registers its `buy-<n>` receipt |
 
-The handlers live in [`jobs.ts` lines 25–88](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/jobs.ts#L25-L88). Each write simulates first, waits for its receipt and is logged with **both its Sui digest and its Sepolia transaction** in `ens_writes` ([`names.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L34-L43)).
+The handlers are in [`jobs.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/jobs.ts#L27-L113). Each write simulates first, waits for its receipt and is logged with **both its Sui digest and its Sepolia transaction** ([`logWrite`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/names.ts#L34)). Existing users can be moved onto split permissions with [`ens-permissions-backfill.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-permissions-backfill.ts).
 
-At the time of writing, the relayer has produced **48 registrations, 91 record updates, 8 reservations and 7 unregistrations** on Sepolia.
+### 7.9 Reading, verifying and proving permissions
 
-### 7.6 Reading and verifying
+- **Live reads.** [`resolveCall`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/read.ts#L16) goes through the ENSv2 **UniversalResolver**, exactly as any third party would read the names.
+- **Two-way verification.** [`verifyName`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/read.ts#L85) checks that the name's `eth.brandmystuff.sui.object` record matches the Sui object it describes. With the `ens_name` stored in the Move object, this gives a **bidirectional link**: Sui points to ENS and ENS points back to Sui.
+- **Permissions, proven live.** [`permissionsView`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/permissions.ts#L354), served by `GET /api/names/<name>/permissions`, shows:
+  - which keys are attested and which are holder-managed;
+  - the name token's roles;
+  - live `hasRoles` reads;
+  - with `?probe=1`, gas-free `eth_call` probes that try a write from the holder's key. A holder-managed key succeeds, and an attested key such as `attested.aqs` reverts with `EACUnauthorizedAccountRoles`;
+  - the full permission history: resolver deploys, grants, revokes and moves.
+- **Public API.** [`/api/names/[name]`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/names/%5Bname%5D/route.ts) resolves any brandmystuff name, with live verification. [`/api/ens/pulse`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/ens/pulse/route.ts) reports live name counts and the latest writes.
+- **Tested live on Sepolia.**
+  - [`flows.e2e.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/e2e/flows.e2e.ts) asserts that every relayed name verifies against Sui and that the AQS can be read from ENS.
+  - [`ens-permissions.e2e.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/e2e/ens-permissions.e2e.ts) (`pnpm e2e:ens`) proves the permission boundaries with a throwaway user and agent:
+    - owner keys are writable and attested keys aren't;
+    - moved names lose `SET_RESOLVER`;
+    - leases are held and edited by the advertiser;
+    - revoking an agent strips its rights;
+    - receipts register only under the agent's own name;
+    - the x402 identity check works.
 
-- **Live reads.** [`resolveCall`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/read.ts#L16-L24) goes through the ENSv2 **UniversalResolver**, exactly as any third party would read the names.
-- **Two-way verification.** [`verifyName`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/read.ts#L54-L60) reads the name's `eth.brandmystuff.sui.object` data record and checks it matches the Sui object ID the name claims to describe. Combined with the `ens_name` stored inside the Move object, this gives a **bidirectional link**: Sui points to ENS and ENS points back to Sui.
-- **Public API.** [`/api/names/[name]`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/names/%5Bname%5D/route.ts) resolves any brandmystuff name to its space, object, account or lease, with live verification. [`/api/ens/pulse`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/ens/pulse/route.ts) reports live name counts and the latest writes.
-- **Tested for real.** [`flows.e2e.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/e2e/flows.e2e.ts) waits for the relayer to register the account, object, space and lease names. It then asserts that every one verifies against Sui and that the AQS can be read back from ENS.
+### 7.10 ENS for outside agents
 
-### 7.7 ENS for agents
-
-ENS is also how AI agents find brandmystuff.
-
-- **Discovery records.** `agent.brandmystuff.eth` publishes an ENSIP-26 **`agent-endpoint[mcp]`** record pointing at the MCP server, an **`eth.brandmystuff.x402`** record pointing at the paid endpoints, and an `agent-context` describing the tools and payment scheme. [`ens-agent-records.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-agent-records.ts#L12-L13) re-points them whenever the app's URL changes.
+- **Discovery.** `agent.brandmystuff.eth` publishes ENSIP-26 `agent-endpoint[mcp]`, `eth.brandmystuff.x402` and an `agent-context` describing the tools and payment scheme. [`ens-agent-records.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-agent-records.ts#L12-L13) re-points them when the app's URL changes.
 - **Addressing by name.** Every MCP tool and x402 endpoint accepts an **ENS name** as an identifier, so an agent can go from name to quote to payment without ever handling a Sui object ID.
-- **Scout reads ENS for real.** When Scout shortlists spaces, it pulls AQS, grade, confidence, price, placement, dimensions and status **from the live ENS records** through the Universal Resolver. It verifies every name against Sui and only ever picks a space whose ENS name checks out ([`scout.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/scout.ts#L219-L235)). The run's log shows it resolving the subnames of `brandmystuff.eth` on Sepolia.
+- **Scout reads ENS for real.** It pulls AQS, grade, confidence, price, placement, dimensions and status **from live ENS records** and only buys spaces whose names verify against Sui ([`scout.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/scout.ts#L219-L235)).
 
-### 7.8 ENS in the interface
+### 7.11 ENS in the interface
 
-ENS is visible throughout the app without dominating it:
+- **The `EnsName` chip** ([`ens.tsx`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/components/ens.tsx#L122)) appears next to accounts, objects, spaces, leases and agents, with a hover card showing status, owner and expiry.
+- **Names always shown in full.** [`FitName`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/components/ens.tsx#L80) shrinks the font until the whole name fits on one line and wraps at the dots only when it can't. It is used everywhere a name appears: chips, the name tree, the ENS ticker, the header, onboarding and the landing page.
+- **The Verify on-chain panel** ([`VerifyPanel`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/components/verify.tsx#L58)) on every `/<name>.brandmystuff.eth` page has:
+  - an "ENS ↔ Sui verified" badge, the name tree, the Sui object and the ENS resolver and namehash;
+  - a **Records** tab that marks values "live" when the chain matches;
+  - an **Activity** tab linking each Sui digest to its Sepolia transaction;
+  - a new **Permissions** tab ([`EnsPermissions`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/components/ens-permissions.tsx#L97)) showing who can write what. It separates "attested by brandmystuff" from "set by owner, advertiser or agent key", shows the live role reads and the probe results, and lets the key holder sign one-off edits.
+- **Agent pages.** The agent page links Scout's ENS name, and `/<scout name>` and `/<receipt name>` have their own views.
+- **Elsewhere:**
+  - `YourNames` lists every name a user holds, and `EnsPulse` shows the namespace growing live.
+  - Onboarding previews the name as the handle is typed.
+  - Settings shows exactly which records a save will change, and signs them with the user's own wallet.
 
-- The **`EnsName` chip** ([`ens.tsx`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/components/ens.tsx#L67-L156)) appears next to accounts, objects, spaces and leases. Its hover card shows status, owner and expiry.
-- Every public page (`/<name>.brandmystuff.eth`) includes a **Verify on-chain** panel ([`VerifyPanel`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/components/verify.tsx#L57-L128)) with:
-  - an "ENS ↔ Sui verified" badge;
-  - the name tree;
-  - the Sui object with an explorer link;
-  - the ENS record, resolver and namehash;
-  - a **Records** tab that marks each value "live" when the chain matches;
-  - an **Activity** tab that links each Sui digest to its Sepolia transaction.
-- **`YourNames`** on the dashboard lists every name a user holds, including ones still registering. **`EnsPulse`** shows the namespace growing live.
-- Onboarding previews the name letter by letter as the user types their handle, then explains that it is a real ENS name on Sepolia.
-- Settings shows exactly which text records will change before the user saves.
-
-### 7.9 A name's life, end to end
+### 7.12 A name's life, end to end
 
 Following one lease name from birth to retirement shows how tightly ENS tracks Sui:
 
 | Moment on Sui | What ENS shows for `l-19.<space>.brandmystuff.eth` |
 |---|---|
 | `LeaseBooked`: the escrow is funded | The label is **reserved**, so nobody else can take it while the owner decides |
-| `CreativeApproved` | The name is **registered** to the advertiser, with the creative as avatar, the tracked landing URL, the brand, `attested.state = awaiting-install` and `attested.proofs = 0` |
+| `CreativeApproved` | The name is **registered to the advertiser's wallet** on their resolver, expiring at the lease end, with the creative, landing URL, brand, `attested.state = awaiting-install` and `attested.proofs = 0` |
+| During the campaign | The advertiser can update their landing URL and creative themselves; the attested keys stay locked |
 | `ProofAccepted` for the install | `attested.state` becomes `live` and `attested.proofs` becomes `1` |
 | Each weekly `ProofAccepted` | `attested.proofs` counts up |
 | `DisputeOpened` | `attested.state` becomes `disputed`, so anyone can see the lease is contested |
@@ -1395,11 +1438,127 @@ Following one lease name from birth to retirement shows how tightly ENS tracks S
 | `LeaseCompleted` | `attested.state` becomes `completed`, a permanent public record of a delivered campaign |
 | `CreativeRejected`, `LeaseExpired` or a dispute refund | The name is **unregistered** |
 
-The same pattern applies to spaces: price changes, pauses and tokenisation update the records within seconds of the Sui event. Anyone reading ENS sees what the chain says, with a data record pointing back to the Sui object to prove it.
+Anyone reading ENS sees what the chain says, can check who was allowed to write each value, and can follow a data record back to the Sui object to prove it.
 
 ---
 
-## 8. Roadmap
+## 8. Agents
+
+brandmystuff is built for a world where software, not just people, buys and sells attention. This section covers every agent in the system: what it does, what it is allowed to do, and what stops it from doing more.
+
+### 8.1 The agents at a glance
+
+| Agent | Acts for | What it does | Its authority, and its limits |
+|---|---|---|---|
+| **Scout** | One brand | Reads the brand, discovers spaces through ENS, scores fit, picks one ad, pays for it over x402 | Its own Sui and EVM keys; spends only through an on-chain [`BudgetMandate`](https://github.com/Marshal-AM/brandmystuff/blob/main/move/mandate/sources/mandate.move) the brand can pause or revoke |
+| **External AI agents** | Whoever runs them | Find inventory through `agent.brandmystuff.eth` and MCP, quote, pay and book with no account | Only what they pay for; the payment is verified on-chain before anything is booked |
+| **AI judges** | The marketplace | Check object photos, score ad spaces, verify proof-of-display photos | Advisory: the contracts enforce their own thresholds, and the operator writes results on-chain |
+| **Autonomous operators** | The platform | Index Sui, relay to ENS, run cross-chain payouts, enforce deadlines | The `OperatorCap` and platform keys; deadline actions are ones anyone could call |
+
+### 8.2 Scout, the brand's ad-buying agent
+
+Every brand account gets exactly one Scout. The brand gives it a budget and it finds and buys one ad placement per run.
+
+**Identity and keys.** [`agentFor`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/keys.ts#L36) creates the agent's Ed25519 Sui key on first use, and [`agentEvmKey`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/keys.ts#L52) creates its Ethereum key for ENS. Both are sealed with AES-256-GCM at rest. [`ensureAgentGas`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/keys.ts#L65) keeps a little SUI in the agent's wallet so it can always sign.
+
+**A run, step by step** ([`runScout`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/scout.ts#L168)):
+
+1. **Check the leash.** No active, unexpired mandate with budget left means no run.
+2. **Decode the brand.** One Gemini call reads the brand's name, story, location and logo and produces a "brand DNA" across three lands: Identity, Voice and Audience ([`decodeBrand`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/scout.ts#L94)).
+3. **Discover through ENS.** It takes the top-ranked available spaces and, four at a time, reads each space's live ENS records through the Sepolia Universal Resolver: AQS, grade, confidence, price, placement, dimensions and status. It also verifies each name against its Sui object ([line 219](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/scout.ts#L219)).
+4. **Score the fit.** One Gemini call rates every candidate on audience (30%), context (20%), visibility (20%), brand safety (15%) and value (15%), with written reasoning ([`FACTORS`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/scout.ts#L103)).
+5. **Pick exactly one.** It takes the best candidate that is both **affordable** under the mandate and **ENS-verified** ([line 288](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/scout.ts#L288)). If nothing qualifies, it says so rather than guessing.
+
+**Paying** ([`payScout`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/pay.ts#L25)):
+
+1. Scout asks the lease endpoint for a quote and receives **HTTP 402** with the payment terms.
+2. It checks the offer against its mandate: payee, asset, per-ad cap and remaining budget.
+3. It signs [`mandate::spend`](https://github.com/Marshal-AM/brandmystuff/blob/main/move/mandate/sources/mandate.move#L83) with its own key and retries with the payment, naming itself with an `x-agent-ens` header.
+4. The booking comes back with the lease. If the booking fails, the USDC is refunded into the mandate, not to the platform.
+
+**Watching it work.** [`/agent`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/agent/page.tsx) streams the whole run live: the brand being decoded, spaces scanned, scores and reasoning, the pick, then each payment step. It is rendered as an animated journey in [`components/scout`](https://github.com/Marshal-AM/brandmystuff/tree/main/web/src/components/scout).
+
+### 8.3 Scout's on-chain leash: the budget mandate
+
+The mandate is a separate Move package, [`brandmystuff_mandate`](https://github.com/Marshal-AM/brandmystuff/blob/main/move/mandate/sources/mandate.move), so the rules that bind the agent are enforced by the chain, not by our server:
+
+| Rule | Enforced by |
+|---|---|
+| Only the named agent can spend | [`spend`](https://github.com/Marshal-AM/brandmystuff/blob/main/move/mandate/sources/mandate.move#L83) checks the sender |
+| Money can only go to one payee, the brandmystuff x402 treasury | Hard-wired at creation; [`attachMandate`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/agent/keys.ts#L96) refuses any other payee |
+| Never more than the per-payment cap | `EOverCap` |
+| Never more than the total budget | `EOverBudget` |
+| Nothing after the expiry, or while paused | `EExpired`, `EInactive` |
+| The brand stays in control | [`top_up`](https://github.com/Marshal-AM/brandmystuff/blob/main/move/mandate/sources/mandate.move#L104), [`update`](https://github.com/Marshal-AM/brandmystuff/blob/main/move/mandate/sources/mandate.move#L113) and [`revoke`](https://github.com/Marshal-AM/brandmystuff/blob/main/move/mandate/sources/mandate.move#L123), which returns the remaining funds |
+
+Every rule has a dedicated [Move test](https://github.com/Marshal-AM/brandmystuff/blob/main/move/mandate/tests/mandate_tests.move).
+
+### 8.4 Scout's ENS identity, permissions and receipts
+
+Each Scout is also an ENS namespace, `scout.<brand>.brandmystuff.eth`, built on ENSv2 Enhanced Access Control ([`ensureAgentIdentity`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/permissions.ts#L167)).
+
+- **Its own resolver.** The name gets its own PermissionedResolver. Scout's EVM key may write only its ENSIP-26 records (`agent-context`, `agent-endpoint[*]`) and its run log. The name is owned by the brand's wallet with no registry roles.
+- **Records:**
+  - `class = Agent`, an `agent-context` explaining who it works for;
+  - `agent-endpoint[x402]` and `agent-endpoint[mcp]`;
+  - its Sui address (coin type 784) and EVM address;
+  - `eth.brandmystuff.agent.brand`.
+- **Mandate mirrored as attested facts.** [`syncAgent`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/permissions.ts#L244) copies the live Sui mandate into platform-only records: status (active, paused, exhausted, revoked, expired), budget, remaining, per-ad cap and expiry.
+- **Roles follow the mandate.** [`applyAgentStatus`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/permissions.ts#L224) strips Scout's write and registrar roles the moment the brand revokes the mandate or it expires, and restores them if it becomes active again.
+- **Receipts it writes itself.** After each paid run, Scout registers `buy-<n>.scout.<brand>.brandmystuff.eth` with its own registrar role on its own subregistry ([`writeAgentReceipt`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/permissions.ts#L273)). Each receipt holds two kinds of records:
+  - **Scout's own choices:** the space it picked and why, plus a "last run" and "last pick" log on its main name.
+  - **Platform-attested facts:** the payment digest, the amount and the lease.
+- **Background jobs.** The `ens_agent`, `ens_agent_sync` and `ens_agent_receipt` jobs keep all of this current ([`jobs.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/jobs.ts#L41-L50)).
+
+The result is an agent with a public, verifiable identity and an auditable history of every decision and payment, anchored to both ENS and Sui.
+
+### 8.5 External AI agents: MCP, x402 and ENS discovery
+
+Any AI agent can use brandmystuff without an account.
+
+1. **Discover.** `agent.brandmystuff.eth` publishes ENSIP-26 records: `agent-endpoint[mcp]`, `eth.brandmystuff.x402` and an `agent-context` describing the tools and payment scheme ([bootstrap](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/ens-bootstrap.ts#L108-L118)).
+2. **Explore.** The [MCP server](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/mcp/route.ts) exposes five tools over JSON-RPC: `search_spaces`, `get_space`, `get_object`, `quote_lease` and `quote_sponsorship`. Every quote includes the exact x402 endpoint and body.
+3. **Pay and book.** [`/api/x402/leases`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/x402/leases/route.ts) and [`/api/x402/sponsorships`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/x402/sponsorships/route.ts) answer with **402**. The agent signs a USDC transfer on Sui. The facilitator verifies the signature, rejects replays, dry-runs the transaction to confirm the exact amount, settles it, then books through the operator. A failed booking is refunded on-chain ([section 5.6](#56-x402-on-sui)).
+4. **Prove who it is (optional).** An agent can send `x-agent-ens: <name>`. Before any money moves, [`checkAgentIdentity`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/ens/permissions.ts#L323) resolves the name through the Universal Resolver and requires:
+   - that it resolves to the **paying Sui address**;
+   - that it is **not revoked or expired**.
+
+   A mismatch rejects the payment ([`x402route.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/x402route.ts#L30-L33)). Everything takes an ENS name in place of an ID, so an agent can go from name to quote to payment without ever handling a Sui object ID.
+
+### 8.6 The AI judges
+
+Three Gemini-powered judges assess what people submit. Each one returns structured, evidence-first output, and the marketplace's rules, not the model, make the final call.
+
+| Judge | Checks | How it is kept honest |
+|---|---|---|
+| **Object inspector** ([`analyzeHero`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/scoring/pipeline.ts#L81)) | Is this a real photo of the object described? What kind of object is it, how is it seen, and from how far? | A second sample confirms any "synthetic" verdict; C2PA and duplicate-photo checks; prompt-injection text rejected |
+| **Space scorer** ([`analyzeSpace`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/scoring/pipeline.ts#L220)) | Rates 11 anchored criteria for how well an ad on this surface will be seen | Three independent samples, five on disagreement; medians; geometry computed, not guessed; the final AQS is aggregated in code ([section 4.7](#47-the-ai-judge-ad-space-quality-score)) |
+| **Proof verifier** ([`submitProof`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/proofs.ts#L44)) | Is the approved creative clearly on the listed space in this new photo? | Reused photos rejected by perceptual hash; the contract re-checks the 80% match floor before releasing any money |
+
+The judges never touch funds. The operator writes their results on-chain, and the Move contracts apply their own thresholds. For fast demos, a [demo mode](#415-demo-mode-and-the-pitch-deck) swaps the judges for fixed high scores.
+
+### 8.7 The platform's autonomous operators
+
+A long-running worker ([`scripts/worker.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/worker.ts#L22-L24)) hosts four autonomous agents that keep every chain in step without human input:
+
+| Operator | Loop | What it does |
+|---|---|---|
+| **Indexer** | Every 4 s | Walks every module's Sui events across all package versions and projects them into the read model ([`pollOnce`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/indexer.ts#L50)) |
+| **ENS relayer** | Jobs, every 3 s | Registers, updates, renews and unregisters names and records on Sepolia from Sui events, paying all gas ([section 7.8](#78-the-sui-to-ens-relayer)) |
+| **Payout relayer** | Jobs, every 3 s | Releases routed income and burns it through CCTP, waits for Circle, delivers through MultiBaas, confirms ([section 6.5](#65-the-payout-pipeline-step-by-step)) |
+| **Deadline keeper** | Every 20 s | Expires unapproved leases, refunds missed proofs, closes offerings, sweeps expired orders and sponsorships ([`runScheduler`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/jobs.ts#L141)) |
+
+Every job retries with exponential backoff and is logged. The keeper only calls functions that **anyone** is allowed to call once a deadline passes. So if the worker stops, nobody's money is stuck: anyone can enforce the same rules.
+
+### 8.8 Guardrails that apply to every agent
+
+- **Money moves only under rules the chain enforces.** Agents spend through mandates or verified x402 payments. They never hold user funds, and escrow releases need contract-checked proofs.
+- **Least privilege.** Every key and ENS role is scoped to one job: Scout's keys, its registrar role, the operator cap and user-owned resolvers. Revoking the mandate removes Scout's rights.
+- **Verify, then trust.** Scout only buys ENS-verified spaces. x402 verifies every payment by dry run before settling. Named agents must resolve to the Sui address that pays.
+- **Everything is auditable.** Runs are streamed and stored. Payments carry memos, receipts are ENS names, and every relay is logged with its Sui digest and Sepolia transaction.
+- **Humans stay in charge.** Brands can top up, pause or revoke their agent at any time, and admins resolve disputes.
+
+## 9. Roadmap
 
 ### Near term
 
@@ -1411,15 +1570,14 @@ The same pattern applies to spaces: price changes, pauses and tokenisation updat
 
 ### Deeper ENSv2 integration
 
-ENSv2's shared role-based permissions (Enhanced Access Control), per-name registries and Permissioned Resolvers map naturally onto the marketplace. The plan:
+Split write rights, per-identity Permissioned Resolvers, advertiser-held expiring lease names and brand agents as namespaces with self-registered receipts are already live ([section 7.5](#75-enhanced-access-control-split-write-rights)). What's next:
 
-1. **Role-scoped records.** Owners get resolver roles for their own profile text keys only, such as name, bio, avatar and socials. The platform keeps exclusive write access to `eth.brandmystuff.attested.*`, `sui.*` and `price`. Readers can then tell attested facts from user claims by who is allowed to write them.
-2. **Agents as namespaces.** Every brand's Scout gets `scout.<brand>.brandmystuff.eth`, carrying its Sui address, the mandate ID and budget records, with rights only over its own `agent-context` and endpoint records. The brand's wallet can revoke it, and each run can be recorded as a `run-<id>` subname.
-3. **A lease registry per space.** `l-*` names are issued by a registry whose rules mirror the Move lease: register on approval, expire at the lease end, revoke on refund. Advertisers get delegated rights to update their creative and landing records during the campaign.
-4. **Per-name Permissioned Resolvers.** Accounts own their data outright. Tokenised spaces lock their `token`, `price` and `sui.object` records when an offering opens.
-5. **Record and namespace aliasing.** Attestation records resolve from one platform source. Campaigns appear under both the space and `campaigns.<brand>`, and currently sponsored objects under a shared `sponsored.brandmystuff.eth`.
-6. **Wildcard resolution.** Queries such as `top.laptop.brandmystuff.eth` answer live from the catalogue, without registering anything.
-7. **A deliberate lifecycle per name.** Non-transferable accounts; takedowns wired to unregistration; expiring leases; and **forever** campaign-completion badges with all parent roles renounced.
+1. **Wildcard resolution.** Queries such as `top.laptop.brandmystuff.eth` would answer live from the catalogue, without registering anything.
+2. **Record and namespace aliasing.** Attestation records would resolve from one platform source. Campaigns would appear under both the space and `campaigns.<brand>`, and currently sponsored objects under a shared `sponsored.brandmystuff.eth`.
+3. **A dedicated lease registry per space**, whose rules mirror the Move lease exactly.
+4. **Forever names.** Campaign-completion badges with all parent roles renounced, as a permanent portfolio for brands and owners.
+5. **Takedowns wired to ENS.** Moderation on Sui would unregister or freeze the matching names automatically.
+6. **Self-custody for Sui-only users**, by linking an Ethereum key so they can move onto their own resolver too.
 
 ### Medium term
 
@@ -1438,7 +1596,7 @@ ENSv2's shared role-based permissions (Enhanced Access Control), per-name regist
 
 ---
 
-## 9. Conclusion
+## 10. Conclusion
 
 brandmystuff starts from a simple observation: attention on physical objects is valuable, and the market for it is broken because nobody can trust anybody. The owner fears not being paid. The brand fears the ad never goes up. The investor can't see the income, and the agent can't even find the inventory.
 
