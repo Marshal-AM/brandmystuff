@@ -23,7 +23,7 @@ const BASE = process.env.E2E_BASE ?? "http://localhost:3010";
   await new Promise((r) => setTimeout(r, 4000));
   const a = await j("/api/agent", { headers: H });
   console.log("agent", a.status, a.body.agent?.address);
-  const tx = createMandate({ amount: 1_000_000n, agent: a.body.agent.address, payee: SUI.platformAddress, perPaymentCap: 900_000n, expiresMs: BigInt(Date.now() + 7 * 86400_000) });
+  const tx = createMandate({ amount: 1_000_000n, agent: a.body.agent.address, payee: SUI.platformAddress, perPaymentCap: 1_000_000n, expiresMs: BigInt(Date.now() + 7 * 86400_000) });
   tx.setSender(address);
   const r: any = await sui().signAndExecuteTransaction({ transaction: tx, signer: kp, include: { effects: true } });
   const digest = r.Transaction?.digest;
