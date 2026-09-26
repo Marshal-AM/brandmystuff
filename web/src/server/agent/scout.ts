@@ -108,25 +108,109 @@ const FACTORS = [
   { key: "value", k: "Value for budget", weight: 0.15 },
 ] as const;
 const fs = { type: "object", properties: { score: { type: "integer", minimum: 0, maximum: 100 }, note: { type: "string" } }, required: ["score", "note"] };
-const SCORE_SCHEMA = {
+/**
+ * Spaces are keyed S1…Sn in the prompt (never by their 64-hex Sui ids, which the model garbles on
+ * long prompts) and the schema pins exactly those keys, one entry each.
+ */
+const scoreSchema = (keys: string[], districts: string[]) => ({
   type: "object",
   properties: {
     spaces: {
       type: "array",
+      minItems: keys.length,
+      maxItems: keys.length,
       items: {
         type: "object",
-        properties: { id: { type: "string" }, reasoning: { type: "string" }, ...Object.fromEntries(FACTORS.map((f) => [f.key, fs])) },
-        required: ["id", "reasoning", ...FACTORS.map((f) => f.key)],
+        properties: { key: { type: "string", enum: keys }, reasoning: { type: "string" }, ...Object.fromEntries(FACTORS.map((f) => [f.key, fs])) },
+        required: ["key", "reasoning", ...FACTORS.map((f) => f.key)],
       },
     },
-    districts: { type: "array", items: { type: "object", properties: { id: { type: "string" }, thought: { type: "string" } }, required: ["id", "thought"] } },
+    districts: { type: "array", items: { type: "object", properties: { id: { type: "string", enum: districts.length ? districts : ["object"] }, thought: { type: "string" } }, required: ["id", "thought"] } },
   },
   required: ["spaces", "districts"],
-};
-type ScoreA = { spaces: ({ id: string; reasoning: string } & Record<(typeof FACTORS)[number]["key"], { score: number; note: string }>)[]; districts: { id: string; thought: string }[] };
+});
+type ScoreA = { spaces: ({ key: string; reasoning: string } & Record<(typeof FACTORS)[number]["key"], { score: number; note: string }>)[]; districts: { id: string; thought: string }[] };
 
 const SCORE_SYSTEM = `You are Scout, choosing where to place ONE ad for your brand. You are given the brand profile and every live ad space on brandmystuff with the ENS text records you just read for it (class, attested AQS score and grade, price, placement, dimensions) plus its object description and photo.
-Score each space 0-100 on: audience (would the brand's audience see this object where it's used?), context (does the object and placement suit the brand's story and style?), visibility (size, viewing distance, attested AQS/grade and confidence), safety (brand-safety and tone fit), value (reach and quality for the price, relative to the per-ad cap). Give a one-line note per factor and a 2-3 sentence reasoning in first person ("I…"). Be discerning: scores should spread out. Also give a short, playful first-person "thought" for each district (object type) id.`;
+Score each space 0-100 on: audience (would the brand's audience see this object where it's used?), context (does the object and placement suit the brand's story and style?), visibility (size, viewing distance, attested AQS/grade and confidence), safety (brand-safety and tone fit), value (reach and quality for the price, relative to the per-ad cap). Give a one-line note per factor and a 2-3 sentence reasoning in first person ("I…"). Be discerning: scores should spread out. Also give a short, playful first-person "thought" for each district (object type) id.
+Each space is labelled with a key (S1, S2, …). Return exactly one entry per key, using that key verbatim.`;
+
+type Read = { s: any; rec: Record<string, string | null>; verified: boolean };
+type Scored = ScoreA["spaces"][number];
+const SCORE_BATCH = 4;
+
+function spaceParts(items: { key: string; r: Read; photo: { buf: Buffer; mime: string } | null }[]) {
+  const parts: any[] = [];
+  for (const { key, r, photo } of items) {
+    const o = r.s.objects ?? {};
+    parts.push({ text: `SPACE key=${key} district=${(o.object_type ?? "object").toLowerCase()}\nENS ${r.s.ens_name}\nrecords ${JSON.stringify(r.rec)}\nobject "${o.title}" — ${o.description ?? ""} · city ${o.city ?? "—"} · seen from ~${r.s.viewing_distance_m ?? o.viewing_distance_m ?? "?"} m\nprice ${Number(r.s.price_per_week) / 1e6} USDC/week · ENS↔Sui verified: ${r.verified}` });
+    if (photo) parts.push({ image: photo.buf, mime: photo.mime });
+  }
+  return parts;
+}
+
+/** Scores one batch; returns the entries whose keys came back well-formed. */
+async function scoreBatch(brandText: string, items: { key: string; r: Read; photo: any }[]) {
+  const keys = items.map((x) => x.key);
+  const districts = [...new Set(items.map((x) => String(x.r.s.objects?.object_type ?? "object").toLowerCase()))];
+  const res = await generateJson<ScoreA>({ system: SCORE_SYSTEM, parts: [{ text: brandText }, ...spaceParts(items)], schema: scoreSchema(keys, districts) });
+  const ok = new Map<string, Scored>();
+  for (const e of res.spaces ?? []) if (keys.includes(e.key) && FACTORS.every((f) => typeof e[f.key]?.score === "number")) ok.set(e.key, e);
+  return { ok, districts: res.districts ?? [] };
+}
+
+/** Deterministic last resort, clearly labelled: attested quality, price vs cap, and the ENS check. */
+function fallbackScore(r: Read, perAdCap: number): Scored {
+  const aqs = Number(r.s.aqs ?? 0);
+  const price = Number(r.s.price_per_week) / 1e6;
+  const value = price <= perAdCap ? Math.round(60 + 40 * (1 - price / Math.max(perAdCap, 0.01))) : 20;
+  const f = (score: number, note: string) => ({ score: Math.max(0, Math.min(100, Math.round(score))), note });
+  return {
+    key: "",
+    reasoning: "The AI scorer didn't answer for this space, so I estimated it from its attested quality score, price and ENS verification.",
+    audience: f(50, "estimated"),
+    context: f(50, "estimated"),
+    visibility: f(aqs, `attested AQS ${aqs}`),
+    safety: f(r.verified ? 70 : 30, r.verified ? "ENS ↔ Sui verified" : "ENS not verified"),
+    value: f(value, `${price} USDC vs ${perAdCap} USDC cap`),
+  } as Scored;
+}
+
+/**
+ * Scores every space: small parallel batches, then a single-space retry for anything missing, then a
+ * labelled estimate, so no space ends up silently at 0.
+ */
+async function scoreAll(brandText: string, read: Read[], photos: ({ buf: Buffer; mime: string } | null)[], perAdCap: number, log: (t: string) => Promise<void>) {
+  const items = read.map((r, i) => ({ key: `S${i + 1}`, r, photo: photos[i] }));
+  const batches: (typeof items)[] = [];
+  for (let i = 0; i < items.length; i += SCORE_BATCH) batches.push(items.slice(i, i + SCORE_BATCH));
+  const scored = new Map<string, Scored>();
+  const thoughts: { id: string; thought: string }[] = [];
+  const results = await Promise.allSettled(batches.map((b) => scoreBatch(brandText, b)));
+  results.forEach((res) => {
+    if (res.status === "fulfilled") {
+      res.value.ok.forEach((v, k) => scored.set(k, v));
+      thoughts.push(...res.value.districts);
+    }
+  });
+  const missing = items.filter((x) => !scored.has(x.key));
+  if (missing.length) await log(`Re-scoring ${missing.length} space${missing.length > 1 ? "s" : ""} one by one`);
+  await pool(missing, 3, async (x) => {
+    for (let attempt = 0; attempt < 2 && !scored.has(x.key); attempt++) {
+      try {
+        const one = await scoreBatch(brandText, [{ ...x, key: "S1" }]);
+        const e = one.ok.get("S1");
+        if (e) scored.set(x.key, { ...e, key: x.key });
+        thoughts.push(...one.districts);
+      } catch {
+        /* retried below or estimated */
+      }
+    }
+  });
+  const estimated = items.filter((x) => !scored.has(x.key));
+  if (estimated.length) await log(`Estimated ${estimated.length} space${estimated.length > 1 ? "s" : ""} from attested records (AI scorer unavailable)`);
+  return { byIndex: items.map((x) => scored.get(x.key) ?? fallbackScore(x.r, perAdCap)), thoughts };
+}
 
 const art = (type: string): ArtKind => {
   const t = type.toLowerCase();
@@ -242,20 +326,15 @@ export async function runScout(userId: string, emit: Emit) {
     // 3) score every space
     await out({ t: "log", text: `Scoring ${read.length} spaces against ${brand.name}` });
     const photos = await pool(read, 4, async (r) => fetchImage(r.s.closeup_blob_id));
-    const parts: any[] = [{ text: `BRAND PROFILE\n${JSON.stringify({ name: brand.name, category: b.category, dna: b.dna, about: u.brand_about, location: u.brand_location, mandate: { remaining: mandate.remaining, perAdCap: mandate.perAdCap } })}` }];
-    read.forEach((r, i) => {
-      const o = r.s.objects ?? {};
-      parts.push({ text: `SPACE id=${r.s.id} district=${(o.object_type ?? "object").toLowerCase()}\nENS ${r.s.ens_name}\nrecords ${JSON.stringify(r.rec)}\nobject "${o.title}" — ${o.description ?? ""} · city ${o.city ?? "—"} · seen from ~${r.s.viewing_distance_m ?? o.viewing_distance_m ?? "?"} m\nprice ${Number(r.s.price_per_week) / 1e6} USDC/week · ENS↔Sui verified: ${r.verified}` });
-      if (photos[i]) parts.push({ image: photos[i]!.buf, mime: photos[i]!.mime });
-    });
-    const sc = await generateJson<ScoreA>({ system: SCORE_SYSTEM, parts, schema: SCORE_SCHEMA });
-    for (const d of sc.districts ?? []) {
+    const brandText = `BRAND PROFILE\n${JSON.stringify({ name: brand.name, category: b.category, dna: b.dna, about: u.brand_about, location: u.brand_location, mandate: { remaining: mandate.remaining, perAdCap: mandate.perAdCap } })}`;
+    const sc = await scoreAll(brandText, read as Read[], photos, mandate.perAdCap, async (text) => { await out({ t: "log", text }); });
+    for (const d of sc.thoughts) {
       const x = districtsMap.get(d.id.toLowerCase());
-      if (x) x.thought = d.thought;
+      if (x && !x.thought) x.thought = d.thought;
     }
 
-    const candidates: ScoutCandidate[] = read.map((r) => {
-      const a = sc.spaces.find((x) => x.id === r.s.id);
+    const candidates: ScoutCandidate[] = read.map((r, i) => {
+      const a = sc.byIndex[i];
       const o = r.s.objects ?? {};
       const factors: ScoutFactor[] = FACTORS.map((f) => ({ k: f.k, weight: f.weight, score: Math.max(0, Math.min(100, a?.[f.key]?.score ?? 0)), note: a?.[f.key]?.note ?? "" }));
       const price = Number(r.s.price_per_week) / 1e6;
