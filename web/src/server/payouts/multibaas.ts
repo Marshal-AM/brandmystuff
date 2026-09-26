@@ -110,7 +110,7 @@ export async function setAlias(c: MbChain, alias: string, address: string) {
   try {
     return await mb(c, "POST", "/chains/ethereum/addresses", { alias, address });
   } catch (e) {
-    if (e instanceof MultiBaasError && /exist|conflict|duplicate/i.test(e.message)) return null;
+    if (e instanceof MultiBaasError && (e.status === 409 || /exist|conflict|duplicate/i.test(e.message))) return null;
     throw e;
   }
 }
@@ -121,7 +121,8 @@ export async function linkContract(c: MbChain, addressOrAlias: string, label: st
     // No startingBlock = linked for calls only (no event indexing); the free plan indexes few events/sec.
     return await mb(c, "POST", `/chains/ethereum/addresses/${addressOrAlias}/contracts`, { label, version, ...(startingBlock ? { startingBlock } : {}) });
   } catch (e) {
-    if (e instanceof MultiBaasError && /already|exist/i.test(e.message)) return null;
+    // 409 = this label is already linked to the address (re-running setup).
+    if (e instanceof MultiBaasError && (e.status === 409 || /already|exist/i.test(e.message))) return null;
     throw e;
   }
 }
