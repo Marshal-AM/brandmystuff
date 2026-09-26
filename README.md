@@ -1,6 +1,6 @@
 # brandmystuff
 
-### Rent, lease and tokenise the ad space on the things you own, settled on Sui, named on ENS, paid out on any chain using curvegrid.
+### Rent, lease and tokenise the ad space on the things you own, settled on Sui, named on ENS, paid out on any chain using Curvegrid.
 
 ---
 
