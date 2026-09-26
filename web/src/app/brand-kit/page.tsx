@@ -1,8 +1,9 @@
 "use client";
+import { DEMO, DEMO_ENABLED, demoFile } from "@/lib/client/demo";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { ImagePlus, Loader2, Trash2, UploadCloud } from "lucide-react";
+import { ImagePlus, Loader2, Trash2, UploadCloud, Zap } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { Button, EASE, Empty, Img, PageHeader, Skeleton, cx, useAction } from "@/components/ui";
 import { SignInButtons } from "@/components/shell";
@@ -50,6 +51,13 @@ export default function BrandKit() {
         <div className="relative mt-1 text-sm text-muted">PNG, SVG, JPEG or WEBP · 1000 px+ or vector</div>
         <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" data-testid="brand-upload" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
       </motion.label>
+      {DEMO_ENABLED && (
+        <div className="mt-3 flex justify-center">
+          <Button variant="secondary" loading={uploading} onClick={async () => upload(await demoFile("logo"))} data-testid="brand-demo">
+            <Zap className="h-4 w-4" /> Demo submit
+          </Button>
+        </div>
+      )}
 
       <div className="mt-8 flex items-end justify-between">
         <h2 className="text-2xl font-extrabold tracking-tight">Assets</h2>

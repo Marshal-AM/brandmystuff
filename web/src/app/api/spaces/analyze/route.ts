@@ -5,6 +5,7 @@ import { db, q } from "@/server/db";
 import { analyzeSpace } from "@/server/scoring/pipeline";
 import { readBlob, sha256Hex, storeBlob, storeJson } from "@/server/walrus";
 import { PLACEMENTS, type Placement } from "@/lib/categories";
+import { demoSpace, isDemo } from "@/server/demo";
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
 
@@ -49,7 +50,9 @@ export const POST = handler(async (req) => {
     },
     captureSource: (String(f.get("captureSource") ?? "upload") === "camera" ? "camera" : "upload") as "camera" | "upload",
   };
-  const result = await analyzeSpace({
+  const result: Awaited<ReturnType<typeof analyzeSpace>> = isDemo(f.get("demo"))
+    ? ((await demoSpace(closeup, widthMm, heightMm, input.profile.viewingDistanceM, label)) as any)
+    : await analyzeSpace({
     hero,
     heroMime: "image/jpeg",
     closeup,

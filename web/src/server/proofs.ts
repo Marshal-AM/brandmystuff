@@ -1,4 +1,5 @@
 /** Proof-of-display: AI verification of owner check-in photos and on-chain tranche release. */
+import { demoProof } from "./demo";
 import * as T from "@/lib/sui/tx";
 import { HttpError, type AppUser } from "./auth";
 import { db, q, ok } from "./db";
@@ -41,40 +42,41 @@ export async function nextPeriod(escrowId: string) {
   return null;
 }
 
-export async function submitProof(p: { user: AppUser; escrowId: string; image: Buffer; mime: string }) {
+export async function submitProof(p: { user: AppUser; escrowId: string; image: Buffer; mime: string; demo?: boolean }) {
   const l = await q(db().from("leases").select("*, spaces(closeup_blob_id, offering_id, id)").eq("escrow_id", p.escrowId).maybeSingle());
   if (!l) throw new HttpError(404, "Lease not found");
   if (l.owner !== p.user.sui_address) throw new HttpError(403, "Only the space owner can submit proofs");
   const np = await nextPeriod(p.escrowId);
   if (!np || (np as any).upcoming) throw new HttpError(400, np ? `The next proof window opens ${new Date(np.open).toLocaleString()}` : "No proof is due for this lease");
 
-  const [closeup, creative] = await Promise.all([readBlob((l as any).spaces.closeup_blob_id), readBlob(l.creative_blob_id)]);
+  const [closeup, creative] = p.demo ? [null, null] : await Promise.all([readBlob((l as any).spaces.closeup_blob_id), readBlob(l.creative_blob_id)]);
   const ph = await phash(p.image);
   const prev = await q(db().from("proofs").select("phash").eq("escrow_id", p.escrowId));
-  const reused = prev.some((x: any) => x.phash && hamming(x.phash, ph) <= 6);
+  // Demo submit reuses the same sample photo, so skip the reuse check and the AI judge.
+  const reused = !p.demo && prev.some((x: any) => x.phash && hamming(x.phash, ph) <= 6);
 
-  const a = await generateJson<ProofA>({
+  const a: ProofA = p.demo ? ((await demoProof(p.image)).analysis as any) : await generateJson<ProofA>({
     system: PROOF_SYSTEM,
     parts: [
       { text: "IMAGE A = listing close-up of the ad space:" },
-      { image: closeup, mime: "image/jpeg" },
+      { image: closeup!, mime: "image/jpeg" },
       { text: "IMAGE B = approved creative:" },
-      { image: creative, mime: "image/png" },
+      { image: creative!, mime: "image/png" },
       { text: `IMAGE C = new proof photo (period ${np.period}):` },
       { image: p.image, mime: p.mime },
     ],
     schema: PROOF_SCHEMA,
   });
 
-  if (a.synthetic_suspicion === "high") {
+  if (!p.demo && a.synthetic_suspicion === "high") {
     // Confirm with an independent sample before rejecting (single samples are noisy).
     const b = await generateJson<ProofA>({
       system: PROOF_SYSTEM,
       parts: [
         { text: "IMAGE A = listing close-up of the ad space:" },
-        { image: closeup, mime: "image/jpeg" },
+        { image: closeup!, mime: "image/jpeg" },
         { text: "IMAGE B = approved creative:" },
-        { image: creative, mime: "image/png" },
+        { image: creative!, mime: "image/png" },
         { text: `IMAGE C = new proof photo (period ${np.period}):` },
         { image: p.image, mime: p.mime },
       ],

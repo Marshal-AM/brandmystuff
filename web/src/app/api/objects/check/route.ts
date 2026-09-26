@@ -6,6 +6,7 @@ import { analyzeHero } from "@/server/scoring/pipeline";
 import { storeBlob, storeJson } from "@/server/walrus";
 import { signDraft } from "@/server/drafts";
 import { fromOwnCameraLink } from "@/server/capture";
+import { demoHero, isDemo } from "@/server/demo";
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 28) || "object";
 
@@ -22,7 +23,9 @@ export const POST = handler(async (req) => {
   const buf = Buffer.from(await image.arrayBuffer());
   const liveCamera = await fromOwnCameraLink(String(f.get("captureLinkId") ?? ""), u.id, buf);
 
-  const r = await analyzeHero({ image: buf, mime: image.type || "image/jpeg", name: title, description, liveCamera, userId: u.id });
+  const r: Awaited<ReturnType<typeof analyzeHero>> = isDemo(f.get("demo"))
+    ? ((await demoHero(buf, title, description)) as any)
+    : await analyzeHero({ image: buf, mime: image.type || "image/jpeg", name: title, description, liveCamera, userId: u.id });
   if (r.decision === "REJECTED") return { decision: r.decision, gate: r.gate, reason: r.reason, tips: r.tips };
 
   const hero = await storeBlob(buf, image.type || "image/jpeg");

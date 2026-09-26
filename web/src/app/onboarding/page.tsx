@@ -3,12 +3,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Transaction } from "@mysten/sui/transactions";
-import { Box, Check, Fuel, ImagePlus, MapPin, Megaphone, X } from "lucide-react";
+import { Box, Check, Fuel, ImagePlus, MapPin, Megaphone, X, Zap } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { createProfile, setPayoutRoute } from "@/lib/sui/tx";
 import { Bot } from "@/components/scout-bot";
 import { Button, Spinner, cx, useAction } from "@/components/ui";
 import { EnsHint } from "@/components/ens";
+import { DEMO, DEMO_ENABLED, demoFile } from "@/lib/client/demo";
+
 import { PayoutChainPicker, routeReady, usePayoutChains, type PayoutChoice } from "@/components/payouts";
 import { FlowFrame, FlowInput, FlowNext, FlowQuestion, FlowTextarea, useFlow } from "@/components/flow";
 
@@ -39,10 +41,10 @@ function Onboarding() {
   const router = useRouter();
   const next = useSearchParams().get("next") ?? "/dashboard";
   const [mode, setMode] = useState<Mode>("owner");
-  const [handle, setHandle] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [handle, setHandle] = useState(() => (DEMO_ENABLED ? DEMO.handle() : ""));
+  const [displayName, setDisplayName] = useState(DEMO.displayName);
   const [brandName, setBrandName] = useState("");
-  const [brand, setBrand] = useState({ name: "", about: "", location: "" });
+  const [brand, setBrand] = useState(DEMO.brand);
   const [logo, setLogo] = useState<{ blobId: string; url: string } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [payout, setPayout] = useState<PayoutChoice>("sui");
@@ -234,6 +236,11 @@ function Onboarding() {
                 </button>
               )}
             </label>
+            {DEMO_ENABLED && !logo && (
+              <Button type="button" variant="secondary" className="mt-4" loading={uploading} onClick={async () => uploadLogo(await demoFile("logo"))} data-testid="demo-logo">
+                <Zap className="h-4 w-4" /> Demo submit
+              </Button>
+            )}
             <FlowNext onClick={onEnter} disabled={uploading} label={logo ? "OK" : "Skip for now"} skip={!logo} />
           </FlowQuestion>
         )}

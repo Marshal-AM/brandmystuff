@@ -8,6 +8,8 @@ import { createObject } from "@/lib/sui/tx";
 import { Badge, Button, EASE, Empty, Kicker, cx, useAction } from "@/components/ui";
 import { EnsName } from "@/components/ens";
 import { PhotoCapture } from "@/components/photo-capture";
+import { DEMO, DEMO_ENABLED, demoFile } from "@/lib/client/demo";
+
 import { FlowFrame, FlowInput, FlowNext, FlowQuestion, FlowTextarea, useFlow } from "@/components/flow";
 import { SignInButtons } from "@/components/shell";
 import { Lightbox } from "@/components/lightbox";
@@ -67,7 +69,7 @@ function SummaryRow({ label, value, onEdit }: { label: string; value: ReactNode;
 export default function ListObject() {
   const { authenticated, api, run } = useSession();
   const router = useRouter();
-  const [f, setF] = useState({ title: "", make: "", model: "", color: "", city: "", description: "" });
+  const [f, setF] = useState({ title: DEMO.object.title, make: DEMO.object.make, model: DEMO.object.model, color: "", city: DEMO.object.city, description: DEMO.object.description });
   const [photo, setPhoto] = useState<{ file: File; source: "camera" | "upload"; url: string; linkId?: string } | null>(null);
   const [check, setCheck] = useState<any>(null);
   const flow = useFlow(TOTAL);
@@ -86,13 +88,14 @@ export default function ListObject() {
     setF((x) => ({ ...x, [k]: v }));
     if (check) setCheck(null);
   };
-  const doCheck = () =>
+  const doCheck = (demo?: File) =>
     act("check", async () => {
       const fd = new FormData();
-      fd.set("image", photo!.file);
+      fd.set("image", demo ?? photo!.file);
       Object.entries(f).forEach(([k, v]) => fd.set(k, v));
-      fd.set("captureSource", photo!.source);
-      if (photo!.linkId) fd.set("captureLinkId", photo!.linkId);
+      fd.set("captureSource", demo ? "camera" : photo!.source);
+      if (!demo && photo!.linkId) fd.set("captureLinkId", photo!.linkId);
+      if (demo) fd.set("demo", "1");
       const r = await api<any>("/api/objects/check", { method: "POST", body: fd });
       setCheck(r);
     });
@@ -165,9 +168,9 @@ export default function ListObject() {
                 <span className="inline-flex items-center gap-2"><Sun className="h-4 w-4 text-p" /> Even light, no glare</span>
                 <span className="inline-flex items-center gap-2"><Eye className="h-4 w-4 text-p" /> Seen the way people see it</span>
               </div>
-              <PhotoCapture purpose="hero" label="Photo of the whole object" testId="hero-photo" preview={photo?.url} scanning={busy === "check"} onChange={(file, source, linkId) => { setPhoto({ file, source, linkId, url: URL.createObjectURL(file) }); setCheck(null); }} />
+              <PhotoCapture purpose="hero" label="Photo of the whole object" testId="hero-photo" preview={photo?.url} scanning={busy === "check"} onChange={(file, source, linkId) => { setPhoto({ file, source, linkId, url: URL.createObjectURL(file) }); setCheck(null); }} onDemo={(file) => doCheck(file)} />
               {!accepted && (
-                <Button onClick={doCheck} loading={busy === "check"} disabled={!photo} data-testid="check-hero" size="lg">
+                <Button onClick={() => doCheck()} loading={busy === "check"} disabled={!photo} data-testid="check-hero" size="lg">
                   <ScanSearch className="h-4 w-4" /> {busy === "check" ? "Checking photo…" : check ? "Check again" : "Check photo"}
                 </Button>
               )}

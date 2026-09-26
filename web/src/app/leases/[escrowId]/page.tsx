@@ -38,6 +38,17 @@ function ProofUpload({ escrowId, next, onDone }: { escrowId: string; next: any; 
   const [res, setRes] = useState<any>(null);
   const { busy, run } = useAction();
   const open = Date.now() >= next.open;
+  const submitProof = (demo?: File) =>
+    run("proof", async () => {
+      const fd = new FormData();
+      fd.set("escrowId", escrowId);
+      fd.set("image", demo ?? photo!.file);
+      if (demo) fd.set("demo", "1");
+      const r = await api<any>("/api/proofs", { method: "POST", body: fd });
+      setRes(r);
+      if (r.accepted) onDone();
+      else setPhoto(null);
+    });
   return (
     <Card className={cx("space-y-4", open && "ring-spin")}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -52,23 +63,13 @@ function ProofUpload({ escrowId, next, onDone }: { escrowId: string; next: any; 
       ) : (
         <>
           <p className="text-sm text-muted">Take a clear photo of the ad installed on the space.</p>
-          <PhotoCapture purpose="proof" label="Proof photo" testId="proof-photo" preview={photo?.url} scanning={busy === "proof"} onChange={(file) => { setPhoto({ file, url: URL.createObjectURL(file) }); setRes(null); }} />
+          <PhotoCapture purpose="proof" label="Proof photo" testId="proof-photo" preview={photo?.url} scanning={busy === "proof"} onChange={(file) => { setPhoto({ file, url: URL.createObjectURL(file) }); setRes(null); }} onDemo={(file) => submitProof(file)} />
           <Button
             size="lg"
             disabled={!photo}
             loading={busy === "proof"}
             data-testid="submit-proof"
-            onClick={() =>
-              run("proof", async () => {
-                const fd = new FormData();
-                fd.set("escrowId", escrowId);
-                fd.set("image", photo!.file);
-                const r = await api<any>("/api/proofs", { method: "POST", body: fd });
-                setRes(r);
-                if (r.accepted) onDone();
-                else setPhoto(null);
-              })
-            }
+            onClick={() => submitProof()}
           >
             <ScanSearch className="h-4 w-4" /> Submit proof
           </Button>

@@ -1,4 +1,5 @@
 "use client";
+import { DEMO } from "@/lib/client/demo";
 import Link from "next/link";
 import { use, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -13,7 +14,7 @@ export default function Thread({ params }: { params: Promise<{ id: string }> }) 
   const { api, events, authenticated } = useSession();
   const { data, refetch } = useQuery({ queryKey: ["thread", id], queryFn: () => api<any>(`/api/conversations/${id}`), enabled: authenticated });
   const [msgs, setMsgs] = useState<any[]>([]);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(DEMO.message);
   const [files, setFiles] = useState<File[]>([]);
   const { busy, run } = useAction();
   const list = useRef<HTMLDivElement>(null);

@@ -1,4 +1,5 @@
 "use client";
+import { DEMO } from "@/lib/client/demo";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Save } from "lucide-react";
@@ -18,7 +19,7 @@ export default function Settings() {
     const u = me?.user;
     if (!u || seeded.current === u.id) return;
     seeded.current = u.id;
-    setF({ displayName: u.display_name ?? "", bio: u.bio ?? "", twitter: u.twitter ?? "", website: u.website ?? "", brandName: u.brand_name ?? "" });
+    setF({ displayName: u.display_name || DEMO.displayName, bio: u.bio || DEMO.profile.bio, twitter: u.twitter || DEMO.profile.twitter, website: u.website || DEMO.profile.website, brandName: u.brand_name ?? "" });
   }, [me?.user]);
   if (!authenticated)
     return (

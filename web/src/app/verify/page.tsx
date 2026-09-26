@@ -8,6 +8,8 @@ import { useSession } from "@/lib/client/session";
 import { Badge, Button, EASE, Empty, Kicker, PageLoader, Spinner, cx, useAction } from "@/components/ui";
 import { FlowChoice, FlowFrame, FlowInput, FlowNext, FlowQuestion, useFlow } from "@/components/flow";
 import { PhotoCapture } from "@/components/photo-capture";
+import { DEMO, DEMO_ENABLED, demoFile } from "@/lib/client/demo";
+
 import { SignInButtons } from "@/components/shell";
 
 const ATTEST: Record<string, string[]> = {
@@ -25,7 +27,7 @@ export default function Verify() {
   const { authenticated, api, refresh } = useSession();
   const { data, refetch, isLoading } = useQuery({ queryKey: ["kyc"], queryFn: () => api<any>("/api/kyc"), enabled: authenticated });
   const flow = useFlow(7);
-  const [f, setF] = useState({ legalName: "", dateOfBirth: "", country: "", addressLine: "", investorType: "non_us" });
+  const [f, setF] = useState({ ...DEMO.kyc, investorType: "non_us" });
   const [att, setAtt] = useState<string[]>([]);
   const [doc, setDoc] = useState<File | null>(null);
   const [docUrl, setDocUrl] = useState<string | null>(null);

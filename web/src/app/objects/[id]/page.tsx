@@ -13,16 +13,18 @@ import { Badge, Button, Card, EASE, Empty, Field, GradeBadge, Img, Input, Modal,
 import { FlowChoice, FlowFrame, FlowInput, FlowNext, FlowOverlay, FlowQuestion, useFlow } from "@/components/flow";
 import { EnsName } from "@/components/ens";
 import { PhotoCapture } from "@/components/photo-capture";
+import { DEMO, DEMO_ENABLED, demoFile } from "@/lib/client/demo";
+
 import { Lightbox } from "@/components/lightbox";
 
 const STEPS = ["Checking photo quality…", "Checking authenticity…", "Scoring the space…", "Scoring the space (second opinion)…"];
 
 function AddSpace({ objectId, onDone, onClose }: { objectId: string; onDone: () => void; onClose: () => void }) {
   const { api, run } = useSession();
-  const [f, setF] = useState({ label: "", widthCm: "", heightCm: "", placement: "rear", material: "anodised aluminium" });
+  const [f, setF] = useState({ label: DEMO.space.label, widthCm: DEMO.space.widthCm, heightCm: DEMO.space.heightCm, placement: "rear", material: DEMO.space.material });
   const [photo, setPhoto] = useState<{ file: File; source: "camera" | "upload"; url: string } | null>(null);
   const [res, setRes] = useState<any>(null);
-  const [price, setPriceV] = useState("");
+  const [price, setPriceV] = useState(DEMO_ENABLED ? "1" : "");
   const [phase, setPhase] = useState(-1);
   const [breakdown, setBreakdown] = useState(false);
   const flow = useFlow(6);
@@ -31,7 +33,7 @@ function AddSpace({ objectId, onDone, onClose }: { objectId: string; onDone: () 
     setF((x) => ({ ...x, [k]: v }));
     if (res) setRes(null);
   };
-  const analyze = () =>
+  const analyze = (demo?: File) =>
     act("analyze", async () => {
       setRes(null);
       let i = 0;
@@ -41,8 +43,9 @@ function AddSpace({ objectId, onDone, onClose }: { objectId: string; onDone: () 
         const fd = new FormData();
         Object.entries(f).forEach(([k, v]) => fd.set(k, v));
         fd.set("objectId", objectId);
-        fd.set("image", photo!.file);
-        fd.set("captureSource", photo!.source);
+        fd.set("image", demo ?? photo!.file);
+        fd.set("captureSource", demo ? "camera" : photo!.source);
+        if (demo) fd.set("demo", "1");
         const out = await api<any>("/api/spaces/analyze", { method: "POST", body: fd });
         setRes(out);
         if (out?.result?.decision === "ACCEPTED") setTimeout(() => flow.go(5), 900);
@@ -108,9 +111,9 @@ function AddSpace({ objectId, onDone, onClose }: { objectId: string; onDone: () 
         {flow.i === 4 && (
           <FlowQuestion n={5} required title="Take a close-up of just this section" sub="Place an ID card beside it for scale if you can. The AI scores the space from this photo.">
             <div className="space-y-6">
-              <PhotoCapture purpose="space" label="Close-up of the space" testId="space-photo" preview={photo?.url} scanning={busy === "analyze"} onChange={(file, source) => { setPhoto({ file, source, url: URL.createObjectURL(file) }); setRes(null); }} />
+              <PhotoCapture purpose="space" label="Close-up of the space" testId="space-photo" preview={photo?.url} scanning={busy === "analyze"} onChange={(file, source) => { setPhoto({ file, source, url: URL.createObjectURL(file) }); setRes(null); }} onDemo={(file) => analyze(file)} />
               {!accepted && (
-                <Button size="lg" onClick={analyze} loading={busy === "analyze"} disabled={!photo || !f.label || !size} data-testid="analyze">
+                <Button size="lg" onClick={() => analyze()} loading={busy === "analyze"} disabled={!photo || !f.label || !size} data-testid="analyze">
                   <ScanSearch className="h-4 w-4" /> Analyse space
                 </Button>
               )}

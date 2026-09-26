@@ -1,9 +1,10 @@
 "use client";
+import { DEMO, DEMO_ENABLED, demoFile } from "@/lib/client/demo";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { Lock, Plus } from "lucide-react";
+import { Loader2, Lock, Plus, Zap } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useSession } from "@/lib/client/session";
 import { book } from "@/lib/sui/tx";
@@ -42,8 +43,8 @@ export function Checkout({ space, booked, onClose }: { space: any; booked: numbe
   });
   const [weeks, setWeeks] = useState(1);
   const [asset, setAsset] = useState<any>(null);
-  const [landing, setLanding] = useState(me?.user?.website ?? "");
-  const [brand, setBrand] = useState(me?.user?.brand_name ?? me?.user?.display_name ?? "");
+  const [landing, setLanding] = useState(me?.user?.website || DEMO.lease.landingUrl);
+  const [brand, setBrand] = useState(me?.user?.brand_name || me?.user?.display_name || DEMO.lease.brand);
   const { data: kit, refetch } = useQuery({ queryKey: ["brand-kit"], queryFn: () => api<any>("/api/brand-assets") });
   const { busy, run: act } = useAction();
   const total = BigInt(space.price_per_week) * BigInt(weeks);
@@ -130,6 +131,11 @@ export function Checkout({ space, booked, onClose }: { space: any; booked: numbe
               </span>
               <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" data-testid="kit-upload" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
             </label>
+            {DEMO_ENABLED && (
+              <button type="button" onClick={() => act("demo-logo", async () => upload(await demoFile("logo")))} className="grid aspect-square place-items-center rounded-2xl border border-dashed border-p/50 bg-p/[0.06] text-xs font-semibold text-p transition-colors hover:bg-p/10" data-testid="kit-demo">
+                <span className="flex flex-col items-center gap-1">{busy === "demo-logo" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Zap className="h-5 w-5" />} Demo submit</span>
+              </button>
+            )}
           </div>
         </Step>
 

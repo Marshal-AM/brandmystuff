@@ -1,7 +1,9 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Camera, Check, Clock3, Copy, ExternalLink, Link2, Loader2, RotateCcw, Share2, Smartphone } from "lucide-react";
+import { Camera, Check, Clock3, Copy, ExternalLink, Link2, Loader2, RotateCcw, Share2, Smartphone, Zap } from "lucide-react";
+import QRCode from "qrcode";
+import { DEMO_ENABLED, demoFile } from "@/lib/client/demo";
 import { useSession } from "@/lib/client/session";
 import { Button, EASE, cx } from "./ui";
 
@@ -26,6 +28,7 @@ export function PhotoCapture({
   preview,
   testId,
   scanning,
+  onDemo,
 }: {
   purpose: CapturePurpose;
   /** `linkId` lets the server confirm the photo really came from this camera link. */
@@ -34,6 +37,8 @@ export function PhotoCapture({
   preview?: string | null;
   testId?: string;
   scanning?: boolean;
+  /** Called after "Demo submit" loads the sample photo; parents submit it straight away in demo mode. */
+  onDemo?: (f: File) => void | Promise<void>;
 }) {
   const { api, token: authToken } = useSession();
   const [token, setToken] = useState<string | null>(null);
@@ -42,6 +47,27 @@ export function PhotoCapture({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const received = useRef<string | null>(null);
+  const [qr, setQr] = useState<string | null>(null);
+  const [demoing, setDemoing] = useState(false);
+  useEffect(() => {
+    if (!token) return setQr(null);
+    QRCode.toDataURL(captureUrl(token), { margin: 1, width: 240, color: { dark: "#0b0816", light: "#ffffff" } }).then(setQr).catch(() => setQr(null));
+  }, [token]);
+  const runDemo = async () => {
+    setDemoing(true);
+    setError(null);
+    try {
+      const file = await demoFile(purpose);
+      setToken(null);
+      setLink(null);
+      onChangeRef.current(file, "camera", "demo");
+      await onDemo?.(file);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Demo submit failed");
+    } finally {
+      setDemoing(false);
+    }
+  };
   const onChangeRef = useRef(onChange);
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -159,6 +185,13 @@ export function PhotoCapture({
           <AnimatePresence mode="wait" initial={false}>
             {state === "waiting" && token ? (
               <motion.div key="waiting" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="space-y-2.5">
+                {qr && (
+                  <div className="flex items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={qr} alt="QR code for the photo link" className="h-28 w-28 shrink-0 rounded-xl bg-white p-1.5 shadow-[0_0_30px_-8px_rgba(171,159,242,0.6)]" data-testid={testId ? `${testId}-qr` : undefined} />
+                    <p className="text-xs text-muted">Scan with your phone&apos;s camera to open the photo link, or copy it below.</p>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 rounded-2xl border border-line-strong bg-white/[0.04] py-1.5 pl-3 pr-1.5">
                   <Link2 className="h-4 w-4 shrink-0 text-p" />
                   <input readOnly value={captureUrl(token)} onFocus={(e) => e.currentTarget.select()} className="min-w-0 flex-1 bg-transparent font-mono text-xs text-white/85 outline-none" data-testid={testId ? `${testId}-link` : undefined} />
@@ -182,6 +215,11 @@ export function PhotoCapture({
                   </span>
                   <span className="inline-flex items-center gap-1"><Clock3 className="h-3 w-3" /> valid until {new Date(link!.expiresAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</span>
                   <button type="button" onClick={createLink} className="font-semibold text-white/70 underline-offset-4 hover:text-white hover:underline">New link</button>
+                  {DEMO_ENABLED && (
+                    <button type="button" onClick={runDemo} disabled={demoing} className="inline-flex items-center gap-1 font-semibold text-p underline-offset-4 hover:underline disabled:opacity-50">
+                      <Zap className="h-3 w-3" /> Demo submit
+                    </button>
+                  )}
                 </div>
                 {link?.lastRejectReason && <p className="text-xs text-p-200">Last try: {link.lastRejectReason}</p>}
               </motion.div>
@@ -193,6 +231,11 @@ export function PhotoCapture({
                     <Button type="button" variant="secondary" onClick={createLink} loading={creating} data-testid={testId}>
                       <RotateCcw className="h-4 w-4" /> Retake photograph
                     </Button>
+                    {DEMO_ENABLED && (
+                      <Button type="button" variant="ghost" onClick={runDemo} loading={demoing || scanning}>
+                        <Zap className="h-4 w-4" /> Demo submit
+                      </Button>
+                    )}
                   </>
                 ) : (
                   <>
@@ -200,6 +243,11 @@ export function PhotoCapture({
                     <Button type="button" onClick={createLink} loading={creating} data-testid={testId}>
                       <Camera className="h-4 w-4" /> Take photograph
                     </Button>
+                    {DEMO_ENABLED && (
+                      <Button type="button" variant="secondary" onClick={runDemo} loading={demoing || scanning} data-testid={testId ? `${testId}-demo` : undefined}>
+                        <Zap className="h-4 w-4" /> Demo submit
+                      </Button>
+                    )}
                     <span className="text-center text-[11px] text-faint sm:text-left">You&apos;ll get a link. Open it on your phone and take the photo with its camera.</span>
                   </>
                 )}

@@ -1,6 +1,7 @@
 import { handler } from "@/server/http";
 import { HttpError, requireUser } from "@/server/auth";
 import { submitProof } from "@/server/proofs";
+import { isDemo } from "@/server/demo";
 
 export const POST = handler(async (req) => {
   const u = await requireUser(req);
@@ -12,5 +13,6 @@ export const POST = handler(async (req) => {
     escrowId: String(f.get("escrowId")),
     image: Buffer.from(await image.arrayBuffer()),
     mime: image.type || "image/jpeg",
+    demo: isDemo(f.get("demo")),
   });
 });
