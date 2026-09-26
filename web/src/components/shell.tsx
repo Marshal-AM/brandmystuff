@@ -267,7 +267,7 @@ export default function Shell({ children }: { children: ReactNode }) {
   const [mobile, setMobile] = useState(false);
   const landing = path === "/";
   // Fixed-height, app-style pages: no footer so nothing scrolls past the viewport.
-  const fixedPage = path.startsWith("/objects/") || (path.endsWith(".brandmystuff.eth") && path.slice(1).split(".").length >= 4 && !path.slice(1).startsWith("l-"));
+  const fixedPage = path.startsWith("/objects/") || /^\/messages\/[^/]+$/.test(path) || (path.endsWith(".brandmystuff.eth") && path.slice(1).split(".").length >= 4 && !path.slice(1).startsWith("l-"));
   useEffect(() => {
     if (ready && authenticated && me?.needsOnboarding && path !== "/onboarding" && path !== "/wallet" && !path.startsWith("/capture/")) router.push(`/onboarding?next=${encodeURIComponent(path)}`);
   }, [ready, authenticated, me?.needsOnboarding, path, router]);

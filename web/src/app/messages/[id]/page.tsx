@@ -16,7 +16,7 @@ export default function Thread({ params }: { params: Promise<{ id: string }> }) 
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const { busy, run } = useAction();
-  const end = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (data) setMsgs(data.messages);
   }, [data]);
@@ -28,7 +28,12 @@ export default function Thread({ params }: { params: Promise<{ id: string }> }) 
     events.addEventListener("message", h);
     return () => events.removeEventListener("message", h);
   }, [events, id]);
-  useEffect(() => end.current?.scrollIntoView({ behavior: "smooth" }), [msgs.length]);
+  // Scroll only the message list, never the page. (scrollIntoView also scrolls every ancestor,
+  // and in current Chrome it returns a Promise, which must not be returned from an effect.)
+  useEffect(() => {
+    const el = list.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: msgs.length > 1 ? "smooth" : "auto" });
+  }, [msgs.length]);
   if (!data) return <PageLoader label="Loading conversation" />;
   const person = (uid: string) => data.people.find((p: any) => p.id === uid);
   const send = () =>
@@ -43,8 +48,8 @@ export default function Thread({ params }: { params: Promise<{ id: string }> }) 
     });
   const sp = data.conversation.spaces;
   return (
-    <div className="mx-auto flex h-[calc(100vh-170px)] max-w-3xl flex-col px-4 sm:px-6">
-      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }} className="glass mb-3 flex items-center gap-3 rounded-3xl p-3">
+    <div className="mx-auto flex h-[calc(100dvh-164px)] min-h-[420px] max-w-3xl flex-col px-4 sm:px-6">
+      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }} className="glass mb-3 flex shrink-0 items-center gap-3 rounded-3xl p-3">
         <Link href="/messages" className="grid h-9 w-9 place-items-center rounded-full text-muted transition-colors hover:bg-white/[0.06] hover:text-white" aria-label="Back">
           <ArrowLeft className="h-4 w-4" />
         </Link>
@@ -60,7 +65,7 @@ export default function Thread({ params }: { params: Promise<{ id: string }> }) 
         )}
       </motion.div>
 
-      <div className="relative flex-1 space-y-3 overflow-y-auto rounded-3xl border border-line bg-white/[0.02] p-4">
+      <div ref={list} className="relative min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain rounded-3xl border border-line bg-white/[0.02] p-4">
         {!msgs.length && (
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="grid h-full place-items-center text-center">
             <div>
@@ -113,10 +118,9 @@ export default function Thread({ params }: { params: Promise<{ id: string }> }) 
             );
           })}
         </AnimatePresence>
-        <div ref={end} />
       </div>
 
-      <div className="sticky bottom-0 mt-3 space-y-2 pb-2">
+      <div className="mt-3 shrink-0 space-y-2 pb-2">
         <AnimatePresence>
           {files.length > 0 && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="flex flex-wrap gap-1.5 overflow-hidden">
