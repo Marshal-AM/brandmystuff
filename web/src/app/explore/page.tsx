@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { PLACEMENTS } from "@/lib/categories";
 import { SpaceCard } from "@/components/space-card";
 import { AnimatedNumber, EASE, Empty, Input, LinkButton, PageHeader, Select, Skeleton, cx } from "@/components/ui";
+import { EnsPulse } from "@/components/ens";
 
 function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
@@ -43,6 +44,8 @@ export default function Explore() {
           </>
         }
       />
+
+      <EnsPulse className="mb-4" />
 
       {/* command bar */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2, ease: EASE }} className={cx("relative rounded-[1.75rem] p-[1px] transition-all duration-500", focus ? "bg-gradient-to-r from-p-600 via-p to-p-300 shadow-[0_0_60px_-10px_rgba(171,159,242,0.6)]" : "bg-line-strong")}>

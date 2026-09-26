@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { EASE, Empty, Img, PageHeader, PageLoader, cx } from "@/components/ui";
+import { EnsName } from "@/components/ens";
 import { SignInButtons } from "@/components/shell";
 
 export default function Messages() {
@@ -38,7 +39,8 @@ export default function Messages() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className={cx("truncate", hot ? "font-extrabold" : "font-semibold")}>{name}</div>
-                  <div className="truncate text-sm text-muted">about {c.spaces?.label} · <span className="font-mono text-xs">{c.spaces?.ens_name}</span></div>
+                  <div className="truncate text-sm text-muted">about {c.spaces?.label}</div>
+                  {c.spaces?.ens_name && <div className="mt-1"><EnsName name={c.spaces.ens_name} kind="space" size="xs" card={false} /></div>}
                 </div>
                 {hot && <span className="rounded-full bg-p px-2.5 py-1 text-xs font-extrabold text-ink">{c.unread} new</span>}
                 <ChevronRight className="h-4 w-4 text-muted transition-transform group-hover:translate-x-1 group-hover:text-p" />

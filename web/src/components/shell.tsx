@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSession } from "@/lib/client/session";
 import { Logo, LogoMark } from "./logo";
 import { Button, EASE, TestnetBanner, cx, useToast, usdc, shortAddr } from "./ui";
+import { EnsGlyph, EnsName } from "./ens";
 
 const APP_NAV = [
   ["/explore", "Explore"],
@@ -146,7 +147,7 @@ function UserMenu() {
     <div className="relative" ref={ref}>
       <motion.button whileTap={{ scale: 0.96 }} onClick={() => setOpen(!open)} className="flex items-center gap-2 rounded-full border border-line-strong bg-white/[0.04] py-1 pl-1 pr-3.5 text-sm transition-colors hover:border-p/50" data-testid="user-menu">
         <Avatar letter={(u.handle ?? "?")[0]?.toUpperCase()} />
-        <span className="hidden max-w-[160px] truncate font-semibold sm:inline">{u.ens_name ?? shortAddr(u.sui_address)}</span>
+        <span className="hidden max-w-[180px] items-center gap-1.5 font-semibold sm:inline-flex">{u.ens_name && <EnsGlyph className="text-p" />}<span className="truncate">{u.ens_name ?? shortAddr(u.sui_address)}</span></span>
       </motion.button>
       <AnimatePresence>
         {open && (
@@ -160,6 +161,15 @@ function UserMenu() {
               <div className="relative mt-1 text-2xl font-extrabold tracking-tight">{usdc(me!.balances.usdc)}</div>
               <div className="relative text-xs font-semibold opacity-70">{(Number(me!.balances.sui) / 1e9).toFixed(3)} SUI for gas</div>
             </div>
+            {u.ens_name && (
+              <div className="mb-2 rounded-2xl border border-line bg-white/[0.03] p-3">
+                <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+                  <span>Your ENS name</span>
+                  <span className={u.ens_status === "registered" ? "text-p" : "text-p-300"}>{u.ens_status === "registered" ? "Live" : "Registering…"}</span>
+                </div>
+                <EnsName name={u.ens_name} status={u.ens_status} kind="account" size="xs" card={false} />
+              </div>
+            )}
             {links.map(([href, label], i) => (
               <motion.div key={href} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.03 * i }}>
                 <Link href={href} onClick={() => setOpen(false)} className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white">
@@ -238,7 +248,7 @@ function AppFooter() {
           <Logo />
         </Link>
         <p className="text-center">
-          Listings are ENS names under <span className="font-mono text-p">brandmystuff.eth</span> (Sepolia ENSv2) · money moves on Sui testnet
+          <span className="inline-flex items-center gap-1 align-middle"><EnsGlyph className="text-p" /> Every account, object, space and lease is an ENS name under <span className="font-mono text-p">brandmystuff.eth</span></span> (Sepolia ENSv2) · money moves on Sui testnet
         </p>
         <div className="flex gap-4">
           <Link className="hover:text-white" href="/explore">Explore</Link>

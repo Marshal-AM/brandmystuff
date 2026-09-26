@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Save } from "lucide-react";
 import { useSession } from "@/lib/client/session";
-import { Button, Card, EASE, Empty, Field, Input, PageHeader, Textarea, useAction } from "@/components/ui";
+import { Button, Card, EASE, Empty, Field, Input, PageHeader, Textarea, cx, useAction } from "@/components/ui";
+import { EnsGlyph, EnsName, ensAppUrl } from "@/components/ens";
 import { SignInButtons } from "@/components/shell";
 
 export default function Settings() {
@@ -28,7 +29,7 @@ export default function Settings() {
   const initial = (f.displayName || me?.user?.handle || "?").slice(0, 1).toUpperCase();
   return (
     <div className="mx-auto max-w-2xl px-4 sm:px-6">
-      <PageHeader kicker="Settings" title="Your profile" sub={<>Saved to your ENS records on <span className="font-mono text-p">{me?.user?.ens_name}</span>.</>} />
+      <PageHeader kicker="Settings" title="Your profile" sub="Your profile lives in your ENS name’s records, so it follows you anywhere ENS is read." />
       <Card className="relative overflow-hidden">
         <div aria-hidden className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-p/15 blur-3xl" />
         <div className="relative mb-6 flex items-center gap-4 border-b border-line pb-6">
@@ -37,7 +38,7 @@ export default function Settings() {
           </motion.div>
           <div className="min-w-0">
             <div className="truncate text-lg font-bold">{f.displayName || me?.user?.handle}</div>
-            <div className="truncate font-mono text-xs text-muted">{me?.user?.ens_name}</div>
+            {me?.user?.ens_name && <div className="mt-1"><EnsName name={me.user.ens_name} status={me.user.ens_status} kind="account" size="xs" /></div>}
           </div>
         </div>
         <motion.div className="relative space-y-4" initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.06, delayChildren: 0.15 } } }}>
@@ -57,6 +58,41 @@ export default function Settings() {
           ))}
         </motion.div>
       </Card>
+      {me?.user?.ens_name && (
+        <Card className="mt-6" delay={0.1}>
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h3 className="flex items-center gap-2 font-bold"><EnsGlyph className="h-4 w-4 text-p" /> What&apos;s written to ENS</h3>
+              <p className="mt-0.5 text-xs text-muted">These text records on your name update when you save. Anyone reading ENS sees the same thing.</p>
+            </div>
+            <a href={ensAppUrl(me.user.ens_name)} target="_blank" rel="noreferrer" className="text-xs font-semibold text-p hover:underline">View in the ENS app ↗</a>
+          </div>
+          <div className="space-y-1.5">
+            {[
+              ["name", f.displayName, me.user.display_name],
+              ["description", f.bio, me.user.bio],
+              ["com.twitter", f.twitter, me.user.twitter],
+              ["url", f.website, me.user.website],
+              ["class", f.brandName ? "Organization" : "Person", me.user.brand_name ? "Organization" : "Person"],
+            ].map(([key, now, saved]) => {
+              const changed = (now ?? "") !== (saved ?? "");
+              return (
+                <div key={key as string} className={cx("flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors", changed ? "bg-p/[0.08] ring-1 ring-p/30" : "bg-white/[0.02]")}>
+                  <span className="w-28 shrink-0 font-mono text-[11px] text-p">{key}</span>
+                  <span className={cx("min-w-0 flex-1 truncate", now ? "text-white/90" : "text-faint")}>{(now as string) || "not set"}</span>
+                  <AnimatePresence>{changed && <motion.span initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="shrink-0 rounded-full bg-p px-2 py-0.5 text-[10px] font-bold text-ink">on save</motion.span>}</AnimatePresence>
+                </div>
+              );
+            })}
+            {me.user.sui_address && (
+              <div className="flex items-center gap-3 rounded-xl bg-white/[0.02] px-3 py-2 text-sm">
+                <span className="w-28 shrink-0 font-mono text-[11px] text-p">addr · Sui</span>
+                <span className="min-w-0 flex-1 truncate font-mono text-xs text-white/70">{me.user.sui_address}</span>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

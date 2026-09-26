@@ -2,9 +2,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { BadgeCheck, Check, IdCard, ScrollText, ShieldCheck, UserRound } from "lucide-react";
+import { BadgeCheck, Check, ShieldCheck } from "lucide-react";
 import { useSession } from "@/lib/client/session";
-import { Badge, Button, EASE, Empty, Field, Input, PageHeader, PageLoader, Spinner, cx, useAction } from "@/components/ui";
+import { Badge, Button, EASE, Empty, Kicker, PageLoader, Spinner, cx, useAction } from "@/components/ui";
+import { FlowChoice, FlowFrame, FlowInput, FlowNext, FlowQuestion, useFlow } from "@/components/flow";
 import { PhotoCapture } from "@/components/photo-capture";
 import { SignInButtons } from "@/components/shell";
 
@@ -18,17 +19,11 @@ const TYPES = [
   { id: "non_us", label: "Non-US", sub: "Investing from outside the US" },
   { id: "retail", label: "Retail", sub: "Within personal limits" },
 ];
-const STEPS = [
-  { icon: UserRound, label: "Details" },
-  { icon: ScrollText, label: "Attest" },
-  { icon: IdCard, label: "Document" },
-];
 
 export default function Verify() {
   const { authenticated, api, refresh } = useSession();
   const { data, refetch, isLoading } = useQuery({ queryKey: ["kyc"], queryFn: () => api<any>("/api/kyc"), enabled: authenticated });
-  const [step, setStep] = useState(1);
-  const [dir, setDir] = useState(1);
+  const flow = useFlow(7);
   const [f, setF] = useState({ legalName: "", dateOfBirth: "", country: "", addressLine: "", investorType: "non_us" });
   const [att, setAtt] = useState<string[]>([]);
   const [doc, setDoc] = useState<File | null>(null);
@@ -57,7 +52,6 @@ export default function Verify() {
         </motion.div>
       </div>
     );
-  const go = (n: number) => { setDir(n > step ? 1 : -1); setStep(n); };
   const submit = () =>
     run("kyc", async () => {
       const fd = new FormData();
@@ -68,112 +62,90 @@ export default function Verify() {
       await refetch();
       await refresh();
     }, "Verified");
+  const can = [f.legalName.trim().length >= 2, !!f.dateOfBirth, f.country.length === 2, f.addressLine.length >= 5, !!f.investorType, att.length >= 2, !!doc][flow.i];
+  const next = () => {
+    if (!can) return;
+    if (flow.i === 6) submit();
+    else flow.next();
+  };
+  const firstName = f.legalName.trim().split(/\s+/)[0];
   return (
-    <div className="mx-auto max-w-xl px-4 pb-16">
-      <PageHeader kicker="Identity" title="Verify your identity" sub="Required to invest in or trade revenue units. Takes about a minute." />
-
-      <div className="relative mb-6 flex justify-between">
-        <div className="absolute left-5 right-5 top-5 h-px bg-white/10" />
-        <motion.div className="absolute left-5 top-5 h-px bg-gradient-to-r from-p-600 to-p" animate={{ width: `calc(${((step - 1) / 2) * 100}% - ${((step - 1) / 2) * 40}px)` }} transition={{ duration: 0.6, ease: EASE }} />
-        {STEPS.map((s, i) => {
-          const n = i + 1, done = step > n, active = step === n;
-          return (
-            <div key={s.label} className="relative flex flex-col items-center gap-2">
-              <motion.span animate={{ scale: active ? 1.12 : 1 }} className={cx("grid h-10 w-10 place-items-center rounded-full transition-colors duration-500", done ? "bg-p text-ink" : active ? "bg-white text-ink shadow-[0_0_24px_rgba(255,255,255,0.35)]" : "bg-p-950 text-muted ring-1 ring-line-strong")}>
-                {done ? <Check className="h-4 w-4" strokeWidth={3} /> : <s.icon className="h-4 w-4" />}
-              </motion.span>
-              <span className={cx("text-xs font-semibold", active || done ? "text-white" : "text-muted")}>{s.label}</span>
+    <div className="mx-auto max-w-3xl px-4 pb-16 sm:px-6">
+      <div className="mb-8 flex flex-wrap items-center gap-3">
+        <Kicker>Identity</Kicker>
+        <span className="text-xs text-muted">Required to invest in or trade revenue units. Takes about a minute.</span>
+      </div>
+      <FlowFrame flow={flow} canNext={can && flow.i !== 6} onEnter={next} chapters={[{ label: "Details", from: 0 }, { label: "Attest", from: 4 }, { label: "Document", from: 6 }]}>
+        {flow.i === 0 && (
+          <FlowQuestion n={1} required title="What's your full legal name?" sub="Exactly as it appears on your ID.">
+            <FlowInput value={f.legalName} onChange={(e) => setF({ ...f, legalName: e.target.value })} onEnter={next} placeholder="Maya Chen" data-testid="kyc-name" />
+            <FlowNext onClick={next} disabled={!can} />
+          </FlowQuestion>
+        )}
+        {flow.i === 1 && (
+          <FlowQuestion n={2} required title={<>When were you born{firstName ? <>, <span className="text-p">{firstName}</span></> : null}?</>}>
+            <FlowInput type="date" value={f.dateOfBirth} onChange={(e) => setF({ ...f, dateOfBirth: e.target.value })} onEnter={next} data-testid="kyc-dob" className="max-w-xs [color-scheme:dark]" />
+            <FlowNext onClick={next} disabled={!can} />
+          </FlowQuestion>
+        )}
+        {flow.i === 2 && (
+          <FlowQuestion n={3} required title="Which country do you live in?" sub="Two-letter ISO code, like IN, US or GB.">
+            <FlowInput maxLength={2} value={f.country} onChange={(e) => setF({ ...f, country: e.target.value.toUpperCase() })} onEnter={next} placeholder="IN" className="max-w-[8rem] font-mono uppercase tracking-[0.2em]" data-testid="kyc-country" />
+            <FlowNext onClick={next} disabled={!can} />
+          </FlowQuestion>
+        )}
+        {flow.i === 3 && (
+          <FlowQuestion n={4} required title="And your address?">
+            <FlowInput value={f.addressLine} onChange={(e) => setF({ ...f, addressLine: e.target.value })} onEnter={next} placeholder="12 MG Road, Bengaluru" data-testid="kyc-address" />
+            <FlowNext onClick={next} disabled={!can} testId="kyc-next1" />
+          </FlowQuestion>
+        )}
+        {flow.i === 4 && (
+          <FlowQuestion n={5} required title="How are you investing?" sub="Press a letter or tap to choose.">
+            <FlowChoice options={TYPES.map((t) => ({ id: t.id, label: t.label, sub: t.sub }))} value={f.investorType} onChange={(v) => { if (v !== f.investorType) { setF({ ...f, investorType: v }); setAtt([]); } }} />
+            <FlowNext onClick={next} disabled={!can} />
+          </FlowQuestion>
+        )}
+        {flow.i === 5 && (
+          <FlowQuestion n={6} required title="Please confirm both of these" sub="Tick each one to continue.">
+            <div className="space-y-2.5">
+              {ATTEST[f.investorType].map((a, i) => {
+                const on = att.includes(a);
+                return (
+                  <motion.label key={a} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className={cx("relative flex cursor-pointer gap-4 rounded-2xl border px-4 py-4 text-base transition-colors", on ? "border-p bg-p/[0.1]" : "border-line-strong hover:border-p/40")}>
+                    <input type="checkbox" className="absolute inset-0 h-full w-full cursor-pointer opacity-0" checked={on} onChange={(e) => setAtt(e.target.checked ? [...att, a] : att.filter((x) => x !== a))} data-testid="kyc-attest" />
+                    <span className={cx("mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-lg transition-colors", on ? "bg-p text-ink" : "ring-1 ring-line-strong")}>
+                      <AnimatePresence>{on && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}><Check className="h-4 w-4" strokeWidth={3.5} /></motion.span>}</AnimatePresence>
+                    </span>
+                    <span className="text-white/85">{a}</span>
+                  </motion.label>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
-
-      <div className="glass relative overflow-hidden rounded-[28px] p-6">
-        <AnimatePresence mode="wait" custom={dir} initial={false}>
-          <motion.div
-            key={step}
-            custom={dir}
-            variants={{ in: (d: number) => ({ opacity: 0, x: 40 * d, filter: "blur(6px)" }), on: { opacity: 1, x: 0, filter: "blur(0px)" }, out: (d: number) => ({ opacity: 0, x: -40 * d, filter: "blur(6px)" }) }}
-            initial="in"
-            animate="on"
-            exit="out"
-            transition={{ duration: 0.4, ease: EASE }}
-            className="space-y-4"
-          >
-            {step === 1 && (
-              <>
-                <Field label="Legal name"><Input value={f.legalName} onChange={(e) => setF({ ...f, legalName: e.target.value })} data-testid="kyc-name" /></Field>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Date of birth"><Input type="date" value={f.dateOfBirth} onChange={(e) => setF({ ...f, dateOfBirth: e.target.value })} data-testid="kyc-dob" /></Field>
-                  <Field label="Country (ISO code)"><Input maxLength={2} value={f.country} onChange={(e) => setF({ ...f, country: e.target.value.toUpperCase() })} placeholder="IN" className="font-mono uppercase" data-testid="kyc-country" /></Field>
-                </div>
-                <Field label="Address"><Input value={f.addressLine} onChange={(e) => setF({ ...f, addressLine: e.target.value })} data-testid="kyc-address" /></Field>
-                <Button className="w-full" disabled={!f.legalName || !f.dateOfBirth || f.country.length !== 2 || f.addressLine.length < 5} onClick={() => go(2)} data-testid="kyc-next1">Continue</Button>
-              </>
-            )}
-            {step === 2 && (
-              <>
-                <div className="text-sm font-semibold text-white/80">Investor type</div>
-                <div className="grid grid-cols-3 gap-2">
-                  {TYPES.map((t) => (
-                    <motion.button key={t.id} whileTap={{ scale: 0.96 }} onClick={() => { setF({ ...f, investorType: t.id }); setAtt([]); }} className={cx("relative overflow-hidden rounded-2xl border p-3 text-left transition-colors", f.investorType === t.id ? "border-p" : "border-line-strong hover:border-p/40")}>
-                      {f.investorType === t.id && <motion.span layoutId="inv-type" className="absolute inset-0 bg-p/15" transition={{ type: "spring", stiffness: 400, damping: 30 }} />}
-                      <div className="relative text-sm font-bold">{t.label}</div>
-                      <div className="relative mt-0.5 text-[11px] leading-tight text-muted">{t.sub}</div>
-                    </motion.button>
-                  ))}
-                </div>
-                <div className="space-y-2">
-                  {ATTEST[f.investorType].map((a, i) => {
-                    const on = att.includes(a);
-                    return (
-                      <motion.label key={a} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className={cx("relative flex cursor-pointer gap-3 rounded-2xl border p-4 text-sm transition-colors", on ? "border-p/50 bg-p/[0.08]" : "border-line hover:border-line-strong")}>
-                        <input type="checkbox" className="absolute inset-0 h-full w-full cursor-pointer opacity-0" checked={on} onChange={(e) => setAtt(e.target.checked ? [...att, a] : att.filter((x) => x !== a))} data-testid="kyc-attest" />
-                        <span className={cx("mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md transition-colors", on ? "bg-p text-ink" : "ring-1 ring-line-strong")}>
-                          <AnimatePresence>{on && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}><Check className="h-3.5 w-3.5" strokeWidth={3.5} /></motion.span>}</AnimatePresence>
-                        </span>
-                        <span className="text-white/85">{a}</span>
-                      </motion.label>
-                    );
-                  })}
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="secondary" onClick={() => go(1)}>Back</Button>
-                  <Button className="flex-1" disabled={att.length < 2} onClick={() => go(3)} data-testid="kyc-next2">Continue</Button>
-                </div>
-              </>
-            )}
-            {step === 3 && (
-              <>
-                <PhotoCapture
-                  purpose="kyc"
-                  label="ID document (passport, national ID or driving licence)"
-                  testId="kyc-doc"
-                  preview={docUrl}
-                  onChange={(file) => { setDoc(file); setDocUrl(URL.createObjectURL(file)); }}
-                />
-                <p className="-mt-1 text-xs text-muted">Checked for type and size, then discarded. Never stored.</p>
-                <AnimatePresence>
-                  {busy === "kyc" && (
-                    <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="flex items-center gap-2 text-sm text-p">
-                      <Spinner className="h-4 w-4" /> Checking your documents…
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-                <div className="flex gap-2">
-                  <Button variant="secondary" onClick={() => go(2)}>Back</Button>
-                  <Button className="flex-1" loading={busy === "kyc"} disabled={!doc} onClick={submit} data-testid="kyc-submit">
-                    <ShieldCheck className="h-4 w-4" /> Submit
-                  </Button>
-                </div>
-              </>
-            )}
-          </motion.div>
-        </AnimatePresence>
-        <p className="mt-6 flex flex-wrap items-center gap-2 border-t border-line pt-4 text-[11px] text-muted">
-          <Badge tone="warn">Testnet</Badge> Identity verification will be provided by Sumsub or Persona. This demo auto-approves.
-        </p>
-      </div>
+            <FlowNext onClick={next} disabled={!can} testId="kyc-next2" />
+          </FlowQuestion>
+        )}
+        {flow.i === 6 && (
+          <FlowQuestion n={7} required title="Last one: a photo of your ID" sub="Passport, national ID or driving licence. It's checked for type and size, then discarded. Never stored.">
+            <PhotoCapture purpose="kyc" label="ID document" testId="kyc-doc" preview={docUrl} onChange={(file) => { setDoc(file); setDocUrl(URL.createObjectURL(file)); }} />
+            <AnimatePresence>
+              {busy === "kyc" && (
+                <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mt-4 flex items-center gap-2 text-sm text-p">
+                  <Spinner className="h-4 w-4" /> Checking your documents…
+                </motion.p>
+              )}
+            </AnimatePresence>
+            <div className="mt-8">
+              <Button size="lg" loading={busy === "kyc"} disabled={!doc} onClick={submit} data-testid="kyc-submit">
+                <ShieldCheck className="h-4 w-4" /> Submit
+              </Button>
+            </div>
+            <p className="mt-6 flex flex-wrap items-center gap-2 text-[11px] text-muted">
+              <Badge tone="warn">Testnet</Badge> Identity verification will be provided by Sumsub or Persona. This demo auto-approves.
+            </p>
+          </FlowQuestion>
+        )}
+      </FlowFrame>
     </div>
   );
 }

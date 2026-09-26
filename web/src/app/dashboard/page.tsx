@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUpRight, BellRing, Camera, Clock, Plus } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { AnimatedNumber, Badge, Card, EASE, Empty, GradeBadge, Img, LinkButton, PageHeader, PageLoader, SectionTitle, Stat, Tabs, cx, suiscan, usdc, ScrollArea, FitText } from "@/components/ui";
+import { YourNames } from "@/components/ens";
 import { SignInButtons } from "@/components/shell";
 
 const leaseTone = (s: string) => (s === "live" || s === "completed" ? "ok" : s === "pending_approval" || s === "awaiting_install" ? "warn" : s === "disputed" ? "bad" : "neutral");
@@ -120,6 +121,7 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
+              <YourNames api={api} />
               <Card>
                 <SectionTitle>Earnings history</SectionTitle>
                 {!o.earnings.length && <p className="text-sm text-muted">Payouts appear here as proofs are accepted.</p>}

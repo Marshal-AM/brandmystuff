@@ -4,6 +4,7 @@ import { motion, useMotionTemplate, useMotionValue, useSpring, useTransform } fr
 import { Camera, Ruler } from "lucide-react";
 import type { MouseEvent } from "react";
 import { Badge, GradeBadge, Img, usdc } from "./ui";
+import { EnsName } from "./ens";
 
 export function SpaceCard({ s }: { s: any }) {
   const week = Number(s.week_ms);
@@ -64,7 +65,7 @@ export function SpaceCard({ s }: { s: any }) {
               {s.object?.city ? ` · ${s.object.city}` : ""}
             </div>
             <div className="mt-auto flex items-center justify-between gap-3 pt-3 text-[11px] text-faint">
-              <span className="truncate font-mono">{s.ens_name}</span>
+              <span className="min-w-0"><EnsName name={s.ens_name} kind="space" size="xs" /></span>
               {s.accepted_proofs > 0 && (
                 <span className="flex shrink-0 items-center gap-1 text-p">
                   <Camera className="h-3 w-3" /> {s.accepted_proofs}

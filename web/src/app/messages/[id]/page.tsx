@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowUpRight, CheckCheck, Flag, Paperclip, Send, X } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { Button, EASE, Img, PageLoader, Textarea, cx, useAction } from "@/components/ui";
+import { EnsName } from "@/components/ens";
 
 export default function Thread({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -50,7 +51,7 @@ export default function Thread({ params }: { params: Promise<{ id: string }> }) 
         <Img blob={sp.closeup_blob_id} alt="" className="h-11 w-11 rounded-xl" />
         <div className="min-w-0">
           <div className="truncate font-bold">{sp.label}</div>
-          <Link href={`/${sp.ens_name}`} className="block truncate font-mono text-[11px] text-p hover:underline">{sp.ens_name}</Link>
+          <div className="mt-0.5"><EnsName name={sp.ens_name} kind="space" size="xs" /></div>
         </div>
         {data.conversation.escrow_id && (
           <Link href={`/leases/${data.conversation.escrow_id}`} className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-p/15 px-3.5 py-1.5 text-xs font-semibold text-p transition-colors hover:bg-p hover:text-ink">

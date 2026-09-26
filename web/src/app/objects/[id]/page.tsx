@@ -9,7 +9,9 @@ import { addSpace, buySponsorship, setPrice, spaceStatus } from "@/lib/sui/tx";
 import { MATERIALS, PLACEMENTS } from "@/lib/categories";
 import { toAtomic } from "@/lib/deployment";
 import { AqsPanel } from "@/components/aqs";
-import { Badge, Button, Card, EASE, Empty, Field, GradeBadge, Img, Input, Modal, PageLoader, Select, cx, useAction, usdc } from "@/components/ui";
+import { Badge, Button, Card, EASE, Empty, Field, GradeBadge, Img, Input, Modal, PageLoader, cx, useAction, usdc } from "@/components/ui";
+import { FlowChoice, FlowFrame, FlowInput, FlowNext, FlowOverlay, FlowQuestion, useFlow } from "@/components/flow";
+import { EnsName } from "@/components/ens";
 import { PhotoCapture } from "@/components/photo-capture";
 
 const STEPS = ["Checking photo quality…", "Checking authenticity…", "Scoring the space…", "Scoring the space (second opinion)…"];
@@ -20,24 +22,31 @@ function AddSpace({ objectId, onDone, onClose }: { objectId: string; onDone: () 
   const [photo, setPhoto] = useState<{ file: File; source: "camera" | "upload"; url: string } | null>(null);
   const [res, setRes] = useState<any>(null);
   const [price, setPriceV] = useState("");
-  const [step, setStep] = useState(-1);
+  const [phase, setPhase] = useState(-1);
+  const flow = useFlow(6);
   const { busy, run: act } = useAction();
+  const set = (k: keyof typeof f, v: string) => {
+    setF((x) => ({ ...x, [k]: v }));
+    if (res) setRes(null);
+  };
   const analyze = () =>
     act("analyze", async () => {
       setRes(null);
       let i = 0;
-      setStep(0);
-      const t = setInterval(() => setStep(Math.min(++i, STEPS.length - 1)), 6000);
+      setPhase(0);
+      const t = setInterval(() => setPhase(Math.min(++i, STEPS.length - 1)), 6000);
       try {
         const fd = new FormData();
         Object.entries(f).forEach(([k, v]) => fd.set(k, v));
         fd.set("objectId", objectId);
         fd.set("image", photo!.file);
         fd.set("captureSource", photo!.source);
-        setRes(await api<any>("/api/spaces/analyze", { method: "POST", body: fd }));
+        const out = await api<any>("/api/spaces/analyze", { method: "POST", body: fd });
+        setRes(out);
+        if (out?.result?.decision === "ACCEPTED") setTimeout(() => flow.go(5), 900);
       } finally {
         clearInterval(t);
-        setStep(-1);
+        setPhase(-1);
       }
     });
   const list = () =>
@@ -48,104 +57,131 @@ function AddSpace({ objectId, onDone, onClose }: { objectId: string; onDone: () 
       onClose();
     }, "Space listed!");
   const r = res?.result;
+  const accepted = r?.decision === "ACCEPTED";
+  const size = Number(f.widthCm) > 0 && Number(f.heightCm) > 0;
+  const can = [f.label.trim().length > 0, size, true, true, accepted, Number(price) > 0][flow.i];
+  const num = (v: string) => v.replace(/[^\d.]/g, "");
+  const next = () => {
+    if (!can) return;
+    if (flow.i === 5) list();
+    else flow.next();
+  };
   return (
-    <Modal open onClose={onClose} title="Add an ad space" wide>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Space name" hint="e.g. lid-center, rear-panel">
-          <Input value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} data-testid="space-label" />
-        </Field>
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="Width (cm)">
-            <Input inputMode="decimal" value={f.widthCm} onChange={(e) => setF({ ...f, widthCm: e.target.value })} data-testid="space-w" />
-          </Field>
-          <Field label="Height (cm)">
-            <Input inputMode="decimal" value={f.heightCm} onChange={(e) => setF({ ...f, heightCm: e.target.value })} data-testid="space-h" />
-          </Field>
-        </div>
-        <Field label="Placement">
-          <Select value={f.placement} onChange={(e) => setF({ ...f, placement: e.target.value })}>
-            {PLACEMENTS.map((p) => (
-              <option key={p}>{p}</option>
-            ))}
-          </Select>
-        </Field>
-        <Field label="Surface material">
-          <Select value={f.material} onChange={(e) => setF({ ...f, material: e.target.value })}>
-            {MATERIALS.map((m) => (
-              <option key={m}>{m}</option>
-            ))}
-          </Select>
-        </Field>
-      </div>
-      <div className="mt-5">
-        <PhotoCapture purpose="space" label="Close-up of this section only (place an ID card for scale if you can)" testId="space-photo" preview={photo?.url} scanning={busy === "analyze"} onChange={(file, source) => { setPhoto({ file, source, url: URL.createObjectURL(file) }); setRes(null); }} />
-      </div>
-      <Button className="mt-5" size="lg" onClick={analyze} loading={busy === "analyze"} disabled={!photo || !f.label || !f.widthCm || !f.heightCm} data-testid="analyze">
-        <ScanSearch className="h-4 w-4" /> Analyse space
-      </Button>
-      <AnimatePresence>
-        {busy === "analyze" && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="mt-4 space-y-2.5 rounded-3xl border border-p/25 bg-p/[0.06] p-4">
-              {STEPS.map((label, k) => {
-                const state = k < step ? "done" : k === step ? "run" : "todo";
-                return (
-                  <div key={label} className={cx("flex items-center gap-3 text-sm transition-opacity", state === "todo" && "opacity-40")}>
-                    <span className={cx("grid h-7 w-7 place-items-center rounded-full", state === "done" ? "bg-p text-ink" : "bg-white/[0.06] text-p")}>
-                      {state === "done" ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : state === "run" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
-                    </span>
-                    <span className={state === "run" ? "font-semibold" : "text-white/70"}>{label}</span>
-                  </div>
-                );
-              })}
-              <div className="relative mt-1 h-1 overflow-hidden rounded-full bg-white/[0.06]">
-                <motion.div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-p-600 to-p" animate={{ width: `${((step + 1) / STEPS.length) * 100}%` }} transition={{ duration: 0.8, ease: EASE }} />
+    <FlowOverlay open onClose={onClose} title="Add an ad space">
+      <FlowFrame flow={flow} canNext={can && flow.i < 5} onEnter={next} chapters={[{ label: "The space", from: 0 }, { label: "Photo", from: 4 }, { label: "Price", from: 5 }]}>
+        {flow.i === 0 && (
+          <FlowQuestion n={1} required title="What do you call this space?" sub="A short name for this part of the object, like lid-center or rear-panel. It becomes part of its ENS name.">
+            <FlowInput value={f.label} onChange={(e) => set("label", e.target.value)} onEnter={next} placeholder="lid-center" data-testid="space-label" />
+            <FlowNext onClick={next} disabled={!can} />
+          </FlowQuestion>
+        )}
+        {flow.i === 1 && (
+          <FlowQuestion n={2} required title={<>How big is <span className="text-p">{f.label || "it"}</span>?</>} sub="The printable area in centimetres. A rough measure is fine; the AI checks it against the photo.">
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="w-32">
+                <FlowInput inputMode="decimal" value={f.widthCm} onChange={(e) => set("widthCm", num(e.target.value))} onEnter={next} placeholder="18" data-testid="space-w" />
+                <div className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted">Width, cm</div>
               </div>
-              <p className="text-xs text-muted">AI checks take about 20–60 seconds.</p>
+              <span className="pb-9 text-3xl font-light text-white/30">×</span>
+              <div className="w-32">
+                <FlowInput autoFocus={false} inputMode="decimal" value={f.heightCm} onChange={(e) => set("heightCm", num(e.target.value))} onEnter={next} placeholder="17" data-testid="space-h" />
+                <div className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted">Height, cm</div>
+              </div>
             </div>
-          </motion.div>
+            <FlowNext onClick={next} disabled={!can} />
+          </FlowQuestion>
         )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {r && (
-          <motion.div initial={{ opacity: 0, y: 20, filter: "blur(8px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 0.6, ease: EASE }} className={cx("relative mt-6 overflow-hidden rounded-3xl border p-5", r.decision === "ACCEPTED" ? "border-p/40 bg-p/[0.06]" : "border-white/20 bg-white/[0.04]")} data-testid="space-result">
-            <div className="mb-4 flex flex-wrap items-center gap-3">
-              {r.decision === "ACCEPTED" ? <Badge tone="ok">Accepted</Badge> : <Badge tone="bad">Rejected</Badge>}
-              <span className="font-bold">{r.decision === "ACCEPTED" ? `Scored ${r.aqs}/100` : r.reason}</span>
-            </div>
-            {r.decision === "ACCEPTED" ? (
-              <>
-                <AqsPanel r={r} />
-                <div className="mt-5 flex flex-wrap items-end gap-3 border-t border-line pt-5">
-                  <div className="w-full max-w-xs">
-                    <Field label="Your fixed price (USDC per week)">
-                      <Input inputMode="decimal" value={price} onChange={(e) => setPriceV(e.target.value)} placeholder="1.00" data-testid="space-price" />
-                    </Field>
-                  </div>
-                  <Button size="lg" onClick={list} loading={busy === "list"} disabled={!(Number(price) > 0)} data-testid="list-space">
-                    <Rocket className="h-4 w-4" /> List space
-                  </Button>
-                </div>
-                <p className="mt-3 text-xs text-muted">Listing signs one Sui transaction. Your ENS name <span className="font-mono text-p">{res.tx.ensName}</span> is registered automatically.</p>
-              </>
-            ) : (
-              <>
-                {!!r.tips?.length && (
-                  <ul className="space-y-1 text-sm text-white/75">
-                    {r.tips.map((t: string) => (
-                      <li key={t} className="flex gap-2"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-p" />{t}</li>
-                    ))}
-                  </ul>
-                )}
-                <Button variant="secondary" className="mt-4" onClick={() => { setPhoto(null); setRes(null); }}>
-                  Retake
+        {flow.i === 2 && (
+          <FlowQuestion n={3} title="Where on the object is it?" sub="Press a letter or tap to choose.">
+            <FlowChoice columns={2} options={PLACEMENTS.map((p) => ({ id: p, label: p }))} value={f.placement} onChange={(v) => set("placement", v)} />
+            <FlowNext onClick={next} />
+          </FlowQuestion>
+        )}
+        {flow.i === 3 && (
+          <FlowQuestion n={4} title="What's the surface made of?" sub="It tells the AI how a sticker or print will hold up.">
+            <FlowChoice columns={2} options={MATERIALS.map((m) => ({ id: m, label: m }))} value={f.material} onChange={(v) => set("material", v)} />
+            <FlowNext onClick={next} />
+          </FlowQuestion>
+        )}
+        {flow.i === 4 && (
+          <FlowQuestion n={5} required title="Take a close-up of just this section" sub="Place an ID card beside it for scale if you can. The AI scores the space from this photo.">
+            <div className="space-y-6">
+              <PhotoCapture purpose="space" label="Close-up of the space" testId="space-photo" preview={photo?.url} scanning={busy === "analyze"} onChange={(file, source) => { setPhoto({ file, source, url: URL.createObjectURL(file) }); setRes(null); }} />
+              {!accepted && (
+                <Button size="lg" onClick={analyze} loading={busy === "analyze"} disabled={!photo || !f.label || !size} data-testid="analyze">
+                  <ScanSearch className="h-4 w-4" /> Analyse space
                 </Button>
-              </>
-            )}
-          </motion.div>
+              )}
+              <AnimatePresence>
+                {busy === "analyze" && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                    <div className="space-y-2.5 border-l-2 border-p/40 py-1 pl-5">
+                      {STEPS.map((label, k) => {
+                        const state = k < phase ? "done" : k === phase ? "run" : "todo";
+                        return (
+                          <div key={label} className={cx("flex items-center gap-3 text-sm transition-opacity", state === "todo" && "opacity-40")}>
+                            <span className={cx("grid h-7 w-7 place-items-center rounded-full", state === "done" ? "bg-p text-ink" : "bg-white/[0.06] text-p")}>
+                              {state === "done" ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : state === "run" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
+                            </span>
+                            <span className={state === "run" ? "font-semibold" : "text-white/70"}>{label}</span>
+                          </div>
+                        );
+                      })}
+                      <p className="pt-1 text-xs text-muted">AI checks take about 20–60 seconds.</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {r && !accepted && (
+                  <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="border-l-2 border-white/30 py-1 pl-5" data-testid="space-result">
+                    <div className="flex flex-wrap items-center gap-3 text-lg font-bold"><Badge tone="bad">Rejected</Badge> {r.reason}</div>
+                    {!!r.tips?.length && (
+                      <ul className="mt-3 space-y-1 text-sm text-white/75">
+                        {r.tips.map((t: string) => (
+                          <li key={t} className="flex gap-2"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-p" />{t}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <Button variant="secondary" className="mt-4" onClick={() => { setPhoto(null); setRes(null); }}>Retake</Button>
+                  </motion.div>
+                )}
+                {accepted && (
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-3 text-lg font-bold">
+                    <Badge tone="ok">Accepted</Badge> Scored {r.aqs}/100
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </FlowQuestion>
         )}
-      </AnimatePresence>
-    </Modal>
+        {flow.i === 5 && accepted && (
+          <FlowQuestion n={6} required title={<>Scored <span className="text-p">{r.aqs}/100</span>. What&apos;s your weekly price?</>} sub="A fixed price in USDC per week. Brands pay it into escrow, and it's released to you as proofs are accepted.">
+            <div data-testid="space-result">
+              <div className="flex items-end gap-3">
+                <div className="w-44">
+                  <FlowInput inputMode="decimal" value={price} onChange={(e) => setPriceV(num(e.target.value))} onEnter={next} placeholder="1.00" data-testid="space-price" />
+                </div>
+                <span className="pb-4 text-lg font-semibold text-muted">USDC / week</span>
+              </div>
+              <div className="mt-8 flex flex-wrap items-center gap-4">
+                <Button size="lg" onClick={list} loading={busy === "list"} disabled={!(Number(price) > 0)} data-testid="list-space">
+                  <Rocket className="h-4 w-4" /> List space
+                </Button>
+                <span className="text-xs text-muted">Signs one Sui transaction.</span>
+              </div>
+              <p className="mt-4 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+                Its ENS name <EnsName name={res.tx.ensName} kind="space" size="xs" /> is registered on Sepolia automatically, with the score and price written as records.
+              </p>
+              <details className="mt-10">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-p hover:underline">See the full score breakdown</summary>
+                <div className="mt-5"><AqsPanel r={r} /></div>
+              </details>
+            </div>
+          </FlowQuestion>
+        )}
+      </FlowFrame>
+    </FlowOverlay>
   );
 }
 
@@ -213,9 +249,17 @@ export default function ObjectPage({ params }: { params: Promise<{ id: string }>
               <div className="text-sm text-muted">
                 {o.object_type ?? "object"} {o.city && `· ${o.city}`} {o.viewing_distance_m && `· seen from ~${o.viewing_distance_m} m`}
               </div>
-              <Link href={`/${o.ens_name}`} className="block break-all font-mono text-[11px] text-p hover:underline">
-                {o.ens_name}
-              </Link>
+              {o.ens_name && (
+                <div className="space-y-2">
+                  <EnsName name={o.ens_name} status={data.ensStatus?.[o.ens_name]} kind="object" full />
+                  {data.ensStatus?.[o.ens_name] !== "registered" && (
+                    <div className="relative overflow-hidden rounded-xl border border-p/25 bg-p/[0.06] px-3 py-2 text-[11px] text-white/75">
+                      <span aria-hidden className="absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-p/20 to-transparent [animation:sweep_2.2s_ease-in-out_infinite]" />
+                      <span className="relative">The relayer is registering this name on Sepolia ENS and writing its records. This page updates on its own.</span>
+                    </div>
+                  )}
+                </div>
+              )}
               {sponsored && <Badge tone="sponsored">Sponsored until {new Date(o.sponsored_until).toLocaleString()}</Badge>}
               {o.description && <p className="text-sm leading-relaxed text-white/75">{o.description}</p>}
               {mine && (
@@ -252,6 +296,7 @@ export default function ObjectPage({ params }: { params: Promise<{ id: string }>
                       <Link href={`/${s.ens_name}`} className="font-bold hover:text-p">{s.label}</Link>
                       <span className="text-xs text-muted">{s.width_mm / 10}×{s.height_mm / 10} cm · {s.placement}</span>
                     </div>
+                    {s.ens_name && <EnsName name={s.ens_name} status={data.ensStatus?.[s.ens_name]} kind="space" size="xs" />}
                     <div className="flex flex-wrap gap-1.5">
                       <Badge>{s.status}</Badge>
                       {s.offering_id && <Badge tone="brand">Tokenised</Badge>}

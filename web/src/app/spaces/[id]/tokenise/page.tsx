@@ -9,6 +9,7 @@ import { useSession } from "@/lib/client/session";
 import { createOffering } from "@/lib/sui/tx";
 import { WALRUS } from "@/lib/deployment";
 import { AnimatedNumber, Badge, Button, Card, EASE, Field, GradeBadge, Img, Input, PageHeader, PageLoader, Select, useAction, usdc } from "@/components/ui";
+import { EnsName } from "@/components/ens";
 
 function Bar({ label, value, total, tone }: { label: string; value: number; total: number; tone: "p" | "w" }) {
   const pct = total > 0 ? Math.max(0, Math.min(100, (value / total) * 100)) : 0;
@@ -84,7 +85,7 @@ export default function Tokenise({ params }: { params: Promise<{ id: string }> }
       <Card className="mb-6 flex items-center gap-4">
         <Img blob={s.closeup_blob_id} alt="" className="h-16 w-16 shrink-0 rounded-2xl" />
         <div className="min-w-0 flex-1">
-          <div className="truncate font-mono text-sm text-p">{s.ens_name}</div>
+          <EnsName name={s.ens_name} kind="space" size="xs" />
           <div className="text-sm text-muted">{usdc(s.price_per_week)}/week · {s.completed_leases} completed leases · {s.accepted_proofs} proofs</div>
         </div>
         <GradeBadge grade={s.grade} aqs={s.aqs} />

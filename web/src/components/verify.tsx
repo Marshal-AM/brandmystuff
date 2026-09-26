@@ -3,7 +3,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, Copy, ExternalLink, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { ENS_DEPLOYMENT } from "@/lib/deployment";
-import { Badge, Card, suiscan } from "./ui";
+import { Badge, Card, Tabs, suiscan } from "./ui";
+import { EnsHint, EnsName, EnsRecords, EnsTree, EnsWrites, ensAppUrl } from "./ens";
 
 function CopyBtn({ text }: { text: string }) {
   const [done, setDone] = useState(false);
@@ -51,7 +52,12 @@ function Row({ label, value, href }: { label: string; value: string; href?: stri
   );
 }
 
-export function VerifyPanel({ name, suiId, v, ens }: { name: string; suiId?: string | null; v: any; ens: any }) {
+type Tab = "name" | "records" | "activity";
+
+export function VerifyPanel({ name, suiId, v, ens, info }: { name: string; suiId?: string | null; v: any; ens: any; info?: any }) {
+  const [tab, setTab] = useState<Tab>("name");
+  const status = info?.status ?? ens?.status ?? "pending";
+  const expiry = info?.expiry ? new Date(info.expiry * 1000) : null;
   return (
     <Card>
       <div className="flex items-center justify-between gap-3">
@@ -68,15 +74,54 @@ export function VerifyPanel({ name, suiId, v, ens }: { name: string; suiId?: str
             <Badge tone="ok">ENS ↔ Sui verified</Badge>
           </motion.span>
         ) : (
-          <Badge tone="warn">{ens?.status === "registered" ? "Mismatch" : "ENS pending"}</Badge>
+          <Badge tone="warn">{status === "registered" ? "Mismatch" : "ENS pending"}</Badge>
         )}
       </div>
-      <dl className="mt-4 space-y-2">
-        <Row label={`ENS name · ${ens?.status ?? "pending"}`} value={name} href={`${ENS_DEPLOYMENT.appUrl}/${name}`} />
-        {suiId && <Row label="Sui object" value={suiId} href={suiscan("object", suiId)} />}
-        {v?.suiRef && <Row label="ENS record eth.brandmystuff.sui.object" value={v.suiRef} />}
-        {v?.records && Object.entries(v.records).map(([k, val]) => <Row key={k} label={k} value={(val as string) || ""} />)}
-      </dl>
+      <div className="mt-3">
+        <EnsName name={name} status={status} kind={info?.kind ?? ens?.kind} size="md" full />
+      </div>
+      <div className="mt-4">
+        <Tabs<Tab>
+          tabs={[
+            { id: "name", label: "Name" },
+            { id: "records", label: <>Records{info?.records?.texts ? <span className="ml-1 text-[10px] opacity-60">{Object.keys(info.records.texts).length}</span> : null}</> },
+            { id: "activity", label: <>Activity{info?.writes?.length ? <span className="ml-1 text-[10px] opacity-60">{info.writes.length}</span> : null}</> },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+      </div>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }} className="mt-4">
+          {tab === "name" && (
+            <div className="space-y-4">
+              {info?.chain && <EnsTree chain={info.chain} current={name} />}
+              <dl className="grid grid-cols-2 gap-2">
+                <div className="rounded-2xl border border-line bg-white/[0.02] p-3">
+                  <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-faint">Network</dt>
+                  <dd className="mt-1 text-xs text-white/85">Sepolia · ENSv2</dd>
+                </div>
+                <div className="rounded-2xl border border-line bg-white/[0.02] p-3">
+                  <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-faint">Expires</dt>
+                  <dd className="mt-1 text-xs text-white/85">{expiry ? expiry.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—"}</dd>
+                </div>
+              </dl>
+              <dl className="space-y-2">
+                {suiId && <Row label="Sui object" value={suiId} href={suiscan("object", suiId)} />}
+                {v?.suiRef && <Row label="ENS record eth.brandmystuff.sui.object" value={v.suiRef} />}
+                <Row label="Resolver" value={info?.resolver ?? ENS_DEPLOYMENT.platformResolver} href={`${ENS_DEPLOYMENT.explorer}/address/${info?.resolver ?? ENS_DEPLOYMENT.platformResolver}`} />
+                {info?.namehash && <Row label="Namehash" value={info.namehash} />}
+              </dl>
+              <EnsHint>The name&apos;s <span className="font-mono text-white/70">sui.object</span> record must equal the Sui object id, and the Sui object stores this name. Both sides are read live, so the check doesn&apos;t rely on brandmystuff.</EnsHint>
+            </div>
+          )}
+          {tab === "records" && <EnsRecords records={info?.records} live={v?.records} />}
+          {tab === "activity" && <EnsWrites writes={info?.writes ?? []} />}
+        </motion.div>
+      </AnimatePresence>
+      <a href={ensAppUrl(name)} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-p hover:underline">
+        View in the ENS app <ExternalLink className="h-3 w-3" />
+      </a>
     </Card>
   );
 }

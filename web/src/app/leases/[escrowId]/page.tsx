@@ -7,6 +7,7 @@ import { Bot, Check, Clock, Download, ExternalLink, Fingerprint, MessageCircle, 
 import { useSession } from "@/lib/client/session";
 import { approveCreative, extendLease, openDispute, rejectCreative } from "@/lib/sui/tx";
 import { Badge, Button, Card, EASE, Empty, Img, PageLoader, Stat, cx, suiscan, useAction, usdc, ScrollArea } from "@/components/ui";
+import { EnsName } from "@/components/ens";
 import { PhotoCapture } from "@/components/photo-capture";
 
 const STATUS: Record<string, { label: string; tone: any }> = {
@@ -135,7 +136,7 @@ export default function LeasePage({ params }: { params: Promise<{ escrowId: stri
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE }} className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <div className="text-xs font-semibold uppercase tracking-widest text-p">Lease</div>
-          <div className="mt-1 break-all font-mono text-xs text-muted">{leaseName}</div>
+          <div className="mt-2"><EnsName name={leaseName} kind="lease" /></div>
           <h1 className="mt-2 text-4xl font-extrabold tracking-tight sm:text-5xl">
             {l.brand} <span className="text-muted">on</span> <Link className="text-p transition-colors hover:text-white" href={`/${s.ens_name}`}>{s.label}</Link>
           </h1>

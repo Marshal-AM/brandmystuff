@@ -12,6 +12,7 @@ import { Checkout, weekLabel } from "@/components/checkout";
 import { VerifyPanel } from "@/components/verify";
 import { SpaceCard } from "@/components/space-card";
 import { Badge, Button, Card, EASE, Empty, GradeBadge, Img, LinkButton, PageLoader, SectionTitle, cx, shortAddr, usdc, useAction, ScrollArea } from "@/components/ui";
+import { EnsName } from "@/components/ens";
 import { SignInButtons } from "@/components/shell";
 
 function Crumbs({ items }: { items: { href?: string; label: string }[] }) {
@@ -176,7 +177,7 @@ function SpaceView({ d }: { d: any }) {
                 </div>
                 <GradeBadge grade={s.grade} aqs={s.aqs} />
               </div>
-              <div className="relative mt-3 break-all font-mono text-[11px] text-p">{s.ens_name}</div>
+              <div className="relative mt-3"><EnsName name={s.ens_name} status={d.ensInfo?.status} kind="space" /></div>
               <div className="relative mt-5 grid grid-cols-2 gap-2">
                 <Spec icon={Ruler} label="Size" value={`${s.width_mm / 10} × ${s.height_mm / 10} cm`} />
                 <Spec icon={Layers} label="Placement" value={s.placement} />
@@ -222,7 +223,7 @@ function SpaceView({ d }: { d: any }) {
               <Avatar letter={(d.owner.handle ?? "?")[0]?.toUpperCase()} />
               <div className="min-w-0">
                 <div className="font-bold transition-colors group-hover:text-p">{d.owner.display_name ?? d.owner.handle ?? shortAddr(d.owner.address)}</div>
-                <div className="truncate font-mono text-[11px] text-muted">{d.owner.ens_name}</div>
+                <div className="mt-1"><EnsName name={d.owner.ens_name} kind="account" size="xs" /></div>
               </div>
             </Link>
             <div className="mt-4 grid grid-cols-2 gap-2 text-center">
@@ -245,7 +246,7 @@ function SpaceView({ d }: { d: any }) {
             </Card>
           )}
 
-          <VerifyPanel name={s.ens_name} suiId={s.id} v={d.verification} ens={d.ens} />
+          <VerifyPanel name={s.ens_name} suiId={s.id} v={d.verification} ens={d.ens} info={d.ensInfo} />
 
           <Card delay={0.2}>
             <div className="flex items-center gap-2 text-sm font-bold">
@@ -292,14 +293,14 @@ function ObjectView({ d }: { d: any }) {
                 {o.object_grade > 0 && <GradeBadge grade={o.object_grade} aqs={o.object_aqs} size="sm" />}
               </div>
               <div className="text-sm text-muted">
-                {o.object_type} {o.city && `· ${o.city}`} · by <Link className="font-semibold text-p hover:underline" href={`/${o.owner?.ens_name}`}>{o.owner?.ens_name}</Link>
+                {o.object_type} {o.city && `· ${o.city}`} · by {o.owner?.ens_name && <Link href={`/${o.owner.ens_name}`}><EnsName name={o.owner.ens_name} kind="account" size="xs" /></Link>}
               </div>
               {o.sponsored_until && new Date(o.sponsored_until).getTime() > Date.now() && <Badge tone="sponsored">Sponsored</Badge>}
               {o.description && <p className="text-sm leading-relaxed text-white/75">{o.description}</p>}
               <div className="flex flex-wrap gap-1.5">{(o.tags ?? []).map((t: string) => <Badge key={t}>{t}</Badge>)}</div>
             </div>
           </Card>
-          <VerifyPanel name={o.ens_name} suiId={o.id} v={d.verification} ens={d.ens} />
+          <VerifyPanel name={o.ens_name} suiId={o.id} v={d.verification} ens={d.ens} info={d.ensInfo} />
         </div>
         <div>
           <h2 className="mb-5 text-2xl font-extrabold tracking-tight">Ad spaces</h2>
@@ -329,7 +330,7 @@ function AccountView({ d }: { d: any }) {
           </motion.div>
           <div className="min-w-0 flex-1">
             <h1 className="text-4xl font-extrabold tracking-tight">{u.display_name ?? u.handle}</h1>
-            <div className="mt-1 font-mono text-sm text-p">{u.ens_name}</div>
+            <div className="mt-2"><EnsName name={u.ens_name} status={d.ensInfo?.status} kind="account" /></div>
             <div className="mt-3 flex flex-wrap gap-2">
               {u.brand_name && <Badge tone="brand">Advertiser · {u.brand_name}</Badge>}
               <Badge>{d.reputation.completedLeases} completed leases</Badge>
@@ -354,14 +355,15 @@ function AccountView({ d }: { d: any }) {
                   <div className="overflow-hidden"><Img blob={o.hero_blob_id} alt={o.title} className="aspect-[16/10] w-full transition-transform duration-700 group-hover:scale-110" /></div>
                   <div className="p-4">
                     <div className="font-bold">{o.title}</div>
-                    <div className="truncate text-sm text-muted">{d.spaces.filter((s: any) => s.object_id === o.id).length} spaces · <span className="font-mono text-[11px]">{o.ens_name}</span></div>
+                    <div className="truncate text-sm text-muted">{d.spaces.filter((s: any) => s.object_id === o.id).length} spaces</div>
+                    <div className="mt-2"><EnsName name={o.ens_name} kind="object" size="xs" /></div>
                   </div>
                 </Link>
               </motion.div>
             ))}
           </div>
         </div>
-        <VerifyPanel name={u.ens_name} suiId={u.profile_id} v={d.verification} ens={d.ens} />
+        <VerifyPanel name={u.ens_name} suiId={u.profile_id} v={d.verification} ens={d.ens} info={d.ensInfo} />
       </div>
     </div>
   );
@@ -386,7 +388,7 @@ function LeaseView({ d }: { d: any }) {
           Open lease
         </LinkButton>
       </Card>
-      <VerifyPanel name={`${l.ens_label}.${d.spaceName}`} suiId={l.escrow_id} v={d.verification} ens={d.ens} />
+      <VerifyPanel name={`${l.ens_label}.${d.spaceName}`} suiId={l.escrow_id} v={d.verification} ens={d.ens} info={d.ensInfo} />
     </div>
   );
 }

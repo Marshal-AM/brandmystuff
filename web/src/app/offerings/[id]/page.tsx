@@ -8,6 +8,7 @@ import { useSession } from "@/lib/client/session";
 import { buyPrimary, claim, closeOffering, refundOffering } from "@/lib/sui/tx";
 import { WALRUS } from "@/lib/deployment";
 import { AnimatedNumber, Badge, Button, Card, EASE, Empty, Field, GradeBadge, Img, Input, PageLoader, ScrollArea, Stat, Unit, FitText, shortAddr, suiscan, useAction, usdc } from "@/components/ui";
+import { EnsName } from "@/components/ens";
 import { MyOrders, OrderBook, PriceChart, TradeTicket, px } from "@/components/trading";
 import { SignInButtons } from "@/components/shell";
 
@@ -56,7 +57,7 @@ export default function Offering({ params }: { params: Promise<{ id: string }> }
                   <h1 className="text-3xl font-extrabold tracking-tight">{pack?.series ?? `Series ${String(o.seq).padStart(6, "0")}`}</h1>
                   <Badge tone={o.status === "open" ? "ok" : o.status === "tokenised" ? "brand" : "warn"}>{o.status}</Badge>
                 </div>
-                <Link href={`/${s.ens_name}`} className="mt-1 block break-all font-mono text-xs text-p hover:underline">{s.ens_name}</Link>
+                <div className="mt-2"><EnsName name={s.ens_name} kind="space" size="xs" /></div>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-white/70">
                   <GradeBadge grade={s.grade} aqs={s.aqs} size="sm" /> {s.objects.title} · {usdc(s.price_per_week)}/week lease price
                 </div>

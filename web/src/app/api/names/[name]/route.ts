@@ -3,23 +3,24 @@ import { HttpError } from "@/server/auth";
 import { db, q } from "@/server/db";
 import { verifyName, ensText } from "@/server/ens/read";
 import { spaceDetail } from "@/server/views";
+import { ensSnapshot } from "@/server/ens/view";
 
 export const GET = handler(async (req, ctx: { params: Promise<{ name: string }> }) => {
   const name = decodeURIComponent((await ctx.params).name).toLowerCase();
   const live = new URL(req.url).searchParams.get("live") !== "0";
-  const ensRow = await q(db().from("ens_names").select("*").eq("name", name).maybeSingle());
+  const [ensRow, ensInfo] = await Promise.all([q(db().from("ens_names").select("*").eq("name", name).maybeSingle()), ensSnapshot(name)]);
 
   const space = await q(db().from("spaces").select("id").eq("ens_name", name).maybeSingle());
   if (space) {
     const d = await spaceDetail(space.id);
     const v = live ? await verifyName(name, space.id, ["class", "eth.brandmystuff.attested.aqs", "eth.brandmystuff.attested.grade", "eth.brandmystuff.price", "eth.brandmystuff.status"]) : null;
-    return { kind: "space", ens: ensRow, verification: v, ...d };
+    return { kind: "space", ens: ensRow, ensInfo, verification: v, ...d };
   }
   const obj = await q(db().from("objects").select("*, owner:owner_user_id(handle, ens_name, display_name, avatar_blob_id)").eq("ens_name", name).maybeSingle());
   if (obj) {
     const spaces = await q(db().from("spaces").select("*").eq("object_id", obj.id).in("status", ["available", "paused"]).order("rank_score", { ascending: false }));
     const v = live ? await verifyName(name, obj.id, ["class", "eth.brandmystuff.type", "eth.brandmystuff.attested.sponsored"]) : null;
-    return { kind: "object", ens: ensRow, verification: v, object: obj, spaces };
+    return { kind: "object", ens: ensRow, ensInfo, verification: v, object: obj, spaces };
   }
   const user = await q(db().from("users").select("id, handle, ens_name, display_name, bio, avatar_blob_id, twitter, website, brand_name, sui_address, profile_id, created_at").eq("ens_name", name).maybeSingle());
   if (user) {
@@ -44,7 +45,7 @@ export const GET = handler(async (req, ctx: { params: Promise<{ name: string }> 
     const lease = sp ? await q(db().from("leases").select("*").eq("space_id", sp.id).eq("ens_label", label).maybeSingle()) : null;
     if (lease) {
       const v = live ? await verifyName(name, lease.escrow_id, ["class", "eth.brandmystuff.brand", "eth.brandmystuff.attested.state", "eth.brandmystuff.attested.proofs"]) : null;
-      return { kind: "lease", ens: ensRow, verification: v, lease, spaceName: parent };
+      return { kind: "lease", ens: ensRow, ensInfo, verification: v, lease, spaceName: parent };
     }
   }
   throw new HttpError(404, `${name} is not a brandmystuff name`);

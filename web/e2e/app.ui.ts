@@ -30,6 +30,7 @@ test("sign in, onboard and browse", async ({ page }) => {
       await expect(funds).toBeHidden({ timeout: 60_000 });
     }
     await page.getByTestId("handle").fill(`ui-${Date.now().toString(36)}`);
+    await page.getByTestId("onboarding-next").click();
     await page.getByTestId("save-handle").click();
     await expect(page).not.toHaveURL(/onboarding/, { timeout: 120_000 });
   }
