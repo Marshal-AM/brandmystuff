@@ -246,6 +246,11 @@ export function PayoutsPanel() {
       ) : chain ? (
         <p className="mt-4 text-xs text-muted">No payouts yet. The next time a campaign on a space you hold pays out, your share will show up here.</p>
       ) : null}
+      <div className="mt-4 flex justify-end">
+        <a href="https://www.curvegrid.com" target="_blank" rel="noreferrer" className="inline-flex items-baseline gap-1.5 text-[11px] text-muted transition-colors hover:text-white" data-testid="powered-by-curvegrid">
+          Cross-chain payouts powered by <span className="text-[13px] font-extrabold lowercase tracking-tight text-white">curvegrid</span>
+        </a>
+      </div>
     </Card>
   );
 }

@@ -209,13 +209,15 @@ export default function Dashboard() {
           )}
           {tab === "investor" && (
             <div className="space-y-5">
-              <PayoutsPanel />
               {!pf ? (
                 <PageLoader label="Loading portfolio" />
               ) : !pf.holdings.length ? (
-                <Empty title="No holdings yet">
-                  Browse <Link className="font-semibold text-p underline" href="/offerings">offerings</Link> or the <Link className="font-semibold text-p underline" href="/trade">market</Link> to invest in ad income.
-                </Empty>
+                <>
+                  <Empty title="No holdings yet">
+                    Browse <Link className="font-semibold text-p underline" href="/offerings">offerings</Link> or the <Link className="font-semibold text-p underline" href="/trade">market</Link> to invest in ad income.
+                  </Empty>
+                  <PayoutsPanel />
+                </>
               ) : (
                 <>
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
@@ -225,6 +227,7 @@ export default function Dashboard() {
                     <Stat label="Net P&L" value={<span className={pf.totals.value + pf.totals.income - pf.totals.cost >= 0 ? "text-p" : "text-white"}>{usdc(pf.totals.value + pf.totals.income - pf.totals.cost, 4)}</span>} delay={0.15} />
                     <Stat label="Open orders" value={pf.openOrders.bids.length + pf.openOrders.asks.length} sub={`${pf.openOrders.bids.length} bids · ${pf.openOrders.asks.length} asks`} delay={0.2} />
                   </div>
+                  <PayoutsPanel />
                   {pf.holdings.map((h: any, i: number) => (
                     <motion.div key={h.offering_id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06, duration: 0.6, ease: EASE }}>
                       <Link href={`/offerings/${h.offering_id}`} className="group block rounded-3xl border border-line bg-white/[0.03] p-5 transition-colors hover:border-p/50" data-testid="holding">
