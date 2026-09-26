@@ -272,6 +272,13 @@ export default function Shell({ children }: { children: ReactNode }) {
     if (ready && authenticated && me?.needsOnboarding && path !== "/onboarding" && path !== "/wallet" && !path.startsWith("/capture/")) router.push(`/onboarding?next=${encodeURIComponent(path)}`);
   }, [ready, authenticated, me?.needsOnboarding, path, router]);
   useEffect(() => setMobile(false), [path]);
+  // Remember the last page outside identity verification so /verify can send people back to it.
+  useEffect(() => {
+    if (path === "/verify" || path === "/onboarding") return;
+    try {
+      sessionStorage.setItem("bms:return-to", path + window.location.search);
+    } catch {}
+  }, [path]);
 
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);

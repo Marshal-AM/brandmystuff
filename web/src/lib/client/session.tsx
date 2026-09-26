@@ -5,6 +5,7 @@
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePrivy } from "@privy-io/react-auth";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSignRawHash } from "@privy-io/react-auth/extended-chains";
 import { useCurrentAccount, useDAppKit } from "@mysten/dapp-kit-react";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
@@ -57,6 +58,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [suiSession, setSuiSession] = useState<boolean>(false);
   const [bootstrapped, setBootstrapped] = useState(false);
   const events = useRef(new EventTarget()).current;
+  const qc = useQueryClient();
 
   const mode: Ctx["mode"] = privy.authenticated ? "privy" : suiSession ? "sui" : null;
 
@@ -181,6 +183,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     },
     [mode, privySigner, dAppKit],
   );
+
+  // Cached queries (offering "mine", KYC, portfolio…) are per viewer; refetch them whenever the signed-in account changes.
+  const viewer = me?.user?.id ?? null;
+  // Queries can fire before the session is known (anonymous), so also refetch once a viewer first appears.
+  const lastViewer = useRef<string | null>(null);
+  useEffect(() => {
+    if (!bootstrapped || lastViewer.current === viewer) return;
+    lastViewer.current = viewer;
+    qc.resetQueries();
+  }, [viewer, bootstrapped, qc]);
 
   // Live notifications / messages over SSE
   useEffect(() => {

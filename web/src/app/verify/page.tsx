@@ -1,8 +1,9 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { BadgeCheck, Check, ShieldCheck } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Check, ShieldCheck } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { Badge, Button, EASE, Empty, Kicker, PageLoader, Spinner, cx, useAction } from "@/components/ui";
 import { FlowChoice, FlowFrame, FlowInput, FlowNext, FlowQuestion, useFlow } from "@/components/flow";
@@ -29,6 +30,14 @@ export default function Verify() {
   const [doc, setDoc] = useState<File | null>(null);
   const [docUrl, setDocUrl] = useState<string | null>(null);
   const { busy, run } = useAction();
+  const router = useRouter();
+  const [returnTo, setReturnTo] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const r = sessionStorage.getItem("bms:return-to");
+      if (r && r.startsWith("/") && !r.startsWith("//")) setReturnTo(r);
+    } catch {}
+  }, []);
   if (!authenticated)
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
@@ -49,6 +58,9 @@ export default function Verify() {
           <h1 className="relative mt-6 text-3xl font-extrabold tracking-tight">You&apos;re verified</h1>
           <p className="relative mt-2 text-sm text-muted">Investor type: {sub.investor_type.replace("_", "-")} · valid until {new Date(sub.expires_at).toLocaleDateString()}</p>
           <p className="relative mt-4 text-xs text-muted">Your verification is recorded on-chain (Sui KYC registry) and on your ENS name; your personal details never leave our private database.</p>
+          <Button size="lg" className="relative mt-8" onClick={() => router.push(returnTo ?? "/offerings")} data-testid="kyc-return">
+            <ArrowLeft className="h-4 w-4" />{returnTo ? "Back to where you were" : "Browse offerings"}
+          </Button>
         </motion.div>
       </div>
     );

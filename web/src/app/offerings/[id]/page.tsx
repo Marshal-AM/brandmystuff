@@ -194,6 +194,7 @@ export default function Offering({ params }: { params: Promise<{ id: string }> }
                       </div>
                       <p className="text-xs text-muted">You&apos;ll sign the subscription agreement with your wallet; its hash is stored on-chain with your purchase.</p>
                       <Button className="w-full" size="lg" loading={busy === "buy"} disabled={!(Number(units) > 0)} onClick={buy} data-testid="buy">Sign & buy</Button>
+                      <p className="text-[11px] leading-snug text-muted">Trading opens once the sale ends, if at least {o.min_raise_units.toLocaleString()} units have sold. If fewer sell, everyone is refunded.</p>
                     </>
                   )}
                 </Card>
