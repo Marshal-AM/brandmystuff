@@ -1,5 +1,5 @@
 /** Proof-of-display: AI verification of owner check-in photos and on-chain tranche release. */
-import { demoProof } from "./demo";
+import { demoBlob, demoProof } from "./demo";
 import * as T from "@/lib/sui/tx";
 import { HttpError, type AppUser } from "./auth";
 import { db, q, ok } from "./db";
@@ -50,7 +50,7 @@ export async function submitProof(p: { user: AppUser; escrowId: string; image: B
   if (!np || (np as any).upcoming) throw new HttpError(400, np ? `The next proof window opens ${new Date(np.open).toLocaleString()}` : "No proof is due for this lease");
 
   const [closeup, creative] = p.demo ? [null, null] : await Promise.all([readBlob((l as any).spaces.closeup_blob_id), readBlob(l.creative_blob_id)]);
-  const ph = await phash(p.image);
+  const ph = p.demo ? (await demoProof(p.image)).phash : await phash(p.image);
   const prev = await q(db().from("proofs").select("phash").eq("escrow_id", p.escrowId));
   // Demo submit reuses the same sample photo, so skip the reuse check and the AI judge.
   const reused = !p.demo && prev.some((x: any) => x.phash && hamming(x.phash, ph) <= 6);
@@ -84,7 +84,7 @@ export async function submitProof(p: { user: AppUser; escrowId: string; image: B
     });
     if (b.synthetic_suspicion !== "high") a.synthetic_suspicion = b.synthetic_suspicion;
   }
-  const stored = await storeBlob(p.image, p.mime);
+  const stored = p.demo ? await demoBlob(p.image, p.mime) : await storeBlob(p.image, p.mime);
   let reason: string | null = null;
   if (reused) reason = "This photo was already used — take a new one.";
   else if (a.visible_text.some((t) => t.instruction_like)) reason = "Photo contains disallowed text.";

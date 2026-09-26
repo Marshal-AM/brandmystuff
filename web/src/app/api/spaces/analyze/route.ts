@@ -5,7 +5,7 @@ import { db, q } from "@/server/db";
 import { analyzeSpace } from "@/server/scoring/pipeline";
 import { readBlob, sha256Hex, storeBlob, storeJson } from "@/server/walrus";
 import { PLACEMENTS, type Placement } from "@/lib/categories";
-import { demoSpace, isDemo } from "@/server/demo";
+import { DEMO_REPORT_BLOB, demoBlob, demoSpace, isDemo } from "@/server/demo";
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
 
@@ -31,7 +31,9 @@ export const POST = handler(async (req) => {
   if ((count ?? 0) >= 20) throw new HttpError(400, "An object can have at most 20 spaces");
 
   const closeup = Buffer.from(await image.arrayBuffer());
-  const hero = await readBlob(o.hero_blob_id);
+  const demo = isDemo(f.get("demo"));
+  // The AI judge needs the object photo; the demo path doesn't, so skip the Walrus read.
+  const hero = demo ? Buffer.alloc(0) : await readBlob(o.hero_blob_id);
   const input = {
     label,
     widthMm,
@@ -50,7 +52,7 @@ export const POST = handler(async (req) => {
     },
     captureSource: (String(f.get("captureSource") ?? "upload") === "camera" ? "camera" : "upload") as "camera" | "upload",
   };
-  const result: Awaited<ReturnType<typeof analyzeSpace>> = isDemo(f.get("demo"))
+  const result: Awaited<ReturnType<typeof analyzeSpace>> = demo
     ? ((await demoSpace(closeup, widthMm, heightMm, input.profile.viewingDistanceM, label)) as any)
     : await analyzeSpace({
     hero,
@@ -61,8 +63,8 @@ export const POST = handler(async (req) => {
     heroProvenance: o.hero_check?.provenance ?? 0.5,
     userId: u.id,
   });
-  const stored = await storeBlob(closeup, image.type || "image/jpeg");
-  const report = await storeJson({ space: ensName, object: objectId, input, result, createdAt: new Date().toISOString() });
+  const stored = demo ? await demoBlob(closeup, image.type || "image/jpeg") : await storeBlob(closeup, image.type || "image/jpeg");
+  const report = demo ? { blobId: DEMO_REPORT_BLOB } : await storeJson({ space: ensName, object: objectId, input, result, createdAt: new Date().toISOString() });
   const row = await q(
     db()
       .from("space_analyses")

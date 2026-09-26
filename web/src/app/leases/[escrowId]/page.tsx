@@ -1,4 +1,5 @@
 "use client";
+import { withDemoDelay } from "@/lib/client/demo";
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -44,7 +45,8 @@ function ProofUpload({ escrowId, next, onDone }: { escrowId: string; next: any; 
       fd.set("escrowId", escrowId);
       fd.set("image", demo ?? photo!.file);
       if (demo) fd.set("demo", "1");
-      const r = await api<any>("/api/proofs", { method: "POST", body: fd });
+      const call = api<any>("/api/proofs", { method: "POST", body: fd });
+      const r = demo ? await withDemoDelay(call) : await call;
       setRes(r);
       if (r.accepted) onDone();
       else setPhoto(null);

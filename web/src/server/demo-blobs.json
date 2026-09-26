@@ -1,0 +1,18 @@
+{
+  "images": {
+    "a03d8b950d77bc0cd926d3daf52fed9a38b2b3f9df1d91c6aed89045bf1a29fa": {
+      "file": "hero.jpg",
+      "blobId": "sReQqGJMWcvZglUTryzSBwB7PysgRb_5jfJ4k3DnkUk"
+    },
+    "2964aa76cc55d775ea77fb4684214eed45a955ef30fcfec78738f3520c273f61": {
+      "file": "space.jpg",
+      "blobId": "Eajf7YbVZ9IAP3HThIZCdElVFYctwB_KCY5OY-uxeLo"
+    },
+    "69cd0fb070454d7db2ed2fc617c8614dea9a94daff61e5e2d1268cdce589195e": {
+      "file": "proof.jpg",
+      "blobId": "br8PuwXGUNHV4aCdpazTE1vYhE-VBOxf93uopB45_C4"
+    }
+  },
+  "manifestBlobId": "uL7wyvmgklCOMfO0XeyR-oagbPprh48LR-LQ908Aqn8",
+  "reportBlobId": "PU1EdmnOMpW60-PIzeS3tnYgqXqvzFDSkCMBHMyUE5Q"
+}

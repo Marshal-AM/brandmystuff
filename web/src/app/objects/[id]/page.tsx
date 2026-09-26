@@ -13,7 +13,7 @@ import { Badge, Button, Card, EASE, Empty, Field, GradeBadge, Img, Input, Modal,
 import { FlowChoice, FlowFrame, FlowInput, FlowNext, FlowOverlay, FlowQuestion, useFlow } from "@/components/flow";
 import { EnsName } from "@/components/ens";
 import { PhotoCapture } from "@/components/photo-capture";
-import { DEMO, DEMO_ENABLED, demoFile } from "@/lib/client/demo";
+import { DEMO, DEMO_ENABLED, withDemoDelay } from "@/lib/client/demo";
 
 import { Lightbox } from "@/components/lightbox";
 
@@ -46,7 +46,8 @@ function AddSpace({ objectId, onDone, onClose }: { objectId: string; onDone: () 
         fd.set("image", demo ?? photo!.file);
         fd.set("captureSource", demo ? "camera" : photo!.source);
         if (demo) fd.set("demo", "1");
-        const out = await api<any>("/api/spaces/analyze", { method: "POST", body: fd });
+        const call = api<any>("/api/spaces/analyze", { method: "POST", body: fd });
+        const out = demo ? await withDemoDelay(call) : await call;
         setRes(out);
         if (out?.result?.decision === "ACCEPTED") setTimeout(() => flow.go(5), 900);
       } finally {

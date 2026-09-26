@@ -6,7 +6,7 @@ import { analyzeHero } from "@/server/scoring/pipeline";
 import { storeBlob, storeJson } from "@/server/walrus";
 import { signDraft } from "@/server/drafts";
 import { fromOwnCameraLink } from "@/server/capture";
-import { demoHero, isDemo } from "@/server/demo";
+import { DEMO_MANIFEST_BLOB, demoBlob, demoHero, isDemo } from "@/server/demo";
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 28) || "object";
 
@@ -23,12 +23,13 @@ export const POST = handler(async (req) => {
   const buf = Buffer.from(await image.arrayBuffer());
   const liveCamera = await fromOwnCameraLink(String(f.get("captureLinkId") ?? ""), u.id, buf);
 
-  const r: Awaited<ReturnType<typeof analyzeHero>> = isDemo(f.get("demo"))
+  const demo = isDemo(f.get("demo"));
+  const r: Awaited<ReturnType<typeof analyzeHero>> = demo
     ? ((await demoHero(buf, title, description)) as any)
     : await analyzeHero({ image: buf, mime: image.type || "image/jpeg", name: title, description, liveCamera, userId: u.id });
   if (r.decision === "REJECTED") return { decision: r.decision, gate: r.gate, reason: r.reason, tips: r.tips };
 
-  const hero = await storeBlob(buf, image.type || "image/jpeg");
+  const hero = demo ? await demoBlob(buf, image.type || "image/jpeg") : await storeBlob(buf, image.type || "image/jpeg");
   // unique object label under the user's name
   const base = slug(title);
   let label = base;
@@ -47,7 +48,7 @@ export const POST = handler(async (req) => {
     color: String(f.get("color") ?? ""),
     city: String(f.get("city") ?? ""),
   };
-  const manifest = await storeJson({ ...meta, ensName, heroBlobId: hero.blobId, heroSha256: hero.sha256, owner: u.sui_address, heroCheck: { analysis: r.analysis, metrics: r.metrics } });
+  const manifest = demo ? { blobId: DEMO_MANIFEST_BLOB } : await storeJson({ ...meta, ensName, heroBlobId: hero.blobId, heroSha256: hero.sha256, owner: u.sui_address, heroCheck: { analysis: r.analysis, metrics: r.metrics } });
   const heroCheck = { metrics: { phash: r.metrics.phash, eqi: r.metrics.eqi, sharpness: r.metrics.sharpness }, analysis: r.analysis, provenance: r.provenance, liveCamera: r.liveCamera };
   const draft = await signDraft({ uid: u.id, ...meta, ensName, heroBlobId: hero.blobId, manifestBlobId: manifest.blobId, heroCheck });
   return {

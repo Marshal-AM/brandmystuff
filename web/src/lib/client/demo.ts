@@ -25,3 +25,11 @@ export const DEMO = {
   lease: { brand: "Lumen Coffee Co.", landingUrl: "https://example.com/lumen" },
   message: "Hi! We'd love to put our logo on this space for a couple of weeks. Does that work for you?",
 };
+
+/** How long a demo submission shows its loading state. */
+export const DEMO_DELAY_MS = 3000;
+/** Runs a demo submission and keeps the loading state up for DEMO_DELAY_MS, however fast the server is. */
+export async function withDemoDelay<T>(p: Promise<T>): Promise<T> {
+  const [r] = await Promise.all([p, new Promise((res) => setTimeout(res, DEMO_DELAY_MS))]);
+  return r;
+}

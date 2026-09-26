@@ -8,7 +8,7 @@ import { createObject } from "@/lib/sui/tx";
 import { Badge, Button, EASE, Empty, Kicker, cx, useAction } from "@/components/ui";
 import { EnsName } from "@/components/ens";
 import { PhotoCapture } from "@/components/photo-capture";
-import { DEMO, DEMO_ENABLED, demoFile } from "@/lib/client/demo";
+import { DEMO, withDemoDelay } from "@/lib/client/demo";
 
 import { FlowFrame, FlowInput, FlowNext, FlowQuestion, FlowTextarea, useFlow } from "@/components/flow";
 import { SignInButtons } from "@/components/shell";
@@ -96,7 +96,8 @@ export default function ListObject() {
       fd.set("captureSource", demo ? "camera" : photo!.source);
       if (!demo && photo!.linkId) fd.set("captureLinkId", photo!.linkId);
       if (demo) fd.set("demo", "1");
-      const r = await api<any>("/api/objects/check", { method: "POST", body: fd });
+      const call = api<any>("/api/objects/check", { method: "POST", body: fd });
+      const r = demo ? await withDemoDelay(call) : await call;
       setCheck(r);
     });
   const create = () =>
