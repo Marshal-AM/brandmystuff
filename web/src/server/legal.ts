@@ -59,7 +59,14 @@ async function pdf(title: string, sections: [string, string][]) {
   return Buffer.from(await doc.save());
 }
 
-export async function buildLegalPack(i: PackInput) {
+/** Progress events emitted while a pack is built (streamed to the tokenise page). */
+export type PackEvent =
+  | { t: "draft"; key: string; title: string; bytes: number }
+  | { t: "store"; key: string; title: string; blobId: string; sha256: string }
+  | { t: "hash"; packHash: string }
+  | { t: "index"; blobId: string };
+
+export async function buildLegalPack(i: PackInput, onProgress?: (e: PackEvent) => void | Promise<void>) {
   const date = new Date().toISOString().slice(0, 10);
   const series = `BMS Assets LLC — Series ${i.seriesNo}`;
   const offered = 10_000 - i.retainedUnits;
@@ -119,14 +126,18 @@ export async function buildLegalPack(i: PackInput) {
     ]),
   });
 
+  for (const d of docs) await onProgress?.({ t: "draft", key: d.key, title: d.title, bytes: d.buf.length });
   const stored = [];
   for (const d of docs) {
     const s = await storeBlob(d.buf, "application/pdf");
     stored.push({ key: d.key, title: d.title, blobId: s.blobId, sha256: s.sha256 });
+    await onProgress?.({ t: "store", key: d.key, title: d.title, blobId: s.blobId, sha256: s.sha256 });
   }
   const packHash = sha256Hex(Buffer.from(stored.map((s) => s.sha256).sort().join(""), "hex"));
+  await onProgress?.({ t: "hash", packHash });
   const index = { series, seriesNo: i.seriesNo, createdAt: new Date().toISOString(), packHash, documents: stored, testnetMock: true };
   const idx = await storeJson(index);
+  await onProgress?.({ t: "index", blobId: idx.blobId });
   return { ...index, indexBlobId: idx.blobId };
 }
 

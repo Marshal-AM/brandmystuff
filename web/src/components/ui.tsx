@@ -12,6 +12,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
@@ -30,7 +31,7 @@ type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
 
 const btnBase =
-  "group/btn relative inline-flex select-none items-center justify-center gap-2 overflow-hidden rounded-full font-semibold tracking-tight transition-[background-color,border-color,color,box-shadow] duration-300 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-p/25";
+  "group/btn relative inline-flex select-none items-center justify-center gap-2 overflow-hidden rounded-full font-semibold tracking-tight transition-[background-color,border-color,color,box-shadow] duration-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-p/25";
 const btnSize: Record<Size, string> = { sm: "h-8 px-3.5 text-xs", md: "h-11 px-5 text-sm", lg: "h-13 px-7 text-[15px]" };
 const btnVariant: Record<Variant, string> = {
   primary: "bg-p text-ink shadow-[0_10px_30px_-8px_rgba(171,159,242,0.6)] hover:shadow-[0_14px_40px_-6px_rgba(171,159,242,0.75)]",
@@ -58,12 +59,27 @@ export function Button({
     <motion.button
       {...(p as HTMLMotionProps<"button">)}
       disabled={disabled}
+      aria-busy={loading || undefined}
       whileTap={disabled ? undefined : { scale: 0.96 }}
       whileHover={disabled ? undefined : { y: -1 }}
       transition={SPRING}
-      className={cx(btnBase, btnSize[size], btnVariant[variant], className)}
+      className={cx(
+        btnBase,
+        btnSize[size],
+        btnVariant[variant],
+        // disabled = greyed out; loading = full colour, busy cursor, animated
+        p.disabled && !loading && "cursor-not-allowed opacity-40",
+        loading && "cursor-wait",
+        loading && variant === "primary" && "animate-[btn-pulse_1.6s_ease-in-out_infinite]",
+        className,
+      )}
     >
-      {variant === "primary" && <Sheen />}
+      {variant === "primary" && !loading && <Sheen />}
+      {loading && (
+        <span aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
+          <span className={cx("absolute inset-y-0 -left-1/2 w-1/2 skew-x-[-20deg] bg-gradient-to-r from-transparent to-transparent [animation:btn-sweep_1.1s_linear_infinite]", variant === "primary" ? "via-white/55" : "via-p/35")} />
+        </span>
+      )}
       <AnimatePresence initial={false} mode="popLayout">
         {loading && (
           <motion.span key="spin" initial={{ opacity: 0, scale: 0.4, width: 0 }} animate={{ opacity: 1, scale: 1, width: "auto" }} exit={{ opacity: 0, scale: 0.4, width: 0 }} className="relative">
@@ -87,11 +103,12 @@ export const LinkButton = ({ href, children, variant = "primary", size = "md", c
 
 // ---------------- loaders ----------------
 export function Spinner({ className }: { className?: string }) {
+  // SVG arc (not border colours) so it always renders in the current text colour.
   return (
-    <span className={cx("relative inline-block", className ?? "h-5 w-5")} aria-label="Loading">
-      <span className="absolute inset-0 rounded-full border-2 border-current opacity-20" />
-      <span className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-current" />
-    </span>
+    <svg viewBox="0 0 24 24" fill="none" className={cx("shrink-0 animate-spin [animation-duration:0.75s]", className ?? "h-5 w-5")} role="img" aria-label="Loading">
+      <circle cx="12" cy="12" r="9.5" stroke="currentColor" strokeOpacity="0.22" strokeWidth="2.75" />
+      <path d="M21.5 12a9.5 9.5 0 0 0-9.5-9.5" stroke="currentColor" strokeWidth="2.75" strokeLinecap="round" />
+    </svg>
   );
 }
 
@@ -588,12 +605,132 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 export const useToast = () => useContext(ToastCtx);
 
 /** Wraps an async action with loading state + error toast. */
+// ---------------- activity (what the app is doing right now) ----------------
+type Activity = { id: number; label: string; detail?: string; since: number };
+let acts: Activity[] = [];
+let nextAct = 1;
+const actListeners = new Set<() => void>();
+const emitActs = () => actListeners.forEach((l) => l());
+
+/** A tiny global store of running processes, shown by <BusyDock />. */
+export const activity = {
+  start(label: string, detail?: string) {
+    const id = nextAct++;
+    acts = [...acts, { id, label, detail, since: Date.now() }];
+    emitActs();
+    return id;
+  },
+  update(id: number, label: string, detail?: string) {
+    acts = acts.map((a) => (a.id === id ? { ...a, label, detail } : a));
+    emitActs();
+  },
+  end(id: number) {
+    acts = acts.filter((a) => a.id !== id);
+    emitActs();
+  },
+};
+const EMPTY: Activity[] = [];
+function useActivities() {
+  return useSyncExternalStore(
+    (l) => {
+      actListeners.add(l);
+      return () => actListeners.delete(l);
+    },
+    () => acts,
+    () => EMPTY,
+  );
+}
+
+/** Floating status for whatever is running: a top progress line plus a pill with the current step. */
+export function BusyDock() {
+  const list = useActivities();
+  const cur = list[list.length - 1];
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    if (!cur) return;
+    const t = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(t);
+  }, [cur]);
+  const secs = cur && now ? Math.max(0, Math.floor((now - cur.since) / 1000)) : 0;
+  return (
+    <AnimatePresence>
+      {cur && (
+        <>
+          <motion.div key="bar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pointer-events-none fixed inset-x-0 top-0 z-[95] h-[3px] overflow-hidden bg-p/10">
+            <span className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-p to-transparent shadow-[0_0_12px_rgba(171,159,242,0.9)] [animation:btn-sweep_1.3s_ease-in-out_infinite]" />
+          </motion.div>
+          <motion.div
+            key="dock"
+            role="status"
+            aria-live="polite"
+            initial={{ opacity: 0, y: -18, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12, scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+            className="pointer-events-none fixed inset-x-0 top-[124px] z-[95] mx-auto w-[min(92vw,420px)]"
+          >
+            <div className="relative flex items-center gap-3 overflow-hidden rounded-2xl border border-p/30 bg-p-950/95 px-4 py-3 shadow-[0_24px_70px_-10px_rgba(0,0,0,0.8),0_0_40px_-12px_rgba(171,159,242,0.5)] backdrop-blur-xl">
+              <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-p/15 text-p">
+                <span className="absolute inset-0 animate-ping rounded-full bg-p/20" />
+                <Spinner className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div key={cur.label} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }} className="truncate text-sm font-semibold text-white">
+                    {cur.label}
+                  </motion.div>
+                </AnimatePresence>
+                <div className="truncate text-[11px] text-muted">{cur.detail ?? "Please keep this page open"}</div>
+              </div>
+              <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted">{secs}s</span>
+              <span aria-hidden className="absolute inset-x-0 bottom-0 h-[2px] overflow-hidden">
+                <span className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-p to-transparent [animation:btn-sweep_1.3s_ease-in-out_infinite]" />
+              </span>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/** What the BusyDock says for the common action keys (a call can pass its own label instead). */
+const ACTION_LABEL: Record<string, string> = {
+  analyze: "AI is scoring your space…",
+  check: "Checking your photo…",
+  create: "Creating it on-chain…",
+  list: "Listing your space…",
+  save: "Creating your profile…",
+  fund: "Sending test funds…",
+  kyc: "Verifying your identity…",
+  send: "Sending…",
+  prep: "Building the legal pack…",
+  pay: "Paying into escrow…",
+  buy: "Buying units…",
+  claim: "Claiming your income…",
+  close: "Closing the offering…",
+  refund: "Refunding…",
+  approve: "Approving the creative…",
+  reject: "Rejecting and refunding…",
+  proof: "Checking your proof photo…",
+  code: "Getting a capture code…",
+  order: "Placing your order…",
+  transfer: "Transferring units…",
+  extend: "Extending the lease…",
+  dispute: "Opening a dispute…",
+  msg: "Opening the conversation…",
+  s: "Saving…",
+  up: "Uploading…",
+};
+
+/** Runs an async action with busy state, toasts, and a BusyDock entry while it runs. */
 export function useAction() {
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
   const run = useCallback(
-    async <T,>(key: string, fn: () => Promise<T>, ok?: string): Promise<T | undefined> => {
+    async <T,>(key: string, fn: () => Promise<T>, ok?: string, label?: string): Promise<T | undefined> => {
       setBusy(key);
+      const id = activity.start(label ?? ACTION_LABEL[key] ?? "Working on it…");
       try {
         const r = await fn();
         if (ok) toast({ text: ok, tone: "ok" });
@@ -602,6 +739,7 @@ export function useAction() {
         toast({ text: e?.message ?? String(e), tone: "bad" });
         return undefined;
       } finally {
+        activity.end(id);
         setBusy(null);
       }
     },

@@ -83,8 +83,9 @@ function ConfidenceRing({ value }: { value: number }) {
 export function AqsPanel({ r }: { r: { aqs: number; grade: number; confidence: number; subscores: Record<string, number>; strengths?: any[]; weaknesses?: any[]; tips?: string[]; surface?: string } }) {
   const conf = r.confidence >= 0.75 ? "High" : r.confidence >= 0.5 ? "Medium" : "Low";
   return (
-    <div className="grid gap-6 lg:grid-cols-[auto_1fr]">
-      <div className="flex flex-col items-center gap-4">
+    <div className="grid items-start gap-6 lg:grid-cols-[auto_1fr]">
+      {/* stays in view while the breakdown scrolls, so there is no empty column under the radar */}
+      <div className="flex flex-col items-center gap-4 lg:sticky lg:top-0">
         <div className="flex w-full items-center justify-between gap-4 rounded-2xl border border-line bg-white/[0.03] p-3">
           <div>
             <GradeBadge grade={r.grade} aqs={r.aqs} size="lg" />

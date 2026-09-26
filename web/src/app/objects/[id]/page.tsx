@@ -3,7 +3,7 @@ import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Coins, Eye, Loader2, Megaphone, Pause, Play, Plus, Rocket, ScanSearch } from "lucide-react";
+import { Check, ChevronDown, Coins, Eye, Loader2, Megaphone, Pause, Play, Plus, Rocket, ScanSearch } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { addSpace, buySponsorship, setPrice, spaceStatus } from "@/lib/sui/tx";
 import { MATERIALS, PLACEMENTS } from "@/lib/categories";
@@ -13,6 +13,7 @@ import { Badge, Button, Card, EASE, Empty, Field, GradeBadge, Img, Input, Modal,
 import { FlowChoice, FlowFrame, FlowInput, FlowNext, FlowOverlay, FlowQuestion, useFlow } from "@/components/flow";
 import { EnsName } from "@/components/ens";
 import { PhotoCapture } from "@/components/photo-capture";
+import { Lightbox } from "@/components/lightbox";
 
 const STEPS = ["Checking photo quality…", "Checking authenticity…", "Scoring the space…", "Scoring the space (second opinion)…"];
 
@@ -23,6 +24,7 @@ function AddSpace({ objectId, onDone, onClose }: { objectId: string; onDone: () 
   const [res, setRes] = useState<any>(null);
   const [price, setPriceV] = useState("");
   const [phase, setPhase] = useState(-1);
+  const [breakdown, setBreakdown] = useState(false);
   const flow = useFlow(6);
   const { busy, run: act } = useAction();
   const set = (k: keyof typeof f, v: string) => {
@@ -173,10 +175,19 @@ function AddSpace({ objectId, onDone, onClose }: { objectId: string; onDone: () 
               <p className="mt-4 flex flex-wrap items-center gap-1.5 text-xs text-muted">
                 Its ENS name <EnsName name={res.tx.ensName} kind="space" size="xs" /> is registered on Sepolia automatically, with the score and price written as records.
               </p>
-              <details className="mt-10">
-                <summary className="cursor-pointer list-none text-sm font-semibold text-p hover:underline">See the full score breakdown</summary>
-                <div className="mt-5"><AqsPanel r={r} /></div>
-              </details>
+              <button type="button" onClick={() => setBreakdown((v) => !v)} className="mt-10 inline-flex items-center gap-1.5 text-sm font-semibold text-p hover:underline">
+                {breakdown ? "Hide" : "See"} the full score breakdown
+                <ChevronDown className={cx("h-4 w-4 transition-transform duration-300", breakdown && "rotate-180")} />
+              </button>
+              <AnimatePresence initial={false}>
+                {breakdown && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.4, ease: EASE }} className="overflow-hidden">
+                    <div className="mt-4 max-h-[min(58vh,560px)] overflow-y-auto overscroll-contain rounded-3xl border border-line bg-white/[0.02] p-5">
+                      <AqsPanel r={r} />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </FlowQuestion>
         )}
@@ -209,7 +220,7 @@ function Sponsor({ objectId, onClose, onDone }: { objectId: string; onClose: () 
           <Input type="number" min={1} max={90} value={days} onChange={(e) => setDays(Number(e.target.value))} />
         </Field>
       </div>
-      <Button className="mt-5 w-full" size="lg" loading={busy === "s"} disabled={!quote} data-testid="buy-sponsorship" onClick={() => act("s", async () => { await run(buySponsorship({ objectId, amount: BigInt(quote.amount), tier, days })); onDone(); onClose(); }, "Sponsored!")}>
+      <Button className="mt-5 w-full" size="lg" loading={busy === "s"} disabled={!quote} data-testid="buy-sponsorship" onClick={() => act("s", async () => { await run(buySponsorship({ objectId, amount: BigInt(quote.amount), tier, days })); onDone(); onClose(); }, "Sponsored!", "Buying the Sponsored boost…")}>
         Pay {quote ? usdc(quote.amount) : "…"}
       </Button>
     </Modal>
@@ -222,6 +233,7 @@ export default function ObjectPage({ params }: { params: Promise<{ id: string }>
   const { data, refetch, isLoading } = useQuery({ queryKey: ["object", id], queryFn: () => fetch(`/api/objects/${id}`).then((r) => r.json()) });
   const [adding, setAdding] = useState(false);
   const [sponsoring, setSponsoring] = useState(false);
+  const [view, setView] = useState(false);
   const { busy, run: act } = useAction();
   useEffect(() => {
     const t = setInterval(() => refetch(), 15000);
@@ -237,7 +249,7 @@ export default function ObjectPage({ params }: { params: Promise<{ id: string }>
       <div className="grid gap-5 lg:h-[calc(100dvh-172px)] lg:min-h-[600px] lg:grid-cols-[380px_1fr]">
         <div className="flex min-h-0 flex-col">
           <div className="glass flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl">
-            <div className="relative aspect-[4/3] shrink-0 lg:aspect-auto lg:h-[38%]">
+            <div onClick={() => setView(true)} className="relative aspect-[4/3] shrink-0 cursor-zoom-in lg:aspect-auto lg:h-[38%]">
               <Img blob={o.hero_blob_id} alt={o.title} className="h-full w-full" />
               <div className="absolute inset-0 bg-gradient-to-t from-p-950 via-transparent to-transparent" />
             </div>
@@ -329,6 +341,7 @@ export default function ObjectPage({ params }: { params: Promise<{ id: string }>
       </div>
       {adding && <AddSpace objectId={id} onDone={() => refetch()} onClose={() => setAdding(false)} />}
       {sponsoring && <Sponsor objectId={id} onClose={() => setSponsoring(false)} onDone={() => refetch()} />}
+      <Lightbox images={[{ blob: o.hero_blob_id, label: o.title }]} index={view ? 0 : null} onClose={() => setView(false)} />
     </div>
   );
 }

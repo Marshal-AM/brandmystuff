@@ -10,6 +10,7 @@ import { EnsName } from "@/components/ens";
 import { PhotoCapture } from "@/components/photo-capture";
 import { FlowFrame, FlowInput, FlowNext, FlowQuestion, FlowTextarea, useFlow } from "@/components/flow";
 import { SignInButtons } from "@/components/shell";
+import { Lightbox } from "@/components/lightbox";
 
 const CHECKS = [
   { icon: Fingerprint, label: "Confirming it came from your live camera" },
@@ -70,6 +71,7 @@ export default function ListObject() {
   const [photo, setPhoto] = useState<{ file: File; source: "camera" | "upload"; url: string; linkId?: string } | null>(null);
   const [check, setCheck] = useState<any>(null);
   const flow = useFlow(TOTAL);
+  const [preview, setPreview] = useState(false);
   const { busy, run: act } = useAction();
   if (!authenticated)
     return (
@@ -205,9 +207,9 @@ export default function ListObject() {
             <div className="space-y-8">
               <div className="grid gap-6 sm:grid-cols-[200px_1fr]">
                 {photo && (
-                  <motion.div initial={{ opacity: 0, scale: 0.9, rotate: -3 }} animate={{ opacity: 1, scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 220, damping: 18 }} className="overflow-hidden rounded-3xl ring-1 ring-p/40">
+                  <motion.div initial={{ opacity: 0, scale: 0.9, rotate: -3 }} animate={{ opacity: 1, scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 220, damping: 18 }} onClick={() => setPreview(true)} className="aspect-square cursor-zoom-in self-start overflow-hidden rounded-3xl ring-1 ring-p/40">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photo.url} alt="" className="aspect-square w-full object-cover" />
+                    <img src={photo.url} alt="" className="h-full w-full object-cover" />
                   </motion.div>
                 )}
                 <div>
@@ -251,6 +253,7 @@ export default function ListObject() {
           </FlowQuestion>
         )}
       </FlowFrame>
+      <Lightbox images={photo ? [{ src: photo.url, label: f.title || "Your photo" }] : []} index={preview ? 0 : null} onClose={() => setPreview(false)} />
     </div>
   );
 }

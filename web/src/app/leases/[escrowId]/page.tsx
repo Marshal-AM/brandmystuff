@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Bot, Check, Clock, Download, ExternalLink, Fingerprint, MessageCircle, Plus, ScanSearch, X } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { approveCreative, extendLease, openDispute, rejectCreative } from "@/lib/sui/tx";
-import { Badge, Button, Card, EASE, Empty, Img, PageLoader, Stat, cx, suiscan, useAction, usdc, ScrollArea } from "@/components/ui";
+import { Badge, Button, Card, EASE, Empty, Img, PageLoader, Spinner, Stat, cx, suiscan, useAction, usdc, ScrollArea } from "@/components/ui";
 import { EnsName } from "@/components/ens";
 import { PhotoCapture } from "@/components/photo-capture";
 
@@ -120,15 +120,17 @@ export default function LeasePage({ params }: { params: Promise<{ escrowId: stri
   if (!data) return <div className="mx-auto max-w-xl p-10"><Empty title="Lease not found" /></div>;
   const l = data.lease, s = l.spaces, role = data.role;
   const st = STATUS[l.status] ?? { label: l.status, tone: "neutral" };
-  const download = async (size: string, format: string) => {
-    const t = await token();
-    const r = await fetch(`/api/leases/${escrowId}/print?size=${size}&format=${format}`, { headers: t ? { authorization: `Bearer ${t}` } : {}, credentials: "include" });
-    const b = await r.blob();
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(b);
-    a.download = `${l.ens_label}-${size}.${format}`;
-    a.click();
-  };
+  const download = (size: string, format: string) =>
+    act(`dl-${size}-${format}`, async () => {
+      const t = await token();
+      const r = await fetch(`/api/leases/${escrowId}/print?size=${size}&format=${format}`, { headers: t ? { authorization: `Bearer ${t}` } : {}, credentials: "include" });
+      if (!r.ok) throw new Error("Could not build the print file");
+      const b = await r.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(b);
+      a.download = `${l.ens_label}-${size}.${format}`;
+      a.click();
+    }, undefined, `Rendering the ${format.toUpperCase()} print file…`);
   const leaseName = `${l.ens_label}.${s.ens_name}`;
   const released = data.periods.filter((p: any) => p.status === "released").length;
   return (
@@ -224,8 +226,8 @@ export default function LeasePage({ params }: { params: Promise<{ escrowId: stri
                   <motion.div key={k} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="rounded-2xl border border-line bg-white/[0.02] p-3 text-xs transition-colors hover:border-p/40">
                     <div className="font-semibold">{label}</div>
                     <div className="mt-2 flex gap-1.5">
-                      <button className="inline-flex items-center gap-1 rounded-full bg-p/15 px-2.5 py-1 font-semibold text-p transition-colors hover:bg-p hover:text-ink" onClick={() => download(k, "pdf")} data-testid={`print-${k}-pdf`}><Download className="h-3 w-3" />PDF</button>
-                      <button className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2.5 py-1 font-semibold text-white/80 transition-colors hover:bg-white hover:text-ink" onClick={() => download(k, "png")}>PNG</button>
+                      <button className="inline-flex items-center gap-1 rounded-full bg-p/15 px-2.5 py-1 font-semibold text-p transition-colors hover:bg-p hover:text-ink" disabled={!!busy} onClick={() => download(k, "pdf")} data-testid={`print-${k}-pdf`}>{busy === `dl-${k}-pdf` ? <Spinner className="h-3 w-3" /> : <Download className="h-3 w-3" />}PDF</button>
+                      <button className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2.5 py-1 font-semibold text-white/80 transition-colors hover:bg-white hover:text-ink" disabled={!!busy} onClick={() => download(k, "png")}>{busy === `dl-${k}-png` && <Spinner className="h-3 w-3" />}PNG</button>
                     </div>
                   </motion.div>
                 ))}

@@ -10,6 +10,7 @@ import { useCurrentAccount, useDAppKit } from "@mysten/dapp-kit-react";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 import type { Transaction } from "@mysten/sui/transactions";
 import { toBase64 } from "@mysten/sui/utils";
+import { activity } from "@/components/ui";
 import { SUI } from "@/lib/deployment";
 import { PrivySuiSigner, decodePublicKey } from "./privySigner";
 
@@ -136,34 +137,47 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const run = useCallback(
     async (tx: Transaction) => {
       let digest: string;
-      if (mode === "privy") {
-        if (!privySigner) throw new Error("Your Sui wallet is still being set up — try again in a moment");
-        tx.setSenderIfNotSet(privySigner.toSuiAddress());
-        const r: any = await client.signAndExecuteTransaction({ transaction: tx, signer: privySigner, include: { effects: true } });
-        if (!r.Transaction) throw new Error(`Transaction failed: ${JSON.stringify(r.FailedTransaction?.status?.error ?? "")}`);
-        digest = r.Transaction.digest;
-      } else if (mode === "sui") {
-        const r: any = await dAppKit.signAndExecuteTransaction({ transaction: tx });
-        if (r.FailedTransaction || r.$kind === "FailedTransaction") throw new Error(`Transaction failed: ${JSON.stringify(r.FailedTransaction?.status?.error ?? "")}`);
-        digest = r.Transaction?.digest ?? r.digest;
-      } else throw new Error("Sign in first");
-      const synced = await api<{ events: any[] }>("/api/sync", { method: "POST", json: { digest } });
-      refresh();
-      return { digest, events: synced.events };
+      // Shown in the BusyDock so people can see which step the transaction is on.
+      const act = activity.start(mode === "sui" ? "Waiting for your wallet to sign…" : "Signing the transaction…", "Sui testnet");
+      try {
+        if (mode === "privy") {
+          if (!privySigner) throw new Error("Your Sui wallet is still being set up — try again in a moment");
+          tx.setSenderIfNotSet(privySigner.toSuiAddress());
+          activity.update(act, "Submitting to Sui…", "Signed with your embedded wallet");
+          const r: any = await client.signAndExecuteTransaction({ transaction: tx, signer: privySigner, include: { effects: true } });
+          if (!r.Transaction) throw new Error(`Transaction failed: ${JSON.stringify(r.FailedTransaction?.status?.error ?? "")}`);
+          digest = r.Transaction.digest;
+        } else if (mode === "sui") {
+          const r: any = await dAppKit.signAndExecuteTransaction({ transaction: tx });
+          if (r.FailedTransaction || r.$kind === "FailedTransaction") throw new Error(`Transaction failed: ${JSON.stringify(r.FailedTransaction?.status?.error ?? "")}`);
+          digest = r.Transaction?.digest ?? r.digest;
+        } else throw new Error("Sign in first");
+        activity.update(act, "Confirmed on Sui, syncing…", `tx ${digest.slice(0, 10)}…`);
+        const synced = await api<{ events: any[] }>("/api/sync", { method: "POST", json: { digest } });
+        refresh();
+        return { digest, events: synced.events };
+      } finally {
+        activity.end(act);
+      }
     },
     [mode, privySigner, dAppKit, api, refresh],
   );
 
   const signMessage = useCallback(
     async (msg: string) => {
-      const bytes = new TextEncoder().encode(msg);
-      if (mode === "privy") {
-        if (!privySigner) throw new Error("Wallet not ready");
-        const r = await privySigner.signPersonalMessage(bytes);
+      const act = activity.start("Waiting for your signature…", "Signing the agreement message");
+      try {
+        const bytes = new TextEncoder().encode(msg);
+        if (mode === "privy") {
+          if (!privySigner) throw new Error("Wallet not ready");
+          const r = await privySigner.signPersonalMessage(bytes);
+          return r.signature;
+        }
+        const r = await dAppKit.signPersonalMessage({ message: bytes });
         return r.signature;
+      } finally {
+        activity.end(act);
       }
-      const r = await dAppKit.signPersonalMessage({ message: bytes });
-      return r.signature;
     },
     [mode, privySigner, dAppKit],
   );

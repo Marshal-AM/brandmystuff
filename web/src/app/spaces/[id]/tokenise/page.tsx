@@ -10,6 +10,7 @@ import { createOffering } from "@/lib/sui/tx";
 import { WALRUS } from "@/lib/deployment";
 import { AnimatedNumber, Badge, Button, Card, EASE, Field, GradeBadge, Img, Input, PageHeader, PageLoader, Select, useAction, usdc } from "@/components/ui";
 import { EnsName } from "@/components/ens";
+import { LegalForge, type ForgeEvent } from "@/components/legal-forge";
 
 function Bar({ label, value, total, tone }: { label: string; value: number; total: number; tone: "p" | "w" }) {
   const pct = total > 0 ? Math.max(0, Math.min(100, (value / total) * 100)) : 0;
@@ -28,11 +29,12 @@ function Bar({ label, value, total, tone }: { label: string; value: number; tota
 
 export default function Tokenise({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { api, run, signMessage, me } = useSession();
+  const { api, run, signMessage, me, token } = useSession();
   const router = useRouter();
   const { data } = useQuery({ queryKey: ["space", id], queryFn: () => api<any>(`/api/spaces/${id}`) });
   const [p, setP] = useState({ share: "60", retained: "2000", price: "0.001", minRaise: "4000", perInvestor: "8000", term: "24", duration: "30" });
   const [prep, setPrep] = useState<any>(null);
+  const [forge, setForge] = useState<{ open: boolean; events: ForgeEvent[]; result?: any }>({ open: false, events: [] });
   const { busy, run: act } = useAction();
   if (!data) return <PageLoader label="Loading space" />;
   const s = data.space;
@@ -48,7 +50,47 @@ export default function Tokenise({ params }: { params: Promise<{ id: string }> }
     perInvestorMax: Number(p.perInvestor),
     termMonths: Number(p.term),
   });
-  const prepare = () => act("prep", async () => setPrep(await api<any>("/api/offerings/prepare", { method: "POST", json: params_() })));
+  // Streams the server's real progress (NDJSON) into the legal-pack panel.
+  const prepare = () =>
+    act("prep", async () => {
+      setPrep(null);
+      setForge({ open: true, events: [] });
+      const push = (e: ForgeEvent) => setForge((f) => ({ ...f, events: [...f.events, e], result: e.t === "done" ? e.result : f.result }));
+      const t = await token();
+      try {
+        const res = await fetch("/api/offerings/prepare?stream=1", {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json", ...(t ? { authorization: `Bearer ${t}` } : {}) },
+          body: JSON.stringify(params_()),
+        });
+        if (!res.ok || !res.body) {
+          const j = await res.json().catch(() => ({}));
+          push({ t: "error", at: Date.now(), error: j.error ?? `Request failed (${res.status})` });
+          return;
+        }
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let buf = "";
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          let nl: number;
+          while ((nl = buf.indexOf("\n")) >= 0) {
+            const line = buf.slice(0, nl).trim();
+            buf = buf.slice(nl + 1);
+            if (line) push(JSON.parse(line));
+          }
+        }
+      } catch {
+        push({ t: "error", at: Date.now(), error: "Lost the connection while building the pack. Try again." });
+      }
+    });
+  const closeForge = () => {
+    if (forge.result) setPrep(forge.result);
+    setForge((f) => ({ ...f, open: false }));
+  };
   const create = () =>
     act("create", async () => {
       const signature = await signMessage(prep.message);
@@ -191,6 +233,7 @@ export default function Tokenise({ params }: { params: Promise<{ id: string }> }
           </Card>
         </div>
       </div>
+      <LegalForge open={forge.open} events={forge.events} onClose={closeForge} onRetry={prepare} />
     </div>
   );
 }

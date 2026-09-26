@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowUpRight, CheckCheck, Flag, Paperclip, Send, X } from "lucide-react";
 import { useSession } from "@/lib/client/session";
-import { Button, EASE, Img, PageLoader, Textarea, cx, useAction } from "@/components/ui";
+import { Button, EASE, Img, PageLoader, Spinner, Textarea, cx, useAction } from "@/components/ui";
 import { EnsName } from "@/components/ens";
 
 export default function Thread({ params }: { params: Promise<{ id: string }> }) {
@@ -108,8 +108,8 @@ export default function Thread({ params }: { params: Promise<{ id: string }> }) 
                     {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     {mine && m.read_at && <span className="inline-flex items-center gap-0.5"><CheckCheck className="h-3 w-3" /> read</span>}
                     {!mine && (
-                      <button onClick={() => api(`/api/conversations/${id}`, { method: "PATCH", json: { messageId: m.id } }).then(() => refetch())} className="inline-flex items-center gap-0.5 opacity-0 transition-opacity hover:text-p group-hover:opacity-100">
-                        <Flag className="h-3 w-3" /> report
+                      <button disabled={!!busy} onClick={() => run(`rep-${m.id}`, async () => { await api(`/api/conversations/${id}`, { method: "PATCH", json: { messageId: m.id } }); await refetch(); }, "Reported to moderators", "Reporting this message…")} className={cx("inline-flex items-center gap-0.5 transition-opacity hover:text-p group-hover:opacity-100", busy === `rep-${m.id}` ? "opacity-100" : "opacity-0")}>
+                        {busy === `rep-${m.id}` ? <Spinner className="h-3 w-3" /> : <Flag className="h-3 w-3" />} {busy === `rep-${m.id}` ? "reporting" : "report"}
                       </button>
                     )}
                   </div>

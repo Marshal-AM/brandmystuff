@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { use, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarDays, Camera, ChevronRight, Code2, Eye, Layers, MapPin, MessageCircle, Ruler, ShieldBan, Sparkles } from "lucide-react";
+import { CalendarDays, Camera, ChevronRight, Code2, Eye, Layers, MapPin, Maximize2, MessageCircle, Ruler, ShieldBan, Sparkles } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { AqsPanel } from "@/components/aqs";
 import { ActivityList } from "@/components/activity";
@@ -13,6 +13,7 @@ import { VerifyPanel } from "@/components/verify";
 import { SpaceCard } from "@/components/space-card";
 import { Badge, Button, Card, EASE, Empty, GradeBadge, Img, LinkButton, PageLoader, Tabs, cx, shortAddr, usdc, useAction } from "@/components/ui";
 import { EnsName } from "@/components/ens";
+import { Lightbox } from "@/components/lightbox";
 import { SignInButtons } from "@/components/shell";
 
 function Crumbs({ items }: { items: { href?: string; label: string }[] }) {
@@ -58,7 +59,7 @@ function Spec({ icon: Icon, label, value }: { icon: any; label: string; value: s
 const FIXED = "lg:h-[calc(100dvh-212px)] lg:min-h-[600px]";
 
 /** A glass panel with tabs on top and a body that scrolls inside (on desktop it fills its column). */
-function TabPanel<T extends string>({ tabs, value, onChange, children, className }: { tabs: { id: T; label: ReactNode }[]; value: T; onChange: (t: T) => void; children: ReactNode; className?: string }) {
+function TabPanel<T extends string>({ tabs, value, onChange, children, className, natural }: { tabs: { id: T; label: ReactNode }[]; value: T; onChange: (t: T) => void; children: ReactNode; className?: string; natural?: boolean }) {
   return (
     <div className={cx("glass flex min-h-0 flex-col overflow-hidden rounded-3xl", className)}>
       <div className="shrink-0 border-b border-line px-3 py-2.5">
@@ -66,7 +67,7 @@ function TabPanel<T extends string>({ tabs, value, onChange, children, className
       </div>
       <div className="relative min-h-0 flex-1">
         <AnimatePresence mode="wait" initial={false}>
-          <motion.div key={value} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22 }} className="overflow-y-auto overscroll-contain p-5 lg:absolute lg:inset-0">
+          <motion.div key={value} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22 }} className={cx("p-5", !natural && "overflow-y-auto overscroll-contain lg:absolute lg:inset-0")}>
             {children}
           </motion.div>
         </AnimatePresence>
@@ -76,18 +77,25 @@ function TabPanel<T extends string>({ tabs, value, onChange, children, className
 }
 
 function Gallery({ closeup, hero, label, title }: { closeup?: string; hero?: string; label: string; title: string }) {
+  const [view, setView] = useState<number | null>(null);
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.98, filter: "blur(10px)" }} animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }} transition={{ duration: 0.8, ease: EASE }} className="group relative aspect-[16/10] shrink-0 overflow-hidden rounded-3xl border border-line lg:aspect-auto lg:h-[44%]">
+    <>
+    <motion.div initial={{ opacity: 0, scale: 0.98, filter: "blur(10px)" }} animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }} transition={{ duration: 0.8, ease: EASE }} onClick={() => setView(0)} className="group relative aspect-[16/10] shrink-0 cursor-zoom-in overflow-hidden rounded-3xl border border-line">
       <Img blob={closeup} alt={label} className="h-full w-full transition-transform duration-[1.2s] group-hover:scale-105" />
       <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-transparent to-ink/20" />
       <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-ink/60 px-3 py-1.5 text-[11px] font-bold text-white/85 backdrop-blur-md">
         <Sparkles className="h-3.5 w-3.5 text-p" /> The ad space
       </span>
-      <motion.div initial={{ opacity: 0, y: 20, rotate: 4 }} animate={{ opacity: 1, y: 0, rotate: -3 }} transition={{ duration: 0.8, delay: 0.3, type: "spring", stiffness: 120, damping: 14 }} whileHover={{ rotate: 0, scale: 1.04 }} className="absolute bottom-4 right-4 w-[30%] max-w-[200px] overflow-hidden rounded-2xl border-4 border-p-950 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+      <span className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-ink/60 px-3 py-1.5 text-[11px] font-bold text-white/85 opacity-0 backdrop-blur-md transition-opacity group-hover:opacity-100">
+        <Maximize2 className="h-3.5 w-3.5 text-p" /> Click to expand
+      </span>
+      <motion.div initial={{ opacity: 0, y: 20, rotate: 4 }} animate={{ opacity: 1, y: 0, rotate: -3 }} transition={{ duration: 0.8, delay: 0.3, type: "spring", stiffness: 120, damping: 14 }} whileHover={{ rotate: 0, scale: 1.04 }} onClick={(e) => { e.stopPropagation(); setView(1); }} className="absolute bottom-4 right-4 w-[30%] max-w-[200px] overflow-hidden rounded-2xl border-4 border-p-950 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
         <Img blob={hero} alt={title} className="aspect-[4/3] w-full" />
         <span className="absolute bottom-1.5 left-1.5 rounded-full bg-ink/70 px-2 py-0.5 text-[10px] font-bold text-white/85 backdrop-blur">Whole object</span>
       </motion.div>
     </motion.div>
+    <Lightbox images={[{ blob: closeup, label: label + " · the ad space" }, { blob: hero, label: title + " · whole object" }]} index={view} onClose={() => setView(null)} />
+    </>
   );
 }
 
@@ -101,6 +109,7 @@ function SpaceView({ d }: { d: any }) {
   const [checkout, setCheckout] = useState(false);
   const [tab, setTab] = useState<SpaceTab>("score");
   const [side, setSide] = useState<SideTab>("chain");
+  const [proofView, setProofView] = useState<number | null>(null);
   const { busy, run } = useAction();
   const mine = address === s.owner_address;
   const weekMs = Number(s.week_ms);
@@ -110,12 +119,12 @@ function SpaceView({ d }: { d: any }) {
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6">
       <Crumbs items={[{ href: "/explore", label: "Explore" }, { href: `/${o.ens_name}`, label: o.title }, { label: s.label }]} />
-      <div className={cx("grid gap-5 lg:grid-cols-[1fr_400px]", FIXED)}>
-        {/* left: photos + details */}
-        <div className="flex min-h-0 flex-col gap-5">
+      <div className="grid items-start gap-5 lg:grid-cols-[1fr_400px]">
+        {/* left: photos + details (the details panel keeps a fixed height and scrolls inside) */}
+        <div className="flex min-w-0 flex-col gap-5">
           <Gallery closeup={s.closeup_blob_id} hero={o.hero_blob_id} label={s.label} title={o.title} />
           <TabPanel
-            className="min-h-[360px] flex-1 lg:min-h-0"
+            className="h-[560px] lg:h-[620px]"
             value={tab}
             onChange={setTab}
             tabs={[
@@ -162,7 +171,7 @@ function SpaceView({ d }: { d: any }) {
               (d.proofs.length ? (
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-6">
                   {d.proofs.map((p: any, i: number) => (
-                    <motion.div key={p.photo_blob_id} initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }} className="overflow-hidden rounded-xl border border-line">
+                    <motion.div key={p.photo_blob_id} initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }} onClick={() => setProofView(i)} className="cursor-zoom-in overflow-hidden rounded-xl border border-line">
                       <Img blob={p.photo_blob_id} alt={`proof ${p.period}`} className="aspect-square w-full transition-transform duration-500 hover:scale-110" />
                     </motion.div>
                   ))}
@@ -190,8 +199,8 @@ function SpaceView({ d }: { d: any }) {
           </TabPanel>
         </div>
 
-        {/* right: booking + on-chain / owner / API */}
-        <div className="flex min-h-0 flex-col gap-5">
+        {/* right: booking + on-chain / owner / API, at their natural height */}
+        <div className="flex min-w-0 flex-col gap-5">
           <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.15, ease: EASE }} className="ring-spin shrink-0 rounded-3xl">
             <div className="glass relative overflow-hidden rounded-3xl p-5">
               <div aria-hidden className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-p/20 blur-3xl" />
@@ -257,7 +266,7 @@ function SpaceView({ d }: { d: any }) {
           </motion.div>
 
           <TabPanel
-            className="min-h-[300px] flex-1 lg:min-h-[180px]"
+            natural
             value={side}
             onChange={setSide}
             tabs={[
@@ -317,6 +326,7 @@ function SpaceView({ d }: { d: any }) {
         </div>
       </div>
       {checkout && <Checkout space={s} booked={d.bookedWeeks} onClose={() => setCheckout(false)} />}
+      <Lightbox images={d.proofs.map((p: any) => ({ blob: p.photo_blob_id, label: "Proof of display · period " + p.period }))} index={proofView} onClose={() => setProofView(null)} />
     </div>
   );
 }
@@ -326,12 +336,13 @@ type ObjTab = "about" | "chain";
 function ObjectView({ d }: { d: any }) {
   const o = d.object;
   const [tab, setTab] = useState<ObjTab>("about");
+  const [view, setView] = useState<number | null>(null);
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6">
       <Crumbs items={[{ href: "/explore", label: "Explore" }, { href: `/${o.owner?.ens_name ?? ""}`, label: o.owner?.handle ?? "owner" }, { label: o.title }]} />
       <div className={cx("grid gap-5 lg:grid-cols-[400px_1fr]", FIXED)}>
         <div className="flex min-h-0 flex-col gap-5">
-          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7, ease: EASE }} className="relative aspect-[4/3] shrink-0 overflow-hidden rounded-3xl border border-line lg:aspect-auto lg:h-[38%]">
+          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7, ease: EASE }} onClick={() => setView(0)} className="relative aspect-[4/3] shrink-0 cursor-zoom-in overflow-hidden rounded-3xl border border-line lg:aspect-auto lg:h-[38%]">
             <Img blob={o.hero_blob_id} alt={o.title} className="h-full w-full" />
             <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/10 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-5">
@@ -377,6 +388,7 @@ function ObjectView({ d }: { d: any }) {
           </div>
         </div>
       </div>
+      <Lightbox images={[{ blob: o.hero_blob_id, label: o.title }]} index={view} onClose={() => setView(null)} />
     </div>
   );
 }

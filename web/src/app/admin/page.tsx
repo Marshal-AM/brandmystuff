@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Activity, Flag, Gavel, RotateCcw, ScrollText, Server, ShieldBan } from "lucide-react";
 import { useSession } from "@/lib/client/session";
-import { Badge, Button, Card, EASE, Empty, Input, PageHeader, PageLoader, Stat, cx, etherscanTx, suiscan, useAction, usdc, ScrollArea } from "@/components/ui";
+import { Badge, Button, Card, EASE, Empty, Input, PageHeader, PageLoader, Stat, cx, etherscanTx, suiscan, useAction, usdc, ScrollArea, Spinner } from "@/components/ui";
 
 function Head({ icon: Icon, children, count }: { icon: any; children: React.ReactNode; count?: number }) {
   return (
@@ -97,8 +97,8 @@ export default function Admin() {
             <Row key={r.id} i={i}>
               <span className="min-w-0 flex-1 truncate"><Badge>{r.kind}</Badge> <span className="ml-1 text-white/80">{r.message?.body ?? r.target_id}</span></span>
               <span className="flex gap-2">
-                {r.kind === "message" && <Button size="sm" variant="danger" onClick={() => act(`m${r.id}`, { action: "remove_message", messageId: r.target_id, reportId: r.id }, "Removed")}>Remove message</Button>}
-                <Button size="sm" variant="secondary" onClick={() => act(`d${r.id}`, { action: "dismiss_report", reportId: r.id }, "Dismissed")}>Dismiss</Button>
+                {r.kind === "message" && <Button size="sm" variant="danger" loading={busy === `m${r.id}`} onClick={() => act(`m${r.id}`, { action: "remove_message", messageId: r.target_id, reportId: r.id }, "Removed")}>Remove message</Button>}
+                <Button size="sm" variant="secondary" loading={busy === `d${r.id}`} onClick={() => act(`d${r.id}`, { action: "dismiss_report", reportId: r.id }, "Dismissed")}>Dismiss</Button>
               </span>
             </Row>
           ))}
@@ -115,8 +115,8 @@ export default function Admin() {
           </div>
           <Input placeholder="Investor Sui address" value={addr} onChange={(e) => setAddr(e.target.value)} className="font-mono" />
           <div className="flex gap-2">
-            <Button size="sm" variant="danger" onClick={() => act("fz", { action: "freeze", address: addr, frozen: true }, "Frozen")}>Freeze</Button>
-            <Button size="sm" variant="secondary" onClick={() => act("ufz", { action: "freeze", address: addr, frozen: false }, "Unfrozen")}>Unfreeze</Button>
+            <Button size="sm" variant="danger" loading={busy === "fz"} onClick={() => act("fz", { action: "freeze", address: addr, frozen: true }, "Frozen")}>Freeze</Button>
+            <Button size="sm" variant="secondary" loading={busy === "ufz"} onClick={() => act("ufz", { action: "freeze", address: addr, frozen: false }, "Unfrozen")}>Unfreeze</Button>
           </div>
         </Card>
         <Card delay={0.1}>
@@ -145,8 +145,8 @@ export default function Admin() {
               <span className="flex shrink-0 items-center gap-2">
                 <Badge tone={j.status === "done" ? "ok" : j.status === "failed" ? "bad" : "neutral"}>{j.status}</Badge>
                 {j.status === "failed" && (
-                  <button className="inline-flex items-center gap-1 font-semibold text-p hover:underline" onClick={() => act(`j${j.id}`, { action: "retry_job", jobId: j.id }, "Retrying")}>
-                    <RotateCcw className="h-3 w-3" /> retry
+                  <button disabled={!!busy} aria-busy={busy === `j${j.id}` || undefined} className="inline-flex items-center gap-1 font-semibold text-p hover:underline disabled:cursor-wait" onClick={() => act(`j${j.id}`, { action: "retry_job", jobId: j.id }, "Retrying")}>
+                    {busy === `j${j.id}` ? <Spinner className="h-3 w-3" /> : <RotateCcw className="h-3 w-3" />} {busy === `j${j.id}` ? "retrying" : "retry"}
                   </button>
                 )}
               </span>

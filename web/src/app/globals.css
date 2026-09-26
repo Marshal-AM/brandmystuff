@@ -251,6 +251,14 @@ select option {
 @keyframes grid-drift {
   to { background-position: 0 64px; }
 }
+@keyframes btn-sweep {
+  from { transform: translateX(-100%) skewX(-20deg); }
+  to { transform: translateX(400%) skewX(-20deg); }
+}
+@keyframes btn-pulse {
+  0%, 100% { box-shadow: 0 10px 30px -8px rgba(171, 159, 242, 0.55), 0 0 0 0 rgba(171, 159, 242, 0.45); }
+  50% { box-shadow: 0 14px 40px -6px rgba(171, 159, 242, 0.8), 0 0 0 6px rgba(171, 159, 242, 0); }
+}
 @keyframes drawPath {
   from { stroke-dasharray: 1000; stroke-dashoffset: 1000; }
   to { stroke-dasharray: 1000; stroke-dashoffset: 0; }
