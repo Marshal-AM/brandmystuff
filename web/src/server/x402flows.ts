@@ -29,7 +29,9 @@ export async function quoteLease(s: any, weeks: number, startWeek?: number) {
   if (!(weeks >= 1 && weeks <= 52)) throw new HttpError(400, "weeks must be 1-52");
   const wk = Number(s.week_ms);
   // Quote against the chain clock: the contract rejects a start week the chain considers past.
-  const current = Math.floor((await chainNowMs()) / wk);
+  // Near the end of a week, start from the next one so settlement can't cross the boundary.
+  const now = await chainNowMs();
+  const current = Math.floor(now / wk) + ((now % wk) > wk - Math.min(90_000, wk * 0.2) ? 1 : 0);
   const booked = await bookedWeeks(s.id);
   let start = startWeek ?? current;
   if (startWeek == null) {
@@ -114,6 +116,18 @@ export async function fulfil(intent: any, payer: string, paymentDigest: string) 
   try {
     let result: any;
     if (intent.kind === "lease") {
+      // Settlement takes a few seconds; if the quoted week has meanwhile become the past on-chain
+      // (short demo weeks), move to the next free week. The price is per week, so the paid amount
+      // still matches.
+      const wk = Number((await q(db().from("spaces").select("week_ms").eq("id", p.spaceId).single())).week_ms);
+      const chainNow = await chainNowMs();
+      const nowWeek = Math.floor(chainNow / wk) + (chainNow % wk > wk - 15_000 ? 1 : 0);
+      if (Number(p.startWeek) < nowWeek) {
+        const booked = await bookedWeeks(p.spaceId);
+        let start = nowWeek;
+        while ([...Array(p.weeks).keys()].some((i) => booked.has(start + i))) start++;
+        p.startWeek = start;
+      }
       const r = await execute(
         T.bookFor({
           spaceId: p.spaceId,

@@ -6,6 +6,7 @@ import { CHAIN, pickOf, short, useScout } from '../data'
 import type { ScoutPaymentStep } from '@/lib/scout/types'
 import { rng, usdc } from '../lib/hooks'
 import './payment.css'
+import { AgentSigning, PayTimeline, ScoutError } from '../components/PayParts'
 
 type Step = 'review' | 'signing' | 'sending' | 'success'
 
@@ -39,37 +40,6 @@ function BotGlyph({ size = 18 }: { size?: number }) {
       <rect x="8" y="9" width="2.6" height="5" rx="1.3" fill="var(--p)" />
       <rect x="13.4" y="9" width="2.6" height="5" rx="1.3" fill="var(--p)" />
     </svg>
-  )
-}
-
-function Cursor({ x, y, show, press }: { x: number; y: number; show: boolean; press: boolean }) {
-  return (
-    <motion.div
-      className="tx-cursor"
-      initial={{ x: 300, y: 560, opacity: 0 }}
-      animate={{ x, y, opacity: show ? 1 : 0, scale: press ? 0.82 : 1 }}
-      transition={{ x: { type: 'spring', stiffness: 70, damping: 16 }, y: { type: 'spring', stiffness: 70, damping: 16 }, scale: { duration: 0.12 }, opacity: { duration: 0.3 } }}
-    >
-      <svg width="22" height="24" viewBox="0 0 22 24">
-        <path d="M2 2 L19 11 L11 13 L7 21 Z" fill="#fff" stroke="var(--ink)" strokeWidth="2" strokeLinejoin="round" />
-      </svg>
-      <span className="tx-cursor-tag">
-        <BotGlyph size={12} />
-        Scout
-      </span>
-      <AnimatePresence>
-        {press && (
-          <motion.span
-            key="ripple"
-            className="tx-ripple"
-            initial={{ scale: 0, opacity: 0.8 }}
-            animate={{ scale: 1, opacity: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6 }}
-          />
-        )}
-      </AnimatePresence>
-    </motion.div>
   )
 }
 
@@ -204,33 +174,17 @@ export function Payment({ onDone, onClose }: { onDone: () => void; onClose: () =
   const step: Step = success ? 'success' : has('submit') ? 'sending' : has('sign') ? 'signing' : 'review'
   const confirm = has('book') || success ? 2 : has('settle') ? 1 : 0
 
-  const [cursor, setCursor] = useState({ x: 300, y: 560, show: false, press: false })
   const [balance, setBalance] = useState(mandate?.remaining ?? 0)
   const [closing, setClosing] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)
-  const approveRef = useRef<HTMLButtonElement>(null)
-
-  // the agent's "cursor" moves to Approve once the quote is in, and presses it when it signs
+  const bodyRef = useRef<HTMLDivElement>(null)
+  // keep the newest step (or the error card) in view: scroll the modal body only, never the page
   useEffect(() => {
-    const m = modalRef.current
-    const el = approveRef.current
-    if (!m || !el) return
-    if (step === 'review' && has('quote')) {
-      const mr = m.getBoundingClientRect()
-      const r = el.getBoundingClientRect()
-      const scale = mr.width / m.offsetWidth || 1
-      setCursor((c) => ({ ...c, show: true, x: (r.left - mr.left + r.width * 0.55) / scale, y: (r.top - mr.top + r.height * 0.55) / scale }))
-    }
-    if (step === 'signing') {
-      setCursor((c) => ({ ...c, press: true }))
-      const a = window.setTimeout(() => setCursor((c) => ({ ...c, press: false })), 160)
-      const b = window.setTimeout(() => setCursor((c) => ({ ...c, show: false })), 560)
-      return () => {
-        window.clearTimeout(a)
-        window.clearTimeout(b)
-      }
-    }
-  }, [step, shown]) // eslint-disable-line react-hooks/exhaustive-deps
+    const el = bodyRef.current
+    if (!el) return
+    const id = window.setTimeout(() => el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }), 120)
+    return () => window.clearTimeout(id)
+  }, [shown, failed, allShown])
 
   // mandate balance ticks down once the transfer lands
   useEffect(() => {
@@ -286,7 +240,7 @@ export function Payment({ onDone, onClose }: { onDone: () => void; onClose: () =
           </div>
         </div>
 
-        <div className="tx-body">
+        <div className="tx-body" ref={bodyRef}>
           <AnimatePresence mode="wait" initial={false}>
             {!sending ? (
               <motion.div key="review" className="tx-pane" exit={{ opacity: 0, y: -12, filter: 'blur(4px)', transition: { duration: 0.25 } }}>
@@ -300,7 +254,7 @@ export function Payment({ onDone, onClose }: { onDone: () => void; onClose: () =
                   </span>
                 </motion.div>
                 <motion.h3 className="tx-title" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
-                  Approve x402 payment
+                  {has('sign') ? 'Scout signed the payment' : 'Scout is paying'}
                 </motion.h3>
 
                 <motion.div className="tx-send" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36, duration: 0.5, ease: EASE }}>
@@ -330,46 +284,10 @@ export function Payment({ onDone, onClose }: { onDone: () => void; onClose: () =
                   </div>
                 </motion.div>
 
-                <motion.div className="tx-checks" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
-                  <div style={{ opacity: has('quote') ? 1 : 0.4 }}>
-                    <Icon name="check" size={12} stroke={3} /> {seen.find((s) => s.key === 'quote')?.detail ?? 'Waiting for the 402 quote'}
-                  </div>
-                  <div style={{ opacity: has('mandate') ? 1 : 0.4 }}>
-                    <Icon name="check" size={12} stroke={3} />{' '}
-                    {seen.find((s) => s.key === 'mandate')?.detail ?? (mandate ? `Within mandate · cap ${usdc(mandate.perAdCap)} per ad` : 'Checking the mandate')}
-                  </div>
-                </motion.div>
-
                 {failed && allShown ? (
-                  <div className="tx-fail">
-                    <b>Payment stopped</b>
-                    <span>{pay.error}</span>
-                    <button className="tx-btn ghost" onClick={onClose}>
-                      Close
-                    </button>
-                  </div>
+                  <ScoutError error={pay.error ?? 'Payment failed'} refunded={pay.refunded} onClose={onClose} />
                 ) : (
-                  <div className="tx-actions">
-                    <button className="tx-btn ghost" tabIndex={-1}>
-                      Reject
-                    </button>
-                    <motion.button ref={approveRef} className={`tx-btn primary ${step === 'signing' ? 'is-signing' : ''}`} tabIndex={-1} animate={{ scale: cursor.press ? 0.96 : 1 }}>
-                      {step === 'signing' && <motion.i className="tx-sign-fill" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 1.2, ease: 'easeInOut' }} />}
-                      <span className="tx-btn-in">
-                        <AnimatePresence mode="popLayout" initial={false}>
-                          <motion.span key={step} initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -14, opacity: 0 }} transition={{ duration: 0.3 }}>
-                            {step === 'signing' ? (
-                              <>
-                                <Icon name="key" size={14} stroke={2.4} /> Signing…
-                              </>
-                            ) : (
-                              'Approve'
-                            )}
-                          </motion.span>
-                        </AnimatePresence>
-                      </span>
-                    </motion.button>
-                  </div>
+                  <AgentSigning quoted={has('quote')} checked={has('mandate')} signing={step === 'signing'} signed={has('sign')} />
                 )}
               </motion.div>
             ) : (
@@ -380,7 +298,7 @@ export function Payment({ onDone, onClose }: { onDone: () => void; onClose: () =
                   {failed && allShown ? (
                     <motion.div key="f" className="tx-status" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
                       <b>Payment stopped</b>
-                      <span>{pay.error}</span>
+                      <span>Here&apos;s what happened</span>
                     </motion.div>
                   ) : step === 'sending' ? (
                     <motion.div key="p" className="tx-status" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
@@ -423,38 +341,8 @@ export function Payment({ onDone, onClose }: { onDone: () => void; onClose: () =
                   ))}
                 </div>
 
-                <div className="tx-payouts">
-                  {STEP_ORDER.map((k, i) => {
-                    const s = seen.find((x) => x.key === k)
-                    const done = !!s
-                    const next = !done && seen.length === i && !(failed && allShown)
-                    return (
-                      <motion.div key={k} className={`tx-payout ${done ? 'is-done' : ''}`} initial={{ opacity: 0, x: 10 }} animate={{ opacity: done || next ? 1 : 0.45, x: 0 }} transition={{ delay: 0.1 + i * 0.05 }}>
-                        <span className="tx-payout-st">
-                          <AnimatePresence mode="popLayout" initial={false}>
-                            {done ? (
-                              <motion.span key="d" initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 18 }}>
-                                <Icon name="check" size={10} stroke={3.6} />
-                              </motion.span>
-                            ) : next ? (
-                              <motion.i key="s" className="tx-spin" exit={{ scale: 0 }} />
-                            ) : (
-                              <motion.i key="w" className="tx-wait" />
-                            )}
-                          </AnimatePresence>
-                        </span>
-                        <span className="tx-payout-name">{s?.label ?? STEP_PLACEHOLDER[k]}</span>
-                        <span className="tx-payout-addr mono">{s?.detail ?? ''}</span>
-                        <span className="tx-payout-amt mono">{k === 'settle' && done ? amount.toLocaleString('en-US', { maximumFractionDigits: 4 }) : ''}</span>
-                      </motion.div>
-                    )
-                  })}
-                </div>
-                {failed && allShown && (
-                  <button className="tx-btn ghost" style={{ marginTop: 12, width: '100%' }} onClick={onClose}>
-                    Close
-                  </button>
-                )}
+                <PayTimeline seen={seen} failed={failed && allShown} amount={amount} />
+                {failed && allShown && <ScoutError error={pay.error ?? 'Payment failed'} refunded={pay.refunded} onClose={onClose} />}
               </motion.div>
             )}
           </AnimatePresence>
@@ -465,7 +353,6 @@ export function Payment({ onDone, onClose }: { onDone: () => void; onClose: () =
           Paid over x402 · signed by Scout&apos;s agent key, capped by the on-chain mandate
         </div>
 
-        <Cursor {...cursor} />
       </motion.div>
     </motion.div>
   )

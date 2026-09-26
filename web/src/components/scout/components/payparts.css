@@ -1,0 +1,305 @@
+/* Scoped under .scout-root like the rest of the Scout styles. */
+
+/* ---- agent signing (replaces the Approve / Reject buttons) ---- */
+.scout-root .pp-sign {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(171, 159, 242, 0.22);
+  background: linear-gradient(180deg, rgba(171, 159, 242, 0.08), rgba(171, 159, 242, 0.02));
+}
+.scout-root .pp-sign-bot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.scout-root .pp-sign-avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--p);
+  box-shadow: 0 0 22px rgba(171, 159, 242, 0.45);
+  flex: none;
+}
+.scout-root .pp-sign-copy {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.scout-root .pp-sign-copy b {
+  font-size: 13.5px;
+  color: #fff;
+}
+.scout-root .pp-sign-copy span {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.scout-root .pp-sign-rows {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+.scout-root .pp-sign-rows li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.scout-root .pp-dot {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  color: var(--ink);
+  flex: none;
+}
+.scout-root .pp-sign-rows li.is-on .pp-dot {
+  background: var(--p);
+  border-color: var(--p);
+}
+.scout-root .pp-sign-rows li.is-run .pp-dot {
+  border-color: rgba(171, 159, 242, 0.5);
+}
+.scout-root .pp-spin {
+  display: block;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  border: 1.6px solid rgba(171, 159, 242, 0.35);
+  border-top-color: var(--p);
+  animation: sc-pp-spin 0.7s linear infinite;
+}
+@keyframes sc-pp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.scout-root .pp-sig {
+  position: relative;
+  margin-top: 12px;
+  height: 40px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.14);
+}
+.scout-root .pp-sig svg {
+  width: 100%;
+  height: 34px;
+}
+.scout-root .pp-sig-key {
+  position: absolute;
+  right: 0;
+  bottom: -18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* ---- timeline (replaces the boxed step rows) ---- */
+.scout-root .pp-tl {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0 2px;
+  display: grid;
+  gap: 0;
+  text-align: left;
+}
+.scout-root .pp-tl li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 10px;
+  padding-bottom: 12px;
+}
+.scout-root .pp-tl li:last-child {
+  padding-bottom: 0;
+}
+.scout-root .pp-tl li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 8.5px;
+  top: 19px;
+  bottom: 1px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.scout-root .pp-tl li.is-done:not(:last-child)::after {
+  background: linear-gradient(var(--p), rgba(171, 159, 242, 0.25));
+}
+.scout-root .pp-tl-dot {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+.scout-root .pp-tl li.is-done .pp-tl-dot {
+  background: var(--p);
+  border-color: var(--p);
+}
+.scout-root .pp-tl li.is-active .pp-tl-dot {
+  border-color: rgba(171, 159, 242, 0.55);
+  box-shadow: 0 0 0 4px rgba(171, 159, 242, 0.12);
+}
+.scout-root .pp-tl li.is-stopped .pp-tl-dot {
+  background: #fff;
+  border-color: #fff;
+}
+.scout-root .pp-tl-body {
+  min-width: 0;
+}
+.scout-root .pp-tl-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.scout-root .pp-tl-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+.scout-root .pp-tl-time {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.scout-root .pp-tl-detail {
+  margin-top: 2px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.5);
+  overflow-wrap: anywhere;
+}
+
+/* ---- known-error card ---- */
+.scout-root .pp-err {
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  text-align: left;
+}
+.scout-root .pp-err-top {
+  display: flex;
+  gap: 10px;
+}
+.scout-root .pp-err-ico {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 900;
+}
+.scout-root .pp-err-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.scout-root .pp-err-copy b {
+  font-size: 14px;
+  color: #fff;
+}
+.scout-root .pp-err-copy span {
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.7);
+}
+.scout-root .pp-err-refund {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 7px 10px;
+  border-radius: 12px;
+  background: rgba(171, 159, 242, 0.12);
+  color: var(--p-200);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.scout-root .pp-err-next {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+}
+.scout-root .pp-err-next span {
+  margin-right: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--p);
+}
+.scout-root .pp-err-tech {
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.scout-root .pp-err-raw {
+  margin: 8px 0 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--ink);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: hidden;
+}
+.scout-root .pp-err-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.scout-root .pp-btn {
+  flex: 1;
+  height: 38px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--p);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.scout-root .pp-btn.ghost {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.scout-root .pp-err.is-compact {
+  margin-top: 0;
+  background: rgba(18, 17, 23, 0.96);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}

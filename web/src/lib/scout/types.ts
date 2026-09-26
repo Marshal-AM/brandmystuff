@@ -65,6 +65,8 @@ export type ScoutPayment = {
   escrowId?: string;
   remainingAfter?: number;
   error?: string;
+  /** The gate refunded a failed booking and the agent returned it to the mandate. */
+  refunded?: boolean;
 };
 
 export type ScoutLive = {
@@ -91,7 +93,7 @@ export type ScoutEvent =
   | { t: "ranked"; candidates: ScoutCandidate[]; pickId: string | null }
   | { t: "pay"; step: ScoutPaymentStep }
   | { t: "paid"; payment: Omit<ScoutPayment, "status" | "steps">; mandate: ScoutMandate }
-  | { t: "error"; error: string; stage?: string }
+  | { t: "error"; error: string; stage?: string; refunded?: boolean }
   | { t: "done" };
 
 export const emptyLive = (brand: ScoutBrand, mandate: ScoutMandate | null = null): ScoutLive => ({
@@ -128,7 +130,7 @@ export function reduceScout(s: ScoutLive, e: ScoutEvent & { at?: number }): Scou
     case "paid":
       return { ...s, payment: { ...s.payment, ...e.payment, status: "done" }, mandate: e.mandate };
     case "error":
-      return s.payment.status === "running" ? { ...s, payment: { ...s.payment, status: "failed", error: e.error }, error: e.error } : { ...s, error: e.error };
+      return s.payment.status === "running" ? { ...s, payment: { ...s.payment, status: "failed", error: e.error, refunded: e.refunded }, error: e.error } : { ...s, error: e.error };
     default:
       return s;
   }

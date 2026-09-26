@@ -1,3 +1,11 @@
+/* Scout is a full-screen layer: hide the app underneath so it isn't restyled/painted every frame. */
+body[data-scout-open] {
+  overflow: hidden;
+}
+body[data-scout-open] > *:not(.scout-root):not(script):not(style) {
+  display: none !important;
+}
+
 /* Scoped copy of the reference Scout UI styles (see scripts in commit). */
 .scout-root {
   --ink: #0a0a0b;
@@ -112,8 +120,5 @@
 }
 
 /* ---- live data additions ---- */
-.scout-root .scout-error { position: absolute; left: 50%; bottom: 28px; z-index: 95; display: flex; align-items: center; gap: 14px; max-width: min(640px, calc(100% - 24px)); padding: 12px 12px 12px 18px; border-radius: 20px; background: rgba(18, 17, 23, 0.92); border: 1px solid rgba(171, 159, 242, 0.35); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); font-size: 13.5px; }
-.scout-root .scout-error b { white-space: nowrap; }
-.scout-root .scout-error span { color: var(--muted); flex: 1; min-width: 0; }
-.scout-root .scout-error button { height: 38px; padding: 0 16px; border-radius: 99px; background: var(--p); color: var(--ink); font-weight: 800; }
+.scout-root .scout-error { position: absolute; left: 50%; bottom: 28px; z-index: 95; width: min(440px, calc(100% - 24px)); }
 .scout-root .tx-payout-addr { max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

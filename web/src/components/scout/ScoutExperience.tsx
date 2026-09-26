@@ -11,6 +11,7 @@ import type { ScoutLive } from '@/lib/scout/types'
 import './index.css'
 import { Header, type Phase } from './components/Header'
 import { ScoutCtx } from './data'
+import { ScoutError } from './components/PayParts'
 import { BlackHole } from './scenes/BlackHole'
 import { Decoded } from './scenes/Decoded'
 import { Journey } from './scenes/Journey'
@@ -39,6 +40,16 @@ export function ScoutExperience({ live, onPay, onClose }: { live: ScoutLive; onP
   useEffect(() => {
     if (live.payment.status === 'running' && (phase === 'results' || phase === 'idle')) setPhase('payment')
   }, [live.payment.status, phase])
+
+  // While Scout is open, take the rest of the app out of rendering: it sits fully underneath,
+  // and restyling/painting its ~500 extra nodes and ambient animations every frame made the
+  // scene animations drop frames. The page stays mounted (it owns the run's state).
+  useEffect(() => {
+    document.body.dataset.scoutOpen = '1'
+    return () => {
+      delete document.body.dataset.scoutOpen
+    }
+  }, [])
 
   const toPayment = useCallback(() => {
     setPhase('payment')
@@ -79,9 +90,7 @@ export function ScoutExperience({ live, onPay, onClose }: { live: ScoutLive; onP
               animate={{ opacity: 1, y: 0, x: '-50%' }}
               exit={{ opacity: 0, y: 20, x: '-50%' }}
             >
-              <b>Scout hit a snag</b>
-              <span>{live.error}</span>
-              <button onClick={onClose}>Close</button>
+              <ScoutError error={live.error ?? ''} onClose={onClose} compact />
             </motion.div>
           )}
         </AnimatePresence>

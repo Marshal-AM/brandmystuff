@@ -25,27 +25,55 @@ const LINES_READY = (brand: string) => [
   "Then I pay with x402, straight from the mandate.",
 ];
 
-/** Scout wandering around its corner of the page, saying things. */
+/** Scout wandering around its corner of the page, saying things. Always stays fully inside the box. */
 function WanderingScout({ lines, busy }: { lines: string[]; busy?: boolean }) {
   const box = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState({ x: 40, y: 20 });
+  const bot = useRef<HTMLDivElement>(null);
+  const bubble = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const [face, setFace] = useState(1);
   const [line, setLine] = useState(0);
   const [pose, setPose] = useState<"idle" | "wave" | "point" | "celebrate">("wave");
+
+  // The reachable area for the bot's top-left corner, from the real sizes of the box, the bot
+  // (incl. its bob and shadow) and the speech bubble centred above it.
+  const bounds = () => {
+    const el = box.current, b = bot.current;
+    if (!el || !b) return null;
+    const pad = 12;
+    const bw = b.offsetWidth, bh = b.offsetHeight + 10; // + bob travel
+    const sw = Math.max(bubble.current?.offsetWidth ?? 224, bw), sh = (bubble.current?.offsetHeight ?? 64) + 10;
+    const side = Math.max(0, (sw - bw) / 2);
+    return { minX: pad + side, maxX: Math.max(pad + side, el.clientWidth - pad - side - bw), minY: pad + sh, maxY: Math.max(pad + sh, el.clientHeight - pad - bh) };
+  };
+  const clamp = (p: { x: number; y: number }) => {
+    const r = bounds();
+    return r ? { x: Math.min(r.maxX, Math.max(r.minX, p.x)), y: Math.min(r.maxY, Math.max(r.minY, p.y)) } : p;
+  };
+
   useEffect(() => {
+    const place = () => {
+      const r = bounds();
+      if (r) setPos((p) => (p ? clamp(p) : { x: (r.minX + r.maxX) / 2, y: (r.minY + r.maxY) / 2 }));
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    if (box.current) ro.observe(box.current);
     const t = setInterval(() => {
-      const el = box.current;
-      if (!el) return;
-      const w = el.clientWidth - 150, h = el.clientHeight - 170;
+      const r = bounds();
+      if (!r) return;
       setPos((p) => {
-        const nx = Math.max(0, Math.min(w, Math.random() * w));
-        setFace(nx >= p.x ? 1 : -1);
-        return { x: nx, y: Math.max(0, Math.min(h, Math.random() * h)) };
+        const nx = r.minX + Math.random() * (r.maxX - r.minX);
+        setFace(!p || nx >= p.x ? 1 : -1);
+        return { x: nx, y: r.minY + Math.random() * (r.maxY - r.minY) };
       });
       setPose((["idle", "point", "wave", "idle"] as const)[Math.floor(Math.random() * 4)]);
     }, 3200);
-    return () => clearInterval(t);
-  }, []);
+    return () => {
+      clearInterval(t);
+      ro.disconnect();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const t = setInterval(() => setLine((l) => (l + 1) % lines.length), 4200);
     return () => clearInterval(t);
@@ -53,10 +81,10 @@ function WanderingScout({ lines, busy }: { lines: string[]; busy?: boolean }) {
   return (
     <div ref={box} className="relative h-[380px] overflow-hidden rounded-[2rem] border border-line bg-[radial-gradient(ellipse_at_50%_120%,rgba(171,159,242,0.18),transparent_60%)]">
       <div aria-hidden className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_at_center,#000_40%,transparent_75%)]" />
-      <motion.div className="absolute left-0 top-0" animate={{ x: pos.x, y: pos.y }} transition={{ type: "spring", stiffness: 40, damping: 12, mass: 1.2 }}>
-        <div className="relative">
+      <motion.div className="absolute left-0 top-0" initial={false} animate={pos ?? { x: 0, y: 0 }} style={{ opacity: pos ? 1 : 0 }} transition={{ type: "spring", stiffness: 40, damping: 12, mass: 1.2 }}>
+        <div ref={bot} className="relative">
           <AnimatePresence mode="wait">
-            <motion.div key={line} initial={{ opacity: 0, y: 8, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.95 }} transition={{ duration: 0.3, ease: EASE }} className="absolute bottom-full left-1/2 mb-2 w-56 -translate-x-1/2 rounded-2xl rounded-bl-md border border-p/30 bg-p-950/95 px-3.5 py-2.5 text-xs font-medium leading-snug text-white shadow-[0_12px_40px_-10px_rgba(171,159,242,0.5)] backdrop-blur">
+            <motion.div ref={bubble} key={line} initial={{ opacity: 0, y: 8, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.95 }} transition={{ duration: 0.3, ease: EASE }} className="absolute bottom-full left-1/2 mb-2 w-56 -translate-x-1/2 rounded-2xl rounded-bl-md border border-p/30 bg-p-950/95 px-3.5 py-2.5 text-xs font-medium leading-snug text-white shadow-[0_12px_40px_-10px_rgba(171,159,242,0.5)] backdrop-blur">
               {busy ? "On it…" : lines[line]}
             </motion.div>
           </AnimatePresence>
@@ -224,7 +252,13 @@ export default function AgentPage() {
   const startRun = async () => {
     const base = emptyLive({ name: brandName, short: brandName.split(/\s+/)[0], category: "", logoUrl: null }, m);
     setLive(base);
-    const push = (e: ScoutEvent) => setLive((s) => (s ? reduceScout(s, e) : s));
+    // Only events that change what the scenes show trigger a render: log lines and the
+    // per-candidate stream (the final "ranked" event carries every candidate) are skipped,
+    // so the running animations aren't re-rendered mid-flight.
+    const push = (e: ScoutEvent) => {
+      if (e.t === "log" || e.t === "candidate") return;
+      setLive((s) => (s ? reduceScout(s, e) : s));
+    };
     const t = await token();
     try {
       const res = await fetch("/api/agent/run", { method: "POST", credentials: "include", headers: t ? { authorization: `Bearer ${t}` } : {} });

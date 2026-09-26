@@ -37,9 +37,10 @@ export async function payScout(userId: string, runId: string, origin: string, em
     events.push({ ...e, at: e.step.at });
     await emit(e);
   };
+  let refunded = false;
   const fail = async (msg: string) => {
-    await emit({ t: "error", error: msg, stage: "pay" });
-    await ok(db().from("agent_runs").update({ status: "pay_failed", error: msg, payment, events }).eq("id", runId));
+    await emit({ t: "error", error: msg, stage: "pay", refunded });
+    await ok(db().from("agent_runs").update({ status: "pay_failed", error: msg, payment: { ...payment, refunded }, events }).eq("id", runId));
   };
 
   try {
@@ -96,7 +97,10 @@ export async function payScout(userId: string, runId: string, origin: string, em
           const back = T.mandateRefund({ mandateId: m.id, amount: BigInt(req.amount) });
           back.setSender(agent.address);
           const r: any = await sui().signAndExecuteTransaction({ transaction: back, signer: kp, include: { effects: true } });
-          if (r.Transaction) await emit({ t: "log", text: `Refund returned to the mandate · tx ${r.Transaction.digest.slice(0, 10)}…` });
+          if (r.Transaction) {
+            refunded = true;
+            await emit({ t: "log", text: `Refund returned to the mandate · tx ${r.Transaction.digest.slice(0, 10)}…` });
+          }
         } catch {
           /* the USDC stays safe in the agent's address */
         }
