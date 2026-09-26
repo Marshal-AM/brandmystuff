@@ -14,6 +14,9 @@
     "e2e:scoring": "tsx e2e/scoring.e2e.ts",
     "e2e:flows": "tsx e2e/flows.e2e.ts",
     "e2e:agent": "tsx e2e/agent.e2e.ts",
+    "e2e:payouts": "tsx e2e/payouts.e2e.ts",
+    "payouts:compile": "tsx scripts/compile-relayer.ts",
+    "payouts:setup": "tsx scripts/multibaas-setup.ts",
     "mandate:publish": "tsx scripts/publish-mandate.ts",
     "e2e:ui": "playwright test"
   },
@@ -47,6 +50,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
     "postgres": "^3.4.9",
+    "solc": "0.8.28",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"

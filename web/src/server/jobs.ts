@@ -16,6 +16,7 @@ import {
 import { applySpaceScore, refreshObjectScore } from "./listing";
 import { execute } from "./sui";
 import { ingestDigest } from "./indexer";
+import { attestRelease, confirmPayout, deliverPayout, reconcileDeliveries, releaseForOffering } from "./payouts/engine";
 import * as T from "@/lib/sui/tx";
 
 type Job = { id: number; kind: string; payload: any; attempts: number };
@@ -89,6 +90,16 @@ const handlers: Record<string, (p: any) => Promise<void>> = {
     await applySpaceScore(p.spaceId);
   },
   object_score: async (p) => refreshObjectScore(p.objectId),
+  // cross-chain payouts (Circle CCTP + Curvegrid MultiBaas)
+  payout_release: async (p) => {
+    await releaseForOffering(p.offeringId);
+  },
+  payout_attest: async (p) => attestRelease(p.digest),
+  payout_deliver: async (p) => deliverPayout(p.payoutId),
+  payout_confirm: async (p) => {
+    await confirmPayout(p.payoutId);
+    await reconcileDeliveries();
+  },
 };
 
 export async function runJobs(limit = 20) {

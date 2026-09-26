@@ -15,7 +15,7 @@
     "AdLease": "0xb3a596174e94791c6b7aa16ae3e334ed85d0a182836df76bf9dd78e2ff01fa57",
     "ListedObject": "0xf61535fd6fcdee7db04d561eb8fb692eb44cbb77ff68b0ad5ca3d14d02fcb53f"
   },
-  "latestPackageId": "0x82cf2dff74c32618ca6cfeb8223b710933dce573514011e30ffe84bda9132a46",
+  "latestPackageId": "0x3d0cbbd8dca61942c379cbab1b3770faad6578bb9194d90015c232557afde7a4",
   "upgrades": [
     {
       "version": 2,
@@ -23,6 +23,15 @@
       "adds": [
         "market v2 (expiring listings, bids)",
         "offering::transfer_units"
+      ]
+    },
+    {
+      "version": 3,
+      "packageId": "0x3d0cbbd8dca61942c379cbab1b3770faad6578bb9194d90015c232557afde7a4",
+      "digest": "8SVTbYCKgcZTgdB4Eo9ZwtE3xCwMnFSX4kFX5szP3FW4",
+      "adds": [
+        "payout (cross-chain payout routes)",
+        "offering::take_claimable"
       ]
     }
   ],
@@ -32,5 +41,6 @@
     "publishDigest": "FjmmhghkW1U7oz81auWCKWdrBtb6KEwrMwCfdj6GfCkN",
     "module": "mandate",
     "publishedAt": "2026-09-26T05:54:40.194Z"
-  }
+  },
+  "payoutRegistryId": "0x203b23613ab711f5e0cbca51e40fb43e7f234abf44bb607864aca2d6cd5c43bc"
 }

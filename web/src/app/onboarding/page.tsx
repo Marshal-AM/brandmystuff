@@ -2,12 +2,14 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Transaction } from "@mysten/sui/transactions";
 import { Box, Check, Fuel, ImagePlus, MapPin, Megaphone, X } from "lucide-react";
 import { useSession } from "@/lib/client/session";
-import { createProfile } from "@/lib/sui/tx";
+import { createProfile, setPayoutRoute } from "@/lib/sui/tx";
 import { Bot } from "@/components/scout-bot";
 import { Button, Spinner, cx, useAction } from "@/components/ui";
 import { EnsHint } from "@/components/ens";
+import { PayoutChainPicker, routeReady, usePayoutChains, type PayoutChoice } from "@/components/payouts";
 import { FlowFrame, FlowInput, FlowNext, FlowQuestion, FlowTextarea, useFlow } from "@/components/flow";
 
 type Mode = "owner" | "brand";
@@ -43,10 +45,14 @@ function Onboarding() {
   const [brand, setBrand] = useState({ name: "", about: "", location: "" });
   const [logo, setLogo] = useState<{ blobId: string; url: string } | null>(null);
   const [uploading, setUploading] = useState(false);
-  const flow = useFlow(mode === "brand" ? 6 : 2);
+  const [payout, setPayout] = useState<PayoutChoice>("sui");
+  const [recipient, setRecipient] = useState<string | null>(null);
+  const { data: chains } = usePayoutChains();
+  const flow = useFlow(mode === "brand" ? 6 : 3);
   const { busy, run: act } = useAction();
   const low = me && BigInt(me.balances.sui) < 20_000_000n;
   const valid = /^[a-z0-9-]{3,32}$/.test(handle);
+  const payTo = recipient ?? me?.user?.evm_address ?? "";
 
   const submit = () =>
     act("save", async () => {
@@ -55,7 +61,12 @@ function Onboarding() {
           ? { handle, accountType: "brand", brandName: brand.name.trim(), displayName: brand.name.trim(), brandAbout: brand.about.trim() || undefined, brandLocation: brand.location.trim() || undefined, brandLogoBlobId: logo?.blobId }
           : { handle, accountType: "owner", displayName: displayName || undefined, brandName: brandName || undefined };
       const r = await api<any>("/api/me/profile", { method: "POST", json });
-      if (r.needsProfileTx) await run(createProfile({ ensName: r.ensName, ensNamehash: r.ensNamehash }));
+      // One signature: the on-chain profile and, if they picked another chain, their payout route.
+      const tx = new Transaction();
+      if (r.needsProfileTx) createProfile({ ensName: r.ensName, ensNamehash: r.ensNamehash }, tx);
+      const route = mode === "owner" && payout !== "sui" ? chains?.find((c) => c.key === payout) : null;
+      if (route) setPayoutRoute({ domain: route.domain, recipient: payTo }, tx);
+      if (r.needsProfileTx || route) await run(tx);
       await refresh();
       router.push(mode === "brand" ? "/agent" : next === "/onboarding" ? "/dashboard" : next);
     });
@@ -75,11 +86,12 @@ function Onboarding() {
 
   // what each step needs before Enter moves on
   const brandCan = [valid, brand.name.trim().length >= 2, brand.about.trim().length >= 10, !uploading, true, !busy];
-  const canNext = mode === "brand" ? brandCan[flow.i] : flow.i === 0 ? valid : !busy;
+  const ownerCan = [valid, true, !busy && routeReady(payout, payTo)];
+  const canNext = mode === "brand" ? brandCan[flow.i] : ownerCan[flow.i];
   const onEnter = () => {
     if (!canNext) return;
     if (mode === "brand") return flow.i === 5 ? submit() : flow.next();
-    return flow.i === 0 ? flow.next() : submit();
+    return flow.i === 2 ? submit() : flow.next();
   };
   const switchMode = (m: Mode) => {
     setMode(m);
@@ -156,7 +168,7 @@ function Onboarding() {
         flow={flow}
         canNext={!!canNext}
         onEnter={onEnter}
-        chapters={mode === "brand" ? [{ label: "Handle", from: 0 }, { label: "Your brand", from: 1 }, { label: "Go", from: 5 }] : undefined}
+        chapters={mode === "brand" ? [{ label: "Handle", from: 0 }, { label: "Your brand", from: 1 }, { label: "Go", from: 5 }] : [{ label: "Handle", from: 0 }, { label: "About you", from: 1 }, { label: "Payouts", from: 2 }]}
       >
         {flow.i === 0 && handleStep}
 
@@ -166,9 +178,16 @@ function Onboarding() {
               <FlowInput value={displayName} onChange={(e) => setDisplayName(e.target.value)} onEnter={onEnter} placeholder="Display name" />
               <FlowInput autoFocus={false} value={brandName} onChange={(e) => setBrandName(e.target.value)} onEnter={onEnter} placeholder="Brand (if you'll advertise)" className="placeholder:text-lg sm:placeholder:text-xl" />
             </div>
+            <FlowNext onClick={onEnter} label={displayName || brandName ? "OK" : "Skip"} skip={!displayName && !brandName} testId="onboarding-extras" />
+          </FlowQuestion>
+        )}
+
+        {mode === "owner" && flow.i === 2 && (
+          <FlowQuestion n={3} title="Where should your earnings land?" sub="When you hold units of a space and a brand's campaign pays out, your share is split on Sui. Keep it there, or have it sent as USDC to the chain you use most. You can change this any time in settings.">
+            <PayoutChainPicker value={payout} onChange={setPayout} recipient={payTo} onRecipient={setRecipient} />
             {gas}
-            <FlowNext onClick={submit} loading={busy === "save"} disabled={!valid} label="Create my profile" testId="save-handle" />
-            <p className="mt-4 text-xs text-muted">This signs one Sui transaction (your on-chain profile). The ENS name is registered by the platform in the background.</p>
+            <FlowNext onClick={submit} loading={busy === "save"} disabled={!valid || !routeReady(payout, payTo)} label="Create my profile" testId="save-handle" />
+            <p className="mt-4 text-xs text-muted">This signs one Sui transaction: your on-chain profile{payout !== "sui" && " and your payout chain"}. The ENS name is registered by the platform in the background.</p>
           </FlowQuestion>
         )}
 

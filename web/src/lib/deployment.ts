@@ -6,7 +6,11 @@ export const SUI = {
   /** Original package id: defines all types (objects, events, type arguments). */
   packageId: "0x926603f13f1a32f95057f50203dddb01bc24f1f799005cc40486fdf6969d201b",
   /** Latest upgraded package id: used as the call target for every Move function. */
-  latestPackageId: "0x82cf2dff74c32618ca6cfeb8223b710933dce573514011e30ffe84bda9132a46",
+  latestPackageId: "0x3d0cbbd8dca61942c379cbab1b3770faad6578bb9194d90015c232557afde7a4",
+  /** Package v2 (still callable by older clients; the indexer watches it). */
+  v2PackageId: "0x82cf2dff74c32618ca6cfeb8223b710933dce573514011e30ffe84bda9132a46",
+  /** Cross-chain payout routes (package v3). */
+  payoutRegistryId: "0x203b23613ab711f5e0cbca51e40fb43e7f234abf44bb607864aca2d6cd5c43bc",
   configId: "0x9486d765ff202d4531a02f19b133ca198b989b61c9ac5193f3f654e48b5c4082",
   kycRegistryId: "0xcf5585232728b0688cc83a7b21a851db7e0377a9f5044348d6ad77eb7ecb6202",
   adminCapId: "0x3f7e222ae88bd1715b1da113930905c66f63be0b9aeca3c00c32613d6a23ecaa",

@@ -4,6 +4,7 @@
  */
 import { SUI } from "@/lib/deployment";
 import { MODULES } from "@/lib/sui/tx";
+import { chainByDomain } from "@/lib/payout-chains";
 import { PLACEMENTS } from "@/lib/categories";
 import { db, q, ok } from "./db";
 import { activity, enqueue, notifyAddress } from "./notify";
@@ -48,8 +49,10 @@ export async function ingestDigest(digest: string) {
 /** One polling pass over every module's events since the stored cursor. */
 export async function pollOnce() {
   const c = sui();
-  for (const [pkg, mod] of [SUI.packageId, SUI.latestPackageId].flatMap((p) => MODULES.map((m) => [p, m] as const))) {
-    const name = pkg === SUI.packageId ? `events:${mod}` : `events:v2:${mod}`;
+  // Every package version that can still be called: original, v2 (pre-payout clients), latest (v3).
+  const versions: [string, string][] = [[SUI.packageId, "events"], [SUI.v2PackageId, "events:v2"], [SUI.latestPackageId, "events:v3"]];
+  for (const [pkg, prefix, mod] of versions.flatMap(([p, pre]) => MODULES.filter((m) => m !== "payout" || p === SUI.latestPackageId).map((m) => [p, pre, m] as const))) {
+    const name = `${prefix}:${mod}`;
     const cur = await q(db().from("cursors").select("cursor").eq("name", name).maybeSingle());
     let after: any = cur?.cursor ?? undefined;
     for (let page = 0; page < 10; page++) {
@@ -449,6 +452,8 @@ async function project(e: Ev) {
       return;
     }
     case "Distributed": {
+      // Holders who chose another chain get their share there (CCTP + MultiBaas), shortly after.
+      await enqueue("payout_release", { offeringId: j.offering_id }, { dedupe: `payout_release:${d}`, runAfter: new Date(Date.now() + 5_000) });
       const o = await q(db().from("offerings").select("total_distributed, space_id").eq("id", j.offering_id).single());
       await ok(db().from("offerings").update({ total_distributed: String(n(o.total_distributed) + n(j.amount)) }).eq("id", j.offering_id));
       await unitEvent(j.offering_id, "distribution", null, null, null, j.amount, d, { acc_per_unit: String(j.acc_per_unit) });
@@ -462,6 +467,18 @@ async function project(e: Ev) {
       await unitEvent(j.offering_id, "claim", j.holder, null, null, j.amount, d, null);
       return;
     }
+    // ---------------- cross-chain payout routes ----------------
+    case "RouteSet": {
+      const chain = chainByDomain(Number(j.domain));
+      if (chain) await ok(db().from("payout_routes").upsert({ sui_address: j.holder, chain: chain.key, domain: Number(j.domain), recipient: "0x" + String(j.recipient).replace(/^0x/, "").padStart(64, "0").slice(24), set_digest: d, updated_at: new Date().toISOString() }));
+      return;
+    }
+    case "RouteCleared": {
+      await ok(db().from("payout_routes").delete().eq("sui_address", j.holder));
+      return;
+    }
+    case "PayoutReleased":
+      return; // recorded by the payout engine, which executes the release
     // ---------------- market ----------------
     case "Listed": {
       await ok(db().from("listings").upsert({ id: j.listing_id, offering_id: j.offering_id, seller: j.seller, units: n(j.units), price_per_unit: String(j.price_per_unit) }, { onConflict: "id", ignoreDuplicates: true }));

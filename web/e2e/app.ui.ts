@@ -31,6 +31,7 @@ test("sign in, onboard and browse", async ({ page }) => {
     }
     await page.getByTestId("handle").fill(`ui-${Date.now().toString(36)}`);
     await page.getByTestId("onboarding-next").click();
+    await page.getByTestId("onboarding-extras").click();
     await page.getByTestId("save-handle").click();
     await expect(page).not.toHaveURL(/onboarding/, { timeout: 120_000 });
   }

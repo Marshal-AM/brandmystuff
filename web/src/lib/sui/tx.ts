@@ -17,8 +17,7 @@ const hexBytes = (hex: string) => {
 export { hexBytes };
 
 // === profile ===
-export function createProfile(p: { ensName: string; ensNamehash: string }) {
-  const tx = new Transaction();
+export function createProfile(p: { ensName: string; ensNamehash: string }, tx: Transaction = new Transaction()) {
   tx.moveCall({ target: t("profile", "create"), arguments: [tx.pure.string(p.ensName), bytes(tx, hexBytes(p.ensNamehash)), tx.object.clock()] });
   return tx;
 }
@@ -323,7 +322,7 @@ export function sendCoin(p: { coinType: string; amount: bigint; to: string }) {
 }
 
 export const EVENT = (module: string, name: string) => `${SUI.packageId}::${module}::${name}`;
-export const MODULES = ["admin", "profile", "asset", "kyc", "lease", "offering", "market", "sponsor"] as const;
+export const MODULES = ["admin", "profile", "asset", "kyc", "lease", "offering", "market", "sponsor", "payout"] as const;
 
 // === trading v2 (package upgrade 2) ===
 export function listUnitsV2(p: { offeringId: string; units: number; pricePerUnit: bigint; expiresMs: bigint }) {
@@ -498,5 +497,20 @@ export function mandateRevoke(p: { mandateId: string }) {
 export function mandateRefund(p: { mandateId: string; amount: bigint }) {
   const tx = new Transaction();
   tx.moveCall({ target: mt("refund"), typeArguments: [U], arguments: [tx.object(p.mandateId), tx.coin({ type: U, balance: p.amount })] });
+  return tx;
+}
+
+// === cross-chain payout routes (package v3) ===
+/** Holder-signed: receive revenue on another chain (Circle CCTP domain + EVM address). */
+export function setPayoutRoute(p: { domain: number; recipient: string }, tx: Transaction = new Transaction()) {
+  const evm = `0x${p.recipient.toLowerCase().replace(/^0x/, "").padStart(64, "0")}`;
+  tx.moveCall({ target: `${SUI.latestPackageId}::payout::set_route`, arguments: [tx.object(SUI.payoutRegistryId), tx.pure.u32(p.domain), tx.pure.address(evm), tx.object.clock()] });
+  return tx;
+}
+
+/** Holder-signed: go back to claiming on Sui. */
+export function clearPayoutRoute() {
+  const tx = new Transaction();
+  tx.moveCall({ target: `${SUI.latestPackageId}::payout::clear_route`, arguments: [tx.object(SUI.payoutRegistryId)] });
   return tx;
 }

@@ -8,6 +8,7 @@ import { useSession } from "@/lib/client/session";
 import { AnimatedNumber, Badge, Card, EASE, Empty, GradeBadge, Img, LinkButton, PageHeader, PageLoader, SectionTitle, Stat, Tabs, cx, suiscan, usdc, ScrollArea, FitText } from "@/components/ui";
 import { YourNames } from "@/components/ens";
 import { SignInButtons } from "@/components/shell";
+import { PayoutsPanel } from "@/components/payouts";
 
 const leaseTone = (s: string) => (s === "live" || s === "completed" ? "ok" : s === "pending_approval" || s === "awaiting_install" ? "warn" : s === "disputed" ? "bad" : "neutral");
 const money = (atomic: any, d = 2) => <AnimatedNumber value={Number(atomic ?? 0) / 1e6} format={(n) => `${n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d })} USDC`} />;
@@ -208,6 +209,7 @@ export default function Dashboard() {
           )}
           {tab === "investor" && (
             <div className="space-y-5">
+              <PayoutsPanel />
               {!pf ? (
                 <PageLoader label="Loading portfolio" />
               ) : !pf.holdings.length ? (

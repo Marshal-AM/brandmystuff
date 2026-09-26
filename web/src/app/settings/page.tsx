@@ -6,6 +6,7 @@ import { useSession } from "@/lib/client/session";
 import { Button, Card, EASE, Empty, Field, Input, PageHeader, Textarea, cx, useAction } from "@/components/ui";
 import { EnsGlyph, EnsName, ensAppUrl } from "@/components/ens";
 import { SignInButtons } from "@/components/shell";
+import { PayoutRouteCard } from "@/components/payouts";
 
 export default function Settings() {
   const { me, authenticated, api, refresh } = useSession();
@@ -58,6 +59,7 @@ export default function Settings() {
           ))}
         </motion.div>
       </Card>
+      {me?.user?.sui_address && me.user.account_type !== "brand" && <PayoutRouteCard delay={0.05} />}
       {me?.user?.ens_name && (
         <Card className="mt-6" delay={0.1}>
           <div className="mb-4 flex flex-wrap items-end justify-between gap-2">

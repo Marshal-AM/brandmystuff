@@ -44,3 +44,6 @@ coverage/
 npm-debug.log*
 *.tmp
 *.temp
+
+# compiled bytecode dumps used for package upgrades
+move/**/.v*-bytecode.json

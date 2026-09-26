@@ -1,0 +1,312 @@
+{
+  "contractName": "BrandMyStuffPayoutRelayer",
+  "version": "1.0",
+  "compiler": "0.8.28+commit.7893614a.Emscripten.clang",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_messageTransmitter",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "BadMessage",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint32",
+          "name": "sourceDomain",
+          "type": "uint32"
+        }
+      ],
+      "name": "NotFromSui",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotOwner",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotRelayer",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ReceiveFailed",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnerChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "suiHolder",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "recipient",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "offeringId",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "suiTx",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint64",
+          "name": "nonce",
+          "type": "uint64"
+        }
+      ],
+      "name": "PayoutDelivered",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "relayer",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "allowed",
+          "type": "bool"
+        }
+      ],
+      "name": "RelayerSet",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "SUI_DOMAIN",
+      "outputs": [
+        {
+          "internalType": "uint32",
+          "name": "",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes",
+          "name": "message",
+          "type": "bytes"
+        },
+        {
+          "internalType": "bytes",
+          "name": "attestation",
+          "type": "bytes"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "suiHolder",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "offeringId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "suiTx",
+          "type": "bytes32"
+        }
+      ],
+      "name": "deliver",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "recipient",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "isRelayer",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "messageTransmitter",
+      "outputs": [
+        {
+          "internalType": "contract IMessageTransmitter",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "payouts",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "relayer",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "allowed",
+          "type": "bool"
+        }
+      ],
+      "name": "setRelayer",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "totalDelivered",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "next",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x60a060405234801561001057600080fd5b506040516108d43803806108d483398101604081905261002f916100a3565b6001600160a01b038116608052600080546001600160a01b03191633908117825580825260016020818152604093849020805460ff19168317905583519283528201527fee42947bc760229eeff964017ac68eddb00ba98b0defcd90a1bc85a5afceb057910160405180910390a1506100d3565b6000602082840312156100b557600080fd5b81516001600160a01b03811681146100cc57600080fd5b9392505050565b6080516107e06100f46000396000818160f201526102bf01526107e06000f3fe608060405234801561001057600080fd5b50600436106100935760003560e01c80638da5cb5b116100665780638da5cb5b14610143578063a247bc3214610156578063e11bb4c71461015f578063ecd8dc3a14610191578063f2fde38b146101a657600080fd5b80631c3f2f4714610098578063541d5548146100ba5780637b04c181146100ed5780638d19f04b1461012c575b600080fd5b6100a0600881565b60405163ffffffff90911681526020015b60405180910390f35b6100dd6100c836600461051b565b60016020526000908152604090205460ff1681565b60405190151581526020016100b1565b6101147f000000000000000000000000000000000000000000000000000000000000000081565b6040516001600160a01b0390911681526020016100b1565b61013560035481565b6040519081526020016100b1565b600054610114906001600160a01b031681565b61013560025481565b61017261016d366004610586565b6101b9565b604080516001600160a01b0390931683526020830191909152016100b1565b6101a461019f366004610623565b6103f2565b005b6101a46101b436600461051b565b610480565b33600090815260016020526040812054819060ff166101eb5760405163c64891a560e01b815260040160405180910390fd5b60f888101561020d5760405163c42784c960e01b815260040160405180910390fd5b600061021d600860048b8d61065a565b61022691610684565b60e01c9050600881146102575760405162c54bd760e21b815263ffffffff8216600482015260240160405180910390fd5b60006102676014600c8c8e61065a565b610270916106bc565b60c01c905061028360b860988c8e61065a565b61028c916106f2565b935061029c60d860b88c8e61065a565b6102a5916106f2565b604051630afd9fa560e31b81529093506001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016906357ecfd28906102fa908e908e908e908e9060040161073a565b6020604051808303816000875af1158015610319573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061033d919061076c565b61035a5760405163071cffe760e51b815260040160405180910390fd5b60016002600082825461036d9190610789565b9250508190555082600360008282546103869190610789565b9091555050604080518481526020810187905267ffffffffffffffff831681830152905187916001600160a01b038716918a917f8f1d624cf9f8d03de01dc0ae1c1dd589b56c30ab1a4b1498b4d65ac605b4ab8e919081900360600190a4505097509795505050505050565b6000546001600160a01b0316331461041d576040516330cd747160e01b815260040160405180910390fd5b6001600160a01b038216600081815260016020908152604091829020805460ff19168515159081179091558251938452908301527fee42947bc760229eeff964017ac68eddb00ba98b0defcd90a1bc85a5afceb057910160405180910390a15050565b6000546001600160a01b031633146104ab576040516330cd747160e01b815260040160405180910390fd5b600080546001600160a01b0319166001600160a01b0383169081179091556040519081527fa2ea9883a321a3e97b8266c2b078bfeec6d50c711ed71f874a90d500ae2eaf369060200160405180910390a150565b80356001600160a01b038116811461051657600080fd5b919050565b60006020828403121561052d57600080fd5b610536826104ff565b9392505050565b60008083601f84011261054f57600080fd5b50813567ffffffffffffffff81111561056757600080fd5b60208301915083602082850101111561057f57600080fd5b9250929050565b600080600080600080600060a0888a0312156105a157600080fd5b873567ffffffffffffffff8111156105b857600080fd5b6105c48a828b0161053d565b909850965050602088013567ffffffffffffffff8111156105e457600080fd5b6105f08a828b0161053d565b989b979a50986040810135976060820135975060809091013595509350505050565b801515811461062057600080fd5b50565b6000806040838503121561063657600080fd5b61063f836104ff565b9150602083013561064f81610612565b809150509250929050565b6000808585111561066a57600080fd5b8386111561067757600080fd5b5050820193919092039150565b80356001600160e01b031981169060048410156106b5576001600160e01b0319600485900360031b81901b82161691505b5092915050565b80356001600160c01b031981169060088410156106b5576001600160c01b031960089490940360031b84901b1690921692915050565b8035602083101561070b57600019602084900360031b1b165b92915050565b81835281816020850137506000828201602090810191909152601f909101601f19169091010190565b60408152600061074e604083018688610711565b8281036020840152610761818587610711565b979650505050505050565b60006020828403121561077e57600080fd5b815161053681610612565b8082018082111561070b57634e487b7160e01b600052601160045260246000fdfea2646970667358221220fb5348c5034c9438c79b47c7bb1b8d2a80e42dab947cdd11d026a0bbee86cb2664736f6c634300081c0033",
+  "devdoc": {
+    "events": {
+      "PayoutDelivered(bytes32,address,uint256,bytes32,bytes32,uint64)": {
+        "params": {
+          "amount": "USDC amount (6 decimals)",
+          "nonce": "the CCTP message nonce (unique per source domain)",
+          "offeringId": "the Sui offering the revenue came from",
+          "recipient": "the EVM address the USDC was minted to",
+          "suiHolder": "the holder's Sui address (32 bytes)",
+          "suiTx": "the Sui transaction that released + burned it (base58 digest, hashed)"
+        }
+      }
+    },
+    "kind": "dev",
+    "methods": {},
+    "title": "brandmystuff cross-chain payout relayer",
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "deliver(bytes,bytes,bytes32,bytes32,bytes32)": {
+        "notice": "Completes one CCTP payout. `message` + `attestation` come from Circle's attestation API."
+      }
+    },
+    "notice": "Completes Circle CCTP transfers that brandmystuff burns on Sui for holders who chose this chain for their revenue share, and records each delivery as an on-chain event. Funds never touch this contract: Circle's TokenMessenger mints USDC straight to the holder's `mintRecipient`. Sui burns name this contract as `destinationCaller`, so every payout is completed (and recorded) through here. Recipient and amount are decoded from Circle's attested message, so the emitted event can't misstate either.",
+    "version": 1
+  }
+}

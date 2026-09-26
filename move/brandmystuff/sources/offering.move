@@ -494,3 +494,19 @@ public fun holding_of<C>(o: &SpaceOffering<C>, who: address): (u64, u64, u64) {
     let pending = if (accrued > h.reward_debt) (((accrued - h.reward_debt) / PRECISION) as u64) else 0;
     (h.units, h.listed_units, h.claimable + pending)
 }
+
+// === Package: routed payouts (v3, used by brandmystuff::payout) ===
+
+/// Settles `holder` and takes everything they can claim right now. Only reachable through
+/// payout::release_routed, which requires the holder's own on-chain payout route.
+public(package) fun take_claimable<C>(o: &mut SpaceOffering<C>, holder: address): Balance<C> {
+    assert!(o.holders.contains(holder), ENoHolding);
+    let offering_id = object::id(o);
+    let acc = o.acc_per_unit;
+    let h = o.holders.borrow_mut(holder);
+    settle(h, acc);
+    let amount = h.claimable;
+    h.claimable = 0;
+    if (amount > 0) event::emit(Claimed { offering_id, holder, amount });
+    o.rewards.split(amount)
+}
