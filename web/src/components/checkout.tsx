@@ -76,7 +76,6 @@ export function Checkout({ space, booked, onClose }: { space: any; booked: numbe
       await refresh();
       router.push(`/leases/${ev!.json.escrow_id}`);
     }, "Lease booked — USDC is in escrow");
-  const aspect = space.width_mm / space.height_mm;
   return (
     <Modal open onClose={onClose} title={`Lease ${space.label}`} wide>
       <div className="space-y-7">
@@ -132,26 +131,6 @@ export function Checkout({ space, booked, onClose }: { space: any; booked: numbe
               <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" data-testid="kit-upload" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
             </label>
           </div>
-          <AnimatePresence>
-            {asset && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.45, ease: EASE }} className="overflow-hidden">
-                <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-line bg-white/[0.03] p-3 sm:flex-row">
-                  <div className="relative w-full overflow-hidden rounded-xl sm:w-44">
-                    <Img blob={space.closeup_blob_id} alt="space" className="aspect-square w-full" />
-                    <div className="absolute inset-0 grid place-items-center">
-                      <motion.div key={asset.id} initial={{ y: -60, opacity: 0, rotate: -8, scale: 1.3 }} animate={{ y: 0, opacity: 1, rotate: 0, scale: 1 }} transition={{ type: "spring", stiffness: 220, damping: 16 }} className="grid place-items-center rounded bg-white/95 p-1 shadow-xl" style={{ width: aspect >= 1 ? "70%" : `${70 * aspect}%`, aspectRatio: String(aspect) }}>
-                        <Img blob={asset.blob_id} alt="creative" className="h-full w-full object-contain" />
-                      </motion.div>
-                    </div>
-                  </div>
-                  <div className="text-sm text-muted">
-                    <div className="mb-1 font-bold text-white">Fit preview</div>
-                    On the owner&apos;s close-up. Printed at {space.width_mm / 10}×{space.height_mm / 10} cm; text up to ~{((0.35 * Math.min(space.width_mm, space.height_mm)) / 10 / 2.54).toFixed(1)}&quot; tall stays legible from a distance.
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </Step>
 
         <Step n={3} title="Brand details">

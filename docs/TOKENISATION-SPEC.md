@@ -267,11 +267,11 @@ public fun book_for<C>(_: &OperatorCap, /* same args */, advertiser: address, â€
 Periods: one per lease week, plus the install proof (period 0). So `tranches = weeks + 1` and `per_tranche = total / tranches`, with the remainder added to the last tranche.
 
 **Check-in pipeline (operator):**
-1. The owner captures the photo in-app with a fresh capture code, timestamp and coarse GPS. It goes to Walrus.
+1. The owner captures the photo in-app (or via the phone camera link); it is timestamped and stored on Walrus.
 2. The proof service (`gemini-3.1-flash-lite`, structured output) checks:
    - the creative is present and matches the approved creative image (`match_score_bps`);
    - it is the same object and space as the listing close-up (`object_match_bps`);
-   - the capture code is visible.
+   - it is not synthetic or a photo of a screen.
    It also checks the pHash against earlier proofs to catch reuse.
 3. If it passes, the operator calls:
 ```move

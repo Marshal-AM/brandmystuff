@@ -97,7 +97,7 @@ Card or fiat payments, onramps, gas sponsorship, AI image generation, real KYC p
 |---|---|
 | OBJ-1 | Free-form listing: the owner gives any **name** and a **description** (≥ 10 chars). No categories. The AI derives the object profile (type, tags, viewer mode, viewing distance, prohibited zones) and shows it |
 | OBJ-2 | Object name, make, model, colour, description |
-| OBJ-3 | Hero photo via in-app camera (gallery allowed, lower provenance confidence), with a capture code written on a note |
+| OBJ-3 | Hero photo via in-app camera (gallery allowed, lower provenance confidence) |
 | OBJ-4 | Optional city (marketplace filter only; not scored) |
 | OBJ-5 | **"Add space" modal** (repeat 1–20 times): name (ENS-normalisable label), W×H cm, placement, material, close-up photo (optional ID-1 card for scale). The AI analysis runs **in the modal** and shows **Accepted** (score + grade + breakdown) or **Rejected** (reason + Retake). Only accepted spaces are added: the owner enters a fixed **price per week** and signs `add_space` ([AQS §9](./AD-QUALITY-SCORING.md)) |
 | OBJ-6 | Light on-device pre-checks (blur, glare) before upload |
@@ -108,7 +108,7 @@ Card or fiat payments, onramps, gas sponsorship, AI image generation, real KYC p
 | ID | Requirement |
 |---|---|
 | SCORE-1 | P0 deterministic metrics; poor photo quality → rejected with reason "retake the photo" |
-| SCORE-2 | P1 integrity gates: capture code, C2PA, duplicates (pHash), AI/stock/screen-photo check by the model, close-up ∈ object, photo matches name & description (G8), dimensions |
+| SCORE-2 | P1 integrity gates: C2PA, duplicates (pHash), AI/stock/screen-photo check by the model, close-up ∈ object, photo matches name & description (G8), dimensions |
 | SCORE-3 | P2 brand safety (GARM floor → reject) and prompt-injection defence (→ reject) |
 | SCORE-4 | P3 per-space rubric: 11 object-intrinsic criteria, anchored 0–4, N=3, median; 2 extra samples when the samples disagree |
 | SCORE-5 | P5 aggregation in code: weights, soft caps, confidence, rank score, grade; **accepted if no gate fails and AQS ≥ 40**, otherwise rejected and not listed |
@@ -148,7 +148,7 @@ Card or fiat payments, onramps, gas sponsorship, AI image generation, real KYC p
 ### 6.6 Proof-of-display (FR-PROOF)
 | ID | Requirement |
 |---|---|
-| PROOF-1 | In-app capture with a fresh capture code, timestamp and coarse GPS |
+| PROOF-1 | In-app capture (or phone camera link), timestamped; reused photos rejected by pHash |
 | PROOF-2 | AI verification (`gemini-3.1-flash-lite`): creative present and matching; same object and space; code visible; no reuse (pHash); time and city consistent |
 | PROOF-3 | Operator `lease::accept_proof` releases the tranche; the photo is public on Walrus |
 | PROOF-4 | Advertiser proof timeline and UTM stats |
@@ -410,7 +410,7 @@ The admin console shows:
 | Users lacking SUI for gas | Balance warnings, faucet links (testnet); gas costs are tiny |
 | Regulatory perception | Testnet funds only; mock documents clearly labelled; persistent demo banner |
 | AI mis-scoring or gaming | Gates, injection defence, N-sample medians, calibration, human review |
-| Fake photos | In-app capture, capture codes, C2PA, duplicate detection, model check for AI/stock/screen photos |
+| Fake photos | In-app capture, C2PA, duplicate detection, model check for AI/stock/screen photos |
 | Owner non-performance | Escrow tranches, cure windows, refunds, disputes, reputation |
 | Operator key trust (no attestations in v1) | Public evidence on Walrus + hashes on-chain; key rotation via `AdminCap` |
 | x402 Sui testnet network id not canonical | Use `sui:testnet` as facilitators do; configurable |

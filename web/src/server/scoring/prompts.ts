@@ -151,8 +151,7 @@ IMAGE A is the listing close-up of the ad space. IMAGE B is the approved creativ
 ${INJECTION_RULE}
 Score 0-10000 (basis points):
 - match_score_bps: how clearly the approved creative (IMAGE B) is physically displayed in IMAGE C (printed/stuck on the surface, recognisable design). A screen showing the creative, or a missing/different design, scores below 3000.
-- object_match_bps: how confident you are IMAGE C shows the same physical object and space as IMAGE A.
-Transcribe any short capture code visible in IMAGE C into nonce_text (else "").`;
+- object_match_bps: how confident you are IMAGE C shows the same physical object and space as IMAGE A.`;
 
 export const PROOF_SCHEMA = {
   type: "object",
@@ -161,10 +160,9 @@ export const PROOF_SCHEMA = {
     creative_visible: { type: "boolean" },
     match_score_bps: { type: "integer", minimum: 0, maximum: 10000 },
     object_match_bps: { type: "integer", minimum: 0, maximum: 10000 },
-    nonce_text: { type: "string" },
     visible_text: visibleText,
     synthetic_suspicion: { type: "string", enum: ["none", "low", "medium", "high"] },
     reason_if_rejected: { type: "string" },
   },
-  required: ["observations", "creative_visible", "match_score_bps", "object_match_bps", "nonce_text", "visible_text", "synthetic_suspicion", "reason_if_rejected"],
+  required: ["observations", "creative_visible", "match_score_bps", "object_match_bps", "visible_text", "synthetic_suspicion", "reason_if_rejected"],
 };

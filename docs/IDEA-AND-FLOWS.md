@@ -82,7 +82,7 @@ Each flow lists: **UX steps**, then the **system steps** that implement them, wi
 ### F2. List an object
 **UX (mobile-first, in-app camera):**
 1. **Name it and describe it** — anything the owner has (laptop, car, guitar case, fridge, shop window…). There are no categories. Optional make, model, colour and city.
-3. **Hero photo** of the full object, with a 4-character capture code written on a note placed in the shot (anti-fraud, [AQS §2.3](./AD-QUALITY-SCORING.md)).
+3. **Hero photo** of the full object, taken in-app (anti-fraud checks in [AQS §2.3](./AD-QUALITY-SCORING.md)).
 4. The hero photo is checked:
    - authenticity (capture code, C2PA, duplicate detection, AI/stock/screen-photo check by the model);
    - the photo matches the name and description (else rejected);
@@ -178,7 +178,7 @@ Full spec: [AD-QUALITY-SCORING.md](./AD-QUALITY-SCORING.md).
    - standard **S / M / L** sizes;
    - each as PDF + 300-dpi PNG.
    The owner prints and applies the sticker.
-4. **Install proof** within 7 days of start: an in-app photo with a capture code, checked as in F9. It releases the first tranche.
+4. **Install proof** within 7 days of start: an in-app photo of the installed ad, checked as in F9. It releases the first tranche.
 
 ### F9. Proof-of-display check-ins & payouts
 1. Each period (each lease week, or each demo "week"), the app prompts "Snap your MacBook lid". The photo is captured in-app with a fresh code, time and GPS, then uploaded to Walrus.

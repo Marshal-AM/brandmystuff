@@ -3,7 +3,7 @@ import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bot, Check, Clock, Download, ExternalLink, Fingerprint, MessageCircle, Plus, ScanSearch, X } from "lucide-react";
+import { Bot, Check, Clock, Download, ExternalLink, MessageCircle, Plus, ScanSearch, X } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { approveCreative, extendLease, openDispute, rejectCreative } from "@/lib/sui/tx";
 import { Badge, Button, Card, EASE, Empty, Img, PageLoader, Spinner, Stat, cx, suiscan, useAction, usdc, ScrollArea } from "@/components/ui";
@@ -34,7 +34,6 @@ function Countdown({ to }: { to: number }) {
 
 function ProofUpload({ escrowId, next, onDone }: { escrowId: string; next: any; onDone: () => void }) {
   const { api } = useSession();
-  const [code, setCode] = useState<string | null>(null);
   const [photo, setPhoto] = useState<{ file: File; url: string } | null>(null);
   const [res, setRes] = useState<any>(null);
   const { busy, run } = useAction();
@@ -50,25 +49,9 @@ function ProofUpload({ escrowId, next, onDone }: { escrowId: string; next: any; 
       </div>
       {!open ? (
         <p className="text-sm text-muted">You can upload this proof when the window opens.</p>
-      ) : !code ? (
-        <Button variant="secondary" loading={busy === "code"} onClick={() => run("code", async () => setCode((await api<any>("/api/capture-codes", { method: "POST", json: { purpose: "proof" } })).code))} data-testid="get-code">
-          <Fingerprint className="h-4 w-4" /> Get a capture code
-        </Button>
       ) : (
         <>
-          <div className="relative overflow-hidden rounded-3xl border border-p/30 bg-gradient-to-br from-p/15 to-transparent p-4">
-            <div aria-hidden className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-p/20 blur-2xl" />
-            <div className="relative flex flex-wrap items-center gap-4 text-sm text-white/80">
-              <span className="flex-1">Write this code on a note next to the ad and snap it.</span>
-              <span className="flex gap-1.5" data-testid="proof-code" aria-label={code}>
-                {code.split("").map((ch, i) => (
-                  <motion.span key={`${ch}${i}`} initial={{ rotateX: 90, opacity: 0 }} animate={{ rotateX: 0, opacity: 1 }} transition={{ delay: i * 0.1, type: "spring", stiffness: 300, damping: 18 }} className="grid h-11 w-9 place-items-center rounded-xl bg-white font-mono text-xl font-extrabold text-ink shadow-lg">
-                    {ch}
-                  </motion.span>
-                ))}
-              </span>
-            </div>
-          </div>
+          <p className="text-sm text-muted">Take a clear photo of the ad installed on the space.</p>
           <PhotoCapture purpose="proof" label="Proof photo" testId="proof-photo" preview={photo?.url} scanning={busy === "proof"} onChange={(file) => { setPhoto({ file, url: URL.createObjectURL(file) }); setRes(null); }} />
           <Button
             size="lg"
@@ -79,12 +62,11 @@ function ProofUpload({ escrowId, next, onDone }: { escrowId: string; next: any; 
               run("proof", async () => {
                 const fd = new FormData();
                 fd.set("escrowId", escrowId);
-                fd.set("captureCode", code);
                 fd.set("image", photo!.file);
                 const r = await api<any>("/api/proofs", { method: "POST", body: fd });
                 setRes(r);
                 if (r.accepted) onDone();
-                else setCode(null);
+                else setPhoto(null);
               })
             }
           >
@@ -103,7 +85,7 @@ function ProofUpload({ escrowId, next, onDone }: { escrowId: string; next: any; 
         {res && (
           <motion.div initial={{ opacity: 0, y: 12, filter: "blur(6px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0 }} transition={{ duration: 0.5, ease: EASE }} className={cx("flex items-start gap-3 rounded-2xl border p-3.5 text-sm", res.accepted ? "border-p/40 bg-p/10" : "border-white/20 bg-white/[0.05]")} data-testid="proof-result">
             <span className={cx("grid h-7 w-7 shrink-0 place-items-center rounded-full", res.accepted ? "bg-p text-ink" : "bg-white text-ink")}>{res.accepted ? <Check className="h-4 w-4" strokeWidth={3} /> : <X className="h-4 w-4" strokeWidth={3} />}</span>
-            <span className="pt-0.5">{res.accepted ? <>✓ Accepted — escrow released. <a className="font-semibold text-p underline" href={suiscan("tx", res.digest)} target="_blank" rel="noreferrer">View tx</a></> : <>✗ {res.reason} Retake and try again with a new code.</>}</span>
+            <span className="pt-0.5">{res.accepted ? <>✓ Accepted — escrow released. <a className="font-semibold text-p underline" href={suiscan("tx", res.digest)} target="_blank" rel="noreferrer">View tx</a></> : <>✗ {res.reason} Retake the photo and try again.</>}</span>
           </motion.div>
         )}
       </AnimatePresence>

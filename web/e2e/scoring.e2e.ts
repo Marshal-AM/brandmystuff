@@ -17,18 +17,9 @@ const uid = randomUUID();
 const LAPTOP = { name: "My MacBook Pro 17", description: "Silver 17-inch laptop I carry to cafés and coworking spaces every day." };
 const CAR = { name: "Honda Civic hatchback", description: "Grey hatchback I drive around the city and park on the street." };
 
-/** In-app photos include a note with the capture code. */
-async function withNote(img: Buffer, code: string) {
-  const sharp = (await import("sharp")).default;
-  const m = await sharp(img).metadata();
-  const W = m.width!, H = m.height!;
-  const note = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(W * 0.2)}" height="${Math.round(H * 0.12)}"><rect width="100%" height="100%" fill="#fff8b0" stroke="#d6c95a" stroke-width="6"/><text x="50%" y="70%" font-size="${Math.round(H * 0.075)}" font-family="Courier" font-weight="bold" text-anchor="middle" fill="#111">${code}</text></svg>`);
-  return sharp(img).composite([{ input: note, left: Math.round(W * 0.74), top: Math.round(H * 0.84) }]).jpeg({ quality: 90 }).toBuffer();
-}
-
 async function main() {
   const t0 = Date.now();
-  const laptopHero = await withNote(img("laptop-hero.jpg"), "K7PX");
+  const laptopHero = img("laptop-hero.jpg");
   const hero = await analyzeHero({ image: laptopHero, mime: "image/jpeg", ...LAPTOP, liveCamera: true, userId: uid, checkDuplicates: false });
   console.log("profile:", JSON.stringify(hero.profile));
   const laptopSpace: SpaceInput = { label: "lid-right", widthMm: 180, heightMm: 170, placement: "rear", material: "anodised aluminium", objectName: LAPTOP.name, objectDescription: LAPTOP.description, profile: hero.profile, captureSource: "camera" };

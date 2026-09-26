@@ -10,7 +10,7 @@ const WEEKS = 4
 const PRICE = 45
 const facts = [
   { icon: Lock, title: "Paid upfront, held in escrow", text: "The brand pays the whole lease on day one. It sits in a Sui escrow, so nobody can walk away without paying." },
-  { icon: ScanEye, title: "Every proof photo is checked", text: "AI confirms the creative is there, it's the same object and space, and the capture code is fresh." },
+  { icon: ScanEye, title: "Every proof photo is checked", text: "AI confirms the creative is there, it's the same object and space, and the photo is new." },
   { icon: RotateCcw, title: "Missed a week? It's refunded", text: "If no proof lands in time, that week's money goes back to the brand automatically." },
 ]
 
@@ -72,7 +72,7 @@ function EscrowCard() {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-bold text-ink">Week {w + 1}</p>
-                <p className="text-xs text-muted-foreground">{done ? "Proof accepted · capture code 7K2Q" : "Waiting for proof photo"}</p>
+                <p className="text-xs text-muted-foreground">{done ? "Proof accepted · escrow released" : "Waiting for proof photo"}</p>
               </div>
               <span className={`font-mono text-sm font-bold ${done ? "text-ink" : "text-muted-foreground/60"}`}>
                 {done ? `+${Math.round(PRICE * 0.88 * 100) / 100}` : `${PRICE}`}

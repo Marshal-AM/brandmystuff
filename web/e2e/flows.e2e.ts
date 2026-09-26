@@ -103,7 +103,7 @@ const FRAMES = [
   { x0: 0.45, y0: 0.0, x1: 0.95, y1: 0.6, rot: -9 },
   { x0: 0.35, y0: 0.25, x1: 0.95, y1: 0.98, rot: 10 },
 ];
-async function proofPhoto(creative: Buffer, code: string, variant: number) {
+async function proofPhoto(creative: Buffer, variant: number) {
   const src = sharp(fx("laptop-hero.jpg"));
   const m = await src.metadata();
   const f = FRAMES[variant % FRAMES.length];
@@ -115,26 +115,10 @@ async function proofPhoto(creative: Buffer, code: string, variant: number) {
   const W = rm.width!, H = rm.height!;
   const sticker = await sharp(creative).resize(Math.round(W * 0.42)).png().toBuffer();
   const sm = await sharp(sticker).metadata();
-  const note = Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(W * 0.34)}" height="${Math.round(H * 0.14)}"><rect width="100%" height="100%" fill="#fff8b0" stroke="#d6c95a" stroke-width="6"/><text x="50%" y="70%" font-size="${Math.round(H * 0.09)}" font-family="Courier" font-weight="bold" text-anchor="middle" fill="#111">${code}</text></svg>`,
-  );
   const composed = await sharp(region)
-    .composite([
-      { input: sticker, left: Math.round((W - sm.width!) / 2), top: Math.round(H * 0.25) },
-      { input: note, left: Math.round(W * 0.06), top: Math.round(H * 0.8) },
-    ])
+    .composite([{ input: sticker, left: Math.round((W - sm.width!) / 2), top: Math.round(H * 0.25) }])
     .toBuffer();
   return sharp(composed).rotate(f.rot, { background: "#e9e6e1" }).jpeg({ quality: 90 }).toBuffer();
-}
-
-/** The owner writes the capture code on a note placed in the hero photo. */
-async function withNote(img: Buffer, code: string) {
-  const m = await sharp(img).metadata();
-  const W = m.width!, H = m.height!;
-  const note = Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(W * 0.2)}" height="${Math.round(H * 0.12)}"><rect width="100%" height="100%" fill="#fff8b0" stroke="#d6c95a" stroke-width="6"/><text x="50%" y="70%" font-size="${Math.round(H * 0.075)}" font-family="Courier" font-weight="bold" text-anchor="middle" fill="#111">${code}</text></svg>`,
-  );
-  return sharp(img).composite([{ input: note, left: Math.round(W * 0.74), top: Math.round(H * 0.84) }]).jpeg({ quality: 90 }).toBuffer();
 }
 
 async function main() {
@@ -204,10 +188,9 @@ async function main() {
     assert.ok(me.user.profile_id, "profile indexed");
 
     step("F2 list object: hero check (AI) + create_object + confirm");
-    const heroCode = (await api(owner, "/api/capture-codes", { method: "POST", json: { purpose: "hero" } })).code;
     const check = await api(owner, "/api/objects/check", {
       method: "POST",
-      body: form({ image: file(await withNote(fx("laptop-hero.jpg"), heroCode), "hero.jpg"), title: "E2E MacBook Pro", city: "Tokyo", make: "Apple", model: "MacBook Pro 17", description: "Silver 17-inch laptop I carry to cafés daily", captureCode: heroCode, captureSource: "camera" }),
+      body: form({ image: file(fx("laptop-hero.jpg"), "hero.jpg"), title: "E2E MacBook Pro", city: "Tokyo", make: "Apple", model: "MacBook Pro 17", description: "Silver 17-inch laptop I carry to cafés daily", captureSource: "camera" }),
     });
     assert.equal(check.decision, "ACCEPTED", `hero accepted: ${check.reason}`);
     const created = await runTx(owner, T.createObject(check.tx));
@@ -263,9 +246,8 @@ async function main() {
     for (const period of [0, 1]) {
       let accepted = false;
       for (let attempt = 0; attempt < 3 && !accepted; attempt++) {
-        const code = (await api(owner, "/api/capture-codes", { method: "POST", json: { purpose: "proof" } })).code;
-        const photo = await proofPhoto(creative, code, period * 3 + attempt);
-        const r = await api(owner, "/api/proofs", { method: "POST", body: form({ escrowId: escrow1, captureCode: code, image: file(photo, "proof.jpg") }) });
+        const photo = await proofPhoto(creative, period * 3 + attempt);
+        const r = await api(owner, "/api/proofs", { method: "POST", body: form({ escrowId: escrow1, image: file(photo, "proof.jpg") }) });
         console.log(`   period ${period} attempt ${attempt}: ${r.accepted ? "accepted" : "rejected — " + r.reason}`);
         accepted = r.accepted;
         if (accepted) assert.equal(r.period, period);
@@ -320,8 +302,7 @@ async function main() {
     await runTx(owner, T.approveCreative({ escrowId: escrow2 }));
     let ok2 = false;
     for (let attempt = 0; attempt < 3 && !ok2; attempt++) {
-      const code = (await api(owner, "/api/capture-codes", { method: "POST", json: { purpose: "proof" } })).code;
-      const r = await api(owner, "/api/proofs", { method: "POST", body: form({ escrowId: escrow2, captureCode: code, image: file(await proofPhoto(creative, code, 3 + ((attempt + 2) % 3)), "proof.jpg") }) });
+      const r = await api(owner, "/api/proofs", { method: "POST", body: form({ escrowId: escrow2, image: file(await proofPhoto(creative, 3 + ((attempt + 2) % 3)), "proof.jpg") }) });
       console.log(`   tokenised install proof attempt ${attempt}: ${r.accepted ? "accepted" : r.reason}`);
       ok2 = r.accepted;
     }

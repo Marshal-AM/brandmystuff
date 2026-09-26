@@ -10,7 +10,6 @@ export const POST = handler(async (req) => {
   return submitProof({
     user: u,
     escrowId: String(f.get("escrowId")),
-    captureCode: String(f.get("captureCode") ?? "").toUpperCase(),
     image: Buffer.from(await image.arrayBuffer()),
     mime: image.type || "image/jpeg",
   });
