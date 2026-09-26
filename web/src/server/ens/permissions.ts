@@ -167,7 +167,8 @@ function agentContext(brand: string, brandName: string) {
 export async function ensureAgentIdentity(userId: string) {
   const u = await q(db().from("users").select("id, account_type, ens_name, ens_status, evm_address, brand_name, handle").eq("id", userId).single());
   if (u.account_type !== "brand" || !u.ens_name) return { skipped: true };
-  if (u.ens_status !== "registered") throw new Error("brand account name not registered yet");
+  // Not live yet: account registration queues this job again once the brand's name is registered.
+  if (u.ens_status !== "registered") return { skipped: true };
   const a = await agentFor(userId);
   const k = await agentEvmKey(userId);
   const name = `${AGENT_LABEL}.${u.ens_name}`;
