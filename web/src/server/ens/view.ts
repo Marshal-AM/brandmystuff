@@ -20,8 +20,18 @@ export async function ensSnapshot(name: string) {
     q(db().from("ens_names").select("*").eq("name", name).maybeSingle()),
     q(db().from("ens_names").select("name, kind, status").in("name", chain)),
     q(db().from("ens_writes").select("id, action, eth_tx, sui_digest, error, created_at").eq("name", name).order("id", { ascending: false }).limit(12)),
-    q(db().from("ens_writes").select("payload, created_at").eq("name", name).eq("action", "records").order("id", { ascending: false }).limit(1).maybeSingle()),
+    q(db().from("ens_writes").select("payload, created_at").eq("name", name).eq("action", "records").order("id", { ascending: true })),
   ]);
+  // The full record set: every relayer write merged in order (partial updates only carry changed keys).
+  const merged = (lastRecords as any[]).reduce(
+    (acc, w) => ({
+      texts: { ...acc.texts, ...(w.payload?.texts ?? {}) },
+      datas: { ...acc.datas, ...(w.payload?.datas ?? {}) },
+      addrs: [...acc.addrs.filter((a: any) => !(w.payload?.addrs ?? []).some((b: any) => String(b.coinType) === String(a.coinType))), ...(w.payload?.addrs ?? [])],
+      writtenAt: w.created_at,
+    }),
+    { texts: {}, datas: {}, addrs: [] as any[], writtenAt: null as string | null },
+  );
   const byName = new Map((chainRows as any[]).map((r) => [r.name, r]));
   return {
     name,
@@ -31,10 +41,10 @@ export async function ensSnapshot(name: string) {
     owner: row?.owner ?? null,
     expiry: row?.expiry ? Number(row.expiry) : null,
     registry: row?.subregistry ?? null,
-    resolver: ENS_DEPLOYMENT.platformResolver,
+    resolver: row?.resolver ?? ENS_DEPLOYMENT.platformResolver,
     updatedAt: row?.updated_at ?? null,
     chain: chain.map((n) => ({ name: n, kind: n === ENS_DEPLOYMENT.parentName ? "platform" : byName.get(n)?.kind ?? null, status: n === ENS_DEPLOYMENT.parentName ? "registered" : byName.get(n)?.status ?? "pending" })),
-    records: lastRecords?.payload ? { ...(lastRecords.payload as any), writtenAt: lastRecords.created_at } : null,
+    records: (lastRecords as any[]).length ? merged : null,
     writes,
   };
 }

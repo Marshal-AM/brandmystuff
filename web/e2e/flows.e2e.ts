@@ -88,7 +88,8 @@ async function main() {
     step("F2 list object: hero check (AI) + create_object + confirm");
     const check = await api(owner, "/api/objects/check", {
       method: "POST",
-      body: form({ image: file(fx("laptop-hero.jpg"), "hero.jpg"), title: "E2E MacBook Pro", city: "Tokyo", make: "Apple", model: "MacBook Pro 17", description: "Silver 17-inch laptop I carry to cafés daily", captureSource: "camera" }),
+      // Mirrored so it never collides with a real listing of the same fixture photo (duplicate gate G2).
+      body: form({ image: file(await sharp(fx("laptop-hero.jpg")).flop().jpeg({ quality: 92 }).toBuffer(), "hero.jpg"), title: "E2E MacBook Pro", city: "Tokyo", make: "Apple", model: "MacBook Pro 17", description: "Silver 17-inch laptop I carry to cafés daily", captureSource: "camera" }),
     });
     assert.equal(check.decision, "ACCEPTED", `hero accepted: ${check.reason}`);
     const created = await runTx(owner, T.createObject(check.tx));
@@ -100,7 +101,7 @@ async function main() {
     const bad = await api(owner, "/api/spaces/analyze", { method: "POST", body: spaceForm(fx("laptop-lid-blurry.jpg")) });
     assert.equal(bad.result.decision, "REJECTED");
     assert.equal(bad.tx, null, "rejected space gets no tx");
-    const good = await api(owner, "/api/spaces/analyze", { method: "POST", body: spaceForm(fx("laptop-lid-right.jpg")) });
+    const good = await api(owner, "/api/spaces/analyze", { method: "POST", body: spaceForm(await sharp(fx("laptop-lid-right.jpg")).flop().jpeg({ quality: 92 }).toBuffer()) }); // mirrored like the hero
     assert.equal(good.result.decision, "ACCEPTED", `space accepted: ${good.result.reason}`);
     console.log(`   AQS ${good.result.aqs} grade ${good.result.grade}`, good.result.subscores);
     const added = await runTx(owner, T.addSpace({ ...good.tx, pricePerWeek: 500_000n }));

@@ -3,6 +3,7 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { DAppKitProvider } from "@mysten/dapp-kit-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
+import { sepolia } from "viem/chains";
 import { dAppKit } from "@/lib/client/dappkit";
 import { SessionProvider } from "@/lib/client/session";
 import { ToastProvider } from "@/components/ui";
@@ -16,6 +17,9 @@ export default function Providers({ children }: { children: ReactNode }) {
         loginMethods: ["email", "google", "apple", "twitter", "passkey"],
         appearance: { theme: "dark", accentColor: "#ab9ff2", logo: "/logo.svg", landingHeader: "Sign in to brandmystuff", walletChainType: "ethereum-only" },
         embeddedWallets: { ethereum: { createOnLogin: "all-users" } },
+        // The embedded Ethereum wallet only signs the user's own ENS record edits (ENSv2 on Sepolia).
+        defaultChain: sepolia,
+        supportedChains: [sepolia],
       }}
     >
       <DAppKitProvider dAppKit={dAppKit}>

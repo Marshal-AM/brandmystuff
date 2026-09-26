@@ -15,6 +15,7 @@ import type { ScoutPaymentStep } from "@/lib/scout/types";
 import { HttpError } from "../auth";
 import { db, ok, q } from "../db";
 import { sui } from "../sui";
+import { enqueue } from "../notify";
 import { b64, unb64, type PaymentRequired } from "../x402";
 import { agentFor, ensureAgentGas, readMandate } from "./keys";
 import type { Emit } from "./scout";
@@ -47,11 +48,13 @@ export async function payScout(userId: string, runId: string, origin: string, em
     const gas = await ensureAgentGas(agent.address);
     if (gas) await emit({ t: "log", text: `Topped up agent gas · tx ${gas.slice(0, 10)}…` });
 
-    // 1) ask the gate — expect 402
+    // 1) ask the gate — expect 402. An agent with an ENS identity names itself; the gate checks it.
     const url = `${origin}/api/x402/leases`;
+    const ba = await q(db().from("brand_agents").select("ens_name, ens_status").eq("user_id", userId).single());
+    const idHeaders: Record<string, string> = ba.ens_status === "registered" && ba.ens_name ? { "x-agent-ens": ba.ens_name } : {};
     const creativeUrl = u.brand_logo_blob_id ? blobUrl(u.brand_logo_blob_id) : `${origin}/api/agent/creative/${userId}`;
     const body = JSON.stringify({ spaceId: pick.id, weeks: 1, creativeUrl, landingUrl: u.website || `${origin}/${u.ens_name ?? ""}`, brand: (u.brand_name ?? u.handle ?? "brand").slice(0, 60) });
-    const first = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body });
+    const first = await fetch(url, { method: "POST", headers: { "content-type": "application/json", ...idHeaders }, body });
     if (first.status !== 402) throw new Error(`Expected 402 from the x402 gate, got ${first.status}: ${(await first.text()).slice(0, 200)}`);
     const prHeader = first.headers.get("payment-required");
     if (!prHeader) throw new Error("402 without a PAYMENT-REQUIRED header");
@@ -82,7 +85,7 @@ export async function payScout(userId: string, runId: string, origin: string, em
     // 4) retry with the payment
     const header = b64({ x402Version: 2, resource: pr.resource, accepted: req, payload: { signature, transaction: toBase64(bytes) } });
     await step("submit", "Sent PAYMENT-SIGNATURE", "the gate verifies, simulates and settles on Sui");
-    const second = await fetch(url, { method: "POST", headers: { "content-type": "application/json", "PAYMENT-SIGNATURE": header }, body });
+    const second = await fetch(url, { method: "POST", headers: { "content-type": "application/json", "PAYMENT-SIGNATURE": header, ...idHeaders }, body });
     const resp = second.headers.get("payment-response");
     const out = await second.json().catch(() => ({}));
     if (resp) {
@@ -116,6 +119,11 @@ export async function payScout(userId: string, runId: string, origin: string, em
     payment.remainingAfter = after?.remaining;
     await emit({ t: "paid", payment: payment as any, mandate: after! });
     await ok(db().from("agent_runs").update({ status: "paid", payment, events, finished_at: new Date().toISOString() }).eq("id", runId));
+    if (idHeaders["x-agent-ens"]) {
+      // The agent registers a receipt subname for this purchase, and the mandate records are refreshed.
+      await enqueue("ens_agent_receipt", { runId }, { dedupe: `ens_agent_receipt:${runId}` });
+      await enqueue("ens_agent_sync", { userId }, { dedupe: `ens_agent_sync:${userId}:paid:${runId}` });
+    }
     return payment;
   } catch (e: any) {
     await fail(e?.message ?? "Payment failed");

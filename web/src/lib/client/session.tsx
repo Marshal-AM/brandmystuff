@@ -21,6 +21,7 @@ export type Me = {
   kyc: any;
   unread: number;
   needsOnboarding: boolean;
+  ensDelegation?: { address: `0x${string}`; manager: string; managed_keys: string[]; status: string } | null;
 };
 
 type Ctx = {

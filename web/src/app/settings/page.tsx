@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Save } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { Button, Card, EASE, Empty, Field, Input, PageHeader, Textarea, cx, useAction } from "@/components/ui";
-import { EnsGlyph, EnsName, ensAppUrl } from "@/components/ens";
+import { EnsGlyph, EnsHint, EnsName, ensAppUrl } from "@/components/ens";
+import { useEnsSigner } from "@/lib/client/ens-signer";
 import { SignInButtons } from "@/components/shell";
 import { PayoutRouteCard } from "@/components/payouts";
 
@@ -13,6 +14,7 @@ export default function Settings() {
   const { me, authenticated, api, refresh } = useSession();
   const [f, setF] = useState({ displayName: "", bio: "", twitter: "", website: "", brandName: "" });
   const { busy, run } = useAction();
+  const signer = useEnsSigner();
   // Seed the form once per signed-in user; later session refreshes must not overwrite what's being typed.
   const seeded = useRef<string | null>(null);
   useEffect(() => {
@@ -52,9 +54,28 @@ export default function Settings() {
               <Field label="Website"><Input value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} placeholder="https://" /></Field>
             </div>,
             <Field key="n" label="Brand name (advertisers)"><Input value={f.brandName} onChange={(e) => setF({ ...f, brandName: e.target.value })} /></Field>,
-            <Button key="save" size="lg" loading={busy === "s"} onClick={() => run("s", async () => { await api("/api/me/profile", { method: "POST", json: { ...f, website: f.website || "" } }); await refresh(); }, "Saved — ENS records update shortly")}>
+            <Button key="save" size="lg" loading={busy === "s"} onClick={() => run("s", async () => {
+              await api("/api/me/profile", { method: "POST", json: { ...f, website: f.website || "" } });
+              await refresh();
+              // Self-managed names: the profile keys are published by the user's own wallet (ENSv2 key-scoped role).
+              const u = me?.user;
+              if (signer.ready && u?.ens_name) {
+                const edits = [
+                  { key: "name", value: f.displayName },
+                  ...(u.account_type === "brand" && u.brand_about ? [] : [{ key: "description", value: f.bio }]),
+                  { key: "com.twitter", value: f.twitter },
+                  { key: "url", value: f.website },
+                ].filter((e) => e.value && signer.keys.includes(e.key));
+                try {
+                  if (edits.length) await signer.setTexts(edits.map((e) => ({ name: u.ens_name, ...e })));
+                } catch (e: any) {
+                  throw new Error(`Saved. Publishing to ENS needs your signature: ${e?.shortMessage ?? e?.message ?? "cancelled"}`);
+                }
+              }
+            }, signer.ready ? "Saved and signed to your ENS name" : "Saved — ENS records update shortly")}>
               <Save className="h-4 w-4" /> Save
             </Button>,
+            ...(signer.ready ? [<EnsHint key="h">Your wallet signs these records itself: on your own ENS resolver it may write your profile keys, while scores and verification stay attested by brandmystuff.</EnsHint>] : []),
           ].map((el, i) => (
             <motion.div key={i} variants={{ h: { opacity: 0, y: 14 }, s: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } } }}>{el}</motion.div>
           ))}

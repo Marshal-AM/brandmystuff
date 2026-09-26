@@ -13,6 +13,7 @@
     "ens:bootstrap": "tsx scripts/ens-bootstrap.ts",
     "e2e:scoring": "tsx e2e/scoring.e2e.ts",
     "e2e:flows": "tsx e2e/flows.e2e.ts",
+    "e2e:ens": "tsx e2e/ens-permissions.e2e.ts",
     "e2e:agent": "tsx e2e/agent.e2e.ts",
     "e2e:payouts": "tsx e2e/payouts.e2e.ts",
     "payouts:compile": "tsx scripts/compile-relayer.ts",

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { use, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarDays, Camera, ChevronRight, Code2, Eye, Layers, MapPin, Maximize2, MessageCircle, Ruler, ShieldBan, Sparkles } from "lucide-react";
+import { Bot, CalendarDays, Camera, ChevronRight, Code2, Eye, Layers, MapPin, Maximize2, MessageCircle, Ruler, ShieldBan, Sparkles } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { AqsPanel } from "@/components/aqs";
 import { ActivityList } from "@/components/activity";
@@ -468,6 +468,52 @@ function LeaseView({ d }: { d: any }) {
   );
 }
 
+/** A brand's Scout agent (scout.<brand>) or one of the receipt names it registered for a purchase. */
+function AgentView({ d }: { d: any }) {
+  const r = d.verification?.records ?? {};
+  const receipt = d.kind === "receipt";
+  const status = r["eth.brandmystuff.attested.agent.status"] ?? d.agent.state?.texts?.["eth.brandmystuff.attested.agent.status"];
+  return (
+    <div className="mx-auto max-w-3xl space-y-4 px-4">
+      <Crumbs items={[{ href: `/${d.agent.brand?.ens_name}`, label: d.agent.brand?.brand_name ?? d.agent.brand?.handle ?? "Brand" }, ...(receipt ? [{ href: `/${d.agent.name}`, label: "Scout" }] : []), { label: receipt ? d.ens.label : "Scout" }]} />
+      <Card>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-p/15 text-p"><Bot className="h-5 w-5" /></span>
+            <div className="min-w-0">
+              <h1 className="text-2xl font-extrabold tracking-tight">{receipt ? "Purchase receipt" : `${d.agent.brand?.brand_name ?? "Brand"}'s Scout`}</h1>
+              <div className="mt-1"><EnsName name={d.ens.name} status={d.ensInfo?.status} kind={d.kind} size="xs" /></div>
+            </div>
+          </div>
+          {!receipt && status && <Badge tone={status === "active" ? "brand" : "neutral"}>{status}</Badge>}
+        </div>
+        {receipt ? (
+          <dl className="mt-5 space-y-2 text-sm">
+            {r["eth.brandmystuff.receipt.pick"] && <div><dt className="text-xs text-muted">Picked</dt><dd><Link className="font-mono text-p hover:underline" href={`/${r["eth.brandmystuff.receipt.pick"]}`}>{r["eth.brandmystuff.receipt.pick"]}</Link></dd></div>}
+            {r["eth.brandmystuff.receipt.reason"] && <div><dt className="text-xs text-muted">Why (written by the agent)</dt><dd className="text-white/80">{r["eth.brandmystuff.receipt.reason"]}</dd></div>}
+            {r["eth.brandmystuff.attested.lease"] && <div><dt className="text-xs text-muted">Lease (attested)</dt><dd><Link className="font-mono text-p hover:underline" href={`/${r["eth.brandmystuff.attested.lease"]}`}>{r["eth.brandmystuff.attested.lease"]}</Link></dd></div>}
+          </dl>
+        ) : (
+          <>
+            {r["agent-context"] && <p className="mt-4 text-sm leading-relaxed text-white/75">{r["agent-context"]}</p>}
+            <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
+              {r["eth.brandmystuff.attested.mandate.remaining"] && <Badge>{r["eth.brandmystuff.attested.mandate.remaining"]} USDC left in mandate</Badge>}
+              {r["eth.brandmystuff.agent.last-pick"] && <Badge>last pick · {r["eth.brandmystuff.agent.last-pick"].split(".")[0]}</Badge>}
+            </div>
+            {d.receipts?.length > 0 && (
+              <div className="mt-5">
+                <div className="mb-2 text-xs font-semibold text-muted">Receipts registered by the agent</div>
+                <div className="flex flex-wrap gap-1.5">{d.receipts.map((x: any) => <Link key={x.name} href={`/${x.name}`}><EnsName name={x.name} status={x.status} kind="receipt" size="xs" card={false} /></Link>)}</div>
+              </div>
+            )}
+          </>
+        )}
+      </Card>
+      <VerifyPanel name={d.ens.name} suiId={null} v={d.verification} ens={d.ens} info={d.ensInfo} />
+    </div>
+  );
+}
+
 export default function NamePage({ params }: { params: Promise<{ name: string }> }) {
   const { name } = use(params);
   const n = decodeURIComponent(name);
@@ -492,5 +538,6 @@ export default function NamePage({ params }: { params: Promise<{ name: string }>
   if (data.kind === "space") return <SpaceView d={d} />;
   if (data.kind === "object") return <ObjectView d={d} />;
   if (data.kind === "account") return <AccountView d={d} />;
+  if (data.kind === "agent" || data.kind === "receipt") return <AgentView d={d} />;
   return <LeaseView d={d} />;
 }

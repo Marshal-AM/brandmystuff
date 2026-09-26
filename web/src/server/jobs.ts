@@ -13,6 +13,8 @@ import {
   unregisterLabel,
   writeRecords,
 } from "./ens/names";
+import { delegateUser, ensureAgentIdentity, syncAgent, writeAgentReceipt } from "./ens/permissions";
+import { enqueue } from "./notify";
 import { applySpaceScore, refreshObjectScore } from "./listing";
 import { execute } from "./sui";
 import { ingestDigest } from "./indexer";
@@ -22,7 +24,30 @@ import * as T from "@/lib/sui/tx";
 type Job = { id: number; kind: string; payload: any; attempts: number };
 
 const handlers: Record<string, (p: any) => Promise<void>> = {
-  ens_account: async (p) => ensureAccountName(p.userId),
+  ens_account: async (p) => {
+    await ensureAccountName(p.userId);
+    // Wallet users get their own resolver (owner-editable profile keys); brands' agents get an ENS identity.
+    const u = await q(db().from("users").select("evm_address, account_type").eq("id", p.userId).single());
+    if (u.evm_address) await enqueue("ens_delegate", { userId: p.userId }, { dedupe: `ens_delegate:${p.userId}` });
+    if (u.account_type === "brand") {
+      const a = await q(db().from("brand_agents").select("user_id").eq("user_id", p.userId).maybeSingle());
+      if (a) await enqueue("ens_agent", { userId: p.userId }, { dedupe: `ens_agent:${p.userId}` });
+    }
+  },
+  // ENSv2 permissions (docs/ENS-INTEGRATION.md §12)
+  ens_delegate: async (p) => {
+    await delegateUser(p.userId);
+  },
+  ens_agent: async (p) => {
+    await ensureAgentIdentity(p.userId);
+    await syncAgent(p.userId);
+  },
+  ens_agent_sync: async (p) => {
+    await syncAgent(p.userId);
+  },
+  ens_agent_receipt: async (p) => {
+    await writeAgentReceipt(p.runId);
+  },
   ens_object: async (p) => ensureObjectName(p.objectId, p.digest ?? null),
   ens_space: async (p) => {
     const s = await q(db().from("spaces").select("*").eq("id", p.spaceId).single());
@@ -195,6 +220,10 @@ export async function runScheduler() {
       console.warn("[scheduler] expire listing", l.id, String(e?.message ?? e).slice(0, 160));
     }
   }
+  // Brand agents: mirror each Sui mandate onto its ENS name every few minutes (revoked → roles stripped).
+  const bucket = Math.floor(now / 180_000);
+  const agents = await q(db().from("brand_agents").select("user_id").eq("ens_status", "registered"));
+  for (const a of agents) await enqueue("ens_agent_sync", { userId: a.user_id }, { dedupe: `ens_agent_sync:${a.user_id}:${bucket}` });
   const expired = await q(db().from("objects").select("id").not("sponsor_tier", "is", null).lt("sponsored_until", new Date().toISOString()));
   for (const o of expired) {
     await ok(db().from("objects").update({ sponsor_tier: null }).eq("id", o.id));

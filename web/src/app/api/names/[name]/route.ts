@@ -31,6 +31,7 @@ export const GET = handler(async (req, ctx: { params: Promise<{ name: string }> 
     return {
       kind: "account",
       ens: ensRow,
+      ensInfo,
       verification: v,
       user,
       objects,
@@ -46,6 +47,20 @@ export const GET = handler(async (req, ctx: { params: Promise<{ name: string }> 
     if (lease) {
       const v = live ? await verifyName(name, lease.escrow_id, ["class", "eth.brandmystuff.brand", "eth.brandmystuff.attested.state", "eth.brandmystuff.attested.proofs"]) : null;
       return { kind: "lease", ens: ensRow, ensInfo, verification: v, lease, spaceName: parent };
+    }
+  }
+  // Brand agents (scout.<brand>) and the receipt subnames they register for each purchase.
+  if (ensRow?.kind === "agent" || ensRow?.kind === "receipt") {
+    const agentName = ensRow.kind === "agent" ? name : ensRow.parent;
+    const ba = await q(db().from("brand_agents").select("user_id, agent_address, ens_state, users(handle, ens_name, brand_name, brand_logo_blob_id)").eq("ens_name", agentName).maybeSingle());
+    if (ba) {
+      const suiRef = ensRow.kind === "agent" ? `0x${ba.agent_address.replace(/^0x/, "").padStart(64, "0")}` : ensRow.sui_ref;
+      const keys = ensRow.kind === "agent"
+        ? ["class", "agent-context", "eth.brandmystuff.attested.agent.status", "eth.brandmystuff.attested.mandate.remaining", "eth.brandmystuff.agent.last-pick"]
+        : ["class", "eth.brandmystuff.receipt.pick", "eth.brandmystuff.receipt.reason", "eth.brandmystuff.attested.payment", "eth.brandmystuff.attested.lease"];
+      const v = live ? await verifyName(name, suiRef, keys) : null;
+      const receipts = ensRow.kind === "agent" ? await q(db().from("ens_names").select("name, status, updated_at").eq("parent", name).eq("kind", "receipt").order("updated_at", { ascending: false })) : [];
+      return { kind: ensRow.kind, ens: ensRow, ensInfo, verification: v, agent: { name: agentName, address: ba.agent_address, brand: (ba as any).users, state: ba.ens_state }, receipts };
     }
   }
   throw new HttpError(404, `${name} is not a brandmystuff name`);

@@ -19,19 +19,19 @@ import {
   unregisterName,
   type Records,
 } from "./client";
-import { LEASE_NAME_ROLES, OWNER_NAME_ROLES, REGISTRY_ROOT_ALL } from "./contracts";
+import { DELEGATED_NAME_ROLES, LEASE_NAME_ROLES, OWNER_NAME_ROLES, REGISTRY_ROOT_ALL } from "./contracts";
 
 const FIVE_YEARS = 5 * 365 * 24 * 3600;
 let clients: ReturnType<typeof ensClients> | undefined;
 export const ens = () => (clients ??= ensClients(process.env.SEPOLIA_RPC_URL!, process.env.SEPOLIA_PLATFORM_PRIVATE_KEY as Hex));
 
 const nowS = () => Math.floor(Date.now() / 1000);
-const splitName = (name: string) => {
+export const splitName = (name: string) => {
   const i = name.indexOf(".");
   return { label: name.slice(0, i), parent: name.slice(i + 1) };
 };
 
-async function logWrite(name: string, action: string, payload: unknown, suiDigest: string | null, res: any) {
+export async function logWrite(name: string, action: string, payload: unknown, suiDigest: string | null, res: any) {
   await ok(db().from("ens_writes").insert({
     name,
     action,
@@ -43,7 +43,7 @@ async function logWrite(name: string, action: string, payload: unknown, suiDiges
 }
 
 /** Registry that holds the children of `name` (deploying and linking it if needed). */
-async function childRegistry(name: string): Promise<Address> {
+export async function childRegistry(name: string): Promise<Address> {
   if (name === ENS_DEPLOYMENT.parentName) return ENS_DEPLOYMENT.rootRegistry;
   const row = await q(db().from("ens_names").select("*").eq("name", name).maybeSingle());
   if (!row) throw new Error(`ENS name ${name} not registered yet`);
@@ -57,27 +57,43 @@ async function childRegistry(name: string): Promise<Address> {
   return reg;
 }
 
+/**
+ * Where a new name's records live. Owners with a delegated resolver (docs/ENS-INTEGRATION.md §12) get
+ * their names on it, with no registry roles; everyone else stays on the shared platform resolver.
+ */
+async function placementFor(owner: Address): Promise<{ resolver: Address; delegated: boolean }> {
+  if (owner.toLowerCase() !== platformOwner().toLowerCase()) {
+    const r = await q(db().from("ens_resolvers").select("address").like("key", "user:%").ilike("manager", owner).eq("status", "active").limit(1).maybeSingle());
+    if (r) return { resolver: r.address as Address, delegated: true };
+  }
+  return { resolver: ENS_DEPLOYMENT.platformResolver, delegated: false };
+}
+
 export async function registerNameFor(p: {
   name: string;
-  kind: "account" | "object" | "space" | "lease";
+  kind: "account" | "object" | "space" | "lease" | "agent" | "receipt";
   owner: Address;
   roles: bigint;
   expiry: number;
   records: Records;
   suiRef: string;
   suiDigest?: string | null;
+  /** Explicit resolver (e.g. an agent's own); otherwise chosen by `placementFor(owner)`. */
+  resolver?: Address;
 }) {
   const { label, parent } = splitName(p.name);
   const registry = await childRegistry(parent);
+  const place = p.resolver ? { resolver: p.resolver, delegated: true } : await placementFor(p.owner);
   const res = await registerName(ens(), {
     registry,
     label,
     owner: p.owner,
-    resolver: ENS_DEPLOYMENT.platformResolver,
-    roles: p.roles,
+    resolver: place.resolver,
+    roles: place.delegated ? DELEGATED_NAME_ROLES : p.roles,
     expiry: BigInt(p.expiry),
   });
-  const tx = await logWrite(p.name, "register", { owner: p.owner, expiry: p.expiry }, p.suiDigest ?? null, res);
+  const fresh = !("skipped" in res);
+  const tx = await logWrite(p.name, "register", { owner: p.owner, expiry: p.expiry, ...(fresh && place.delegated ? { resolver: place.resolver } : {}) }, p.suiDigest ?? null, res);
   await ok(db().from("ens_names").upsert({
     name: p.name,
     label,
@@ -87,15 +103,35 @@ export async function registerNameFor(p: {
     expiry: p.expiry,
     status: "registered",
     sui_ref: p.suiRef,
+    // An already-registered name keeps whatever resolver it has (delegation moves it explicitly).
+    ...(fresh ? { resolver: place.delegated ? place.resolver : null, delegated: place.delegated } : {}),
     updated_at: new Date().toISOString(),
   }));
-  await writeRecords(p.name, p.records, p.suiDigest ?? null);
+  await writeRecords(p.name, p.records, p.suiDigest ?? null, { seed: fresh });
   return tx;
 }
 
-export async function writeRecords(name: string, r: Records, suiDigest: string | null = null) {
-  const res = await setRecords(ens(), ENS_DEPLOYMENT.platformResolver, name, r);
-  return logWrite(name, "records", { texts: r.texts, datas: r.datas, addrs: r.addrs?.map((a) => ({ coinType: String(a.coinType), value: a.value })) }, suiDigest, res);
+/** Keys the identity behind `resolver` manages itself (the platform only seeds them). */
+export async function managedKeys(resolver: string): Promise<string[]> {
+  const r = await q(db().from("ens_resolvers").select("managed_keys").ilike("address", resolver).limit(1).maybeSingle());
+  return (r?.managed_keys as string[] | undefined) ?? [];
+}
+
+/**
+ * Writes records on the name's resolver. On a delegated resolver the platform skips the keys the
+ * owner manages (unless seeding a fresh name), so relayer updates never clobber owner edits.
+ */
+export async function writeRecords(name: string, r: Records, suiDigest: string | null = null, opts: { seed?: boolean } = {}) {
+  const row = await q(db().from("ens_names").select("resolver, delegated").eq("name", name).maybeSingle());
+  const resolver = (row?.resolver ?? ENS_DEPLOYMENT.platformResolver) as Address;
+  let texts = r.texts;
+  if (row?.delegated && !opts.seed && texts) {
+    const managed = new Set(await managedKeys(resolver));
+    texts = Object.fromEntries(Object.entries(texts).filter(([k]) => !managed.has(k)));
+  }
+  const rec = { ...r, texts };
+  const res = await setRecords(ens(), resolver, name, rec);
+  return logWrite(name, "records", { texts: rec.texts, datas: rec.datas, addrs: rec.addrs?.map((a) => ({ coinType: String(a.coinType), value: a.value })) }, suiDigest, res);
 }
 
 export async function reserveLabel(name: string, expiry: number, suiDigest: string | null) {
@@ -130,7 +166,7 @@ export async function labelState(name: string) {
 // ---------------- high-level operations used by the relayer ----------------
 
 const bytes32 = (id: string) => (id.startsWith("0x") ? id : `0x${id}`) as Hex;
-const platformOwner = () => ENS_DEPLOYMENT.platformKey;
+export const platformOwner = () => ENS_DEPLOYMENT.platformKey;
 
 export async function ensureAccountName(userId: string) {
   const u = await q(db().from("users").select("*").eq("id", userId).single());
@@ -244,7 +280,10 @@ export async function leaseName(escrowId: string) {
 export async function registerLeaseName(escrowId: string, suiDigest: string | null) {
   const l = await q(db().from("leases").select("*, spaces(ens_name)").eq("escrow_id", escrowId).single());
   const name = `${l.ens_label}.${(l as any).spaces.ens_name}`;
-  const adv = await q(db().from("users").select("evm_address").eq("sui_address", l.advertiser).maybeSingle());
+  // The advertiser holds the lease name. A Scout-booked lease belongs to the brand behind the agent.
+  let adv = await q(db().from("users").select("evm_address").eq("sui_address", l.advertiser).maybeSingle());
+  const agent = adv ? null : await q(db().from("brand_agents").select("ens_name, users(evm_address)").eq("agent_address", l.advertiser).maybeSingle());
+  if (agent) adv = (agent as any).users;
   const end = Math.floor((Number(l.start_ms) + Number(l.weeks) * Number(l.week_ms)) / 1000);
   await registerNameFor({
     name,
@@ -260,6 +299,7 @@ export async function registerLeaseName(escrowId: string, suiDigest: string | nu
         avatar: `https://aggregator.walrus-testnet.walrus.space/v1/blobs/${l.creative_blob_id}`,
         url: `${process.env.APP_URL ?? "http://localhost:3000"}/r/${escrowId}`,
         "eth.brandmystuff.brand": l.brand ?? "",
+        ...(agent?.ens_name ? { "eth.brandmystuff.booked-by": agent.ens_name } : {}),
         "eth.brandmystuff.attested.state": "awaiting-install",
         "eth.brandmystuff.attested.proofs": "0",
       },

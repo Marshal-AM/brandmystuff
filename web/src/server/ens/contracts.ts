@@ -49,6 +49,24 @@ export const RES = {
 } as const;
 export const RESOLVER_ROOT_ALL = Object.values(RES).reduce((a, r) => a | withAdmin(r), 0n);
 
+/**
+ * Text keys an identity's own EVM key may write on its per-identity resolver (ENSv2 roles are
+ * scoped per key, resolver-wide). Everything else, notably eth.brandmystuff.attested.*, stays platform-only.
+ */
+export const OWNER_TEXT_KEYS = ["name", "description", "avatar", "url", "com.twitter", "location", "eth.brandmystuff.brand"] as const;
+/** Keys a brand's Scout agent writes itself, on its own resolver only (ENSIP-26 + its run log / receipts). */
+export const AGENT_TEXT_KEYS = [
+  "agent-context",
+  "agent-endpoint[x402]",
+  "agent-endpoint[mcp]",
+  "eth.brandmystuff.agent.last-run",
+  "eth.brandmystuff.agent.last-pick",
+  "eth.brandmystuff.receipt.pick",
+  "eth.brandmystuff.receipt.reason",
+] as const;
+/** Names on a delegated resolver get no registry roles: the owner can't repoint the resolver (or transfer). */
+export const DELEGATED_NAME_ROLES = 0n;
+
 /** Name-level roles granted to owners of account/object/space names (no transfer). */
 export const OWNER_NAME_ROLES = RR.SET_RESOLVER;
 /** Lease names: advertiser controls the resolver until expiry; non-transferable. */
@@ -69,6 +87,12 @@ export const registryAbi = parseAbi([
   "function getResolver(string label) view returns (address)",
   "function ownerOf(uint256 tokenId) view returns (address)",
   "function hasRootRoles(uint256 roleBitmap, address account) view returns (bool)",
+  "function hasRoles(uint256 resource, uint256 roleBitmap, address account) view returns (bool)",
+  "function roles(uint256 resource, address account) view returns (uint256)",
+  "function grantRootRoles(uint256 roleBitmap, address account) returns (bool)",
+  "function revokeRootRoles(uint256 roleBitmap, address account) returns (bool)",
+  "function revokeRoles(uint256 resource, uint256 roleBitmap, address account) returns (bool)",
+  "error EACUnauthorizedAccountRoles(uint256 resource, uint256 roleBitmap, address account)",
 ]);
 
 export const resolverAbi = parseAbi([
@@ -79,6 +103,13 @@ export const resolverAbi = parseAbi([
   "function setData(bytes name, string key, bytes value)",
   "function multicall(bytes[] calls) returns (bytes[])",
   "function text(bytes32 node, string key) view returns (string)",
+  "function grantSetterRoles(bytes setter, address account) returns (bool)",
+  "function revokeRoles(uint256 resource, uint256 roleBitmap, address account) returns (bool)",
+  "function hasRoles(uint256 resource, uint256 roleBitmap, address account) view returns (bool)",
+  "function hasRootRoles(uint256 roleBitmap, address account) view returns (bool)",
+  "function roles(uint256 resource, address account) view returns (uint256)",
+  "event EACRolesChanged(uint256 indexed resource, address indexed account, uint256 oldRoleBitmap, uint256 newRoleBitmap)",
+  "error EACUnauthorizedAccountRoles(uint256 resource, uint256 roleBitmap, address account)",
 ]);
 
 export const factoryAbi = parseAbi([

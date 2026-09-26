@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { EnsName } from "@/components/ens";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
@@ -300,6 +301,12 @@ export default function AgentPage() {
           <div className="text-muted">Agent wallet</div>
           <a href={suiscan("account", data.agent.address)} target="_blank" rel="noreferrer" className="font-mono text-p hover:underline">{data.agent.address.slice(0, 10)}…{data.agent.address.slice(-6)}</a>
           <div className="mt-0.5 text-muted">{data.agent.gasSui.toFixed(3)} SUI gas</div>
+          {data.ens?.name && (
+            <Link href={`/${data.ens.name}`} className="mt-2 flex items-center gap-1.5 border-t border-line pt-2 text-muted hover:text-white" title="Scout's ENS identity: its own key writes its agent records; brandmystuff attests the mandate">
+              <EnsName name={data.ens.name} status={data.ens.status} kind="agent" size="xs" card={false} />
+              {data.ens.state && data.ens.state !== "active" && <span className="text-[10px]">{data.ens.state}</span>}
+            </Link>
+          )}
         </div>
       </div>
 
@@ -345,8 +352,8 @@ export default function AgentPage() {
             <div className="relative mt-5 flex flex-wrap items-end gap-2">
               <div className="w-32"><Input inputMode="decimal" placeholder="Top up USDC" value={topUp} onChange={(e) => setTopUp(e.target.value.replace(/[^\d.]/g, ""))} /></div>
               <Button variant="secondary" loading={busy === "topup"} disabled={!(Number(topUp) > 0)} onClick={() => act("topup", async () => { await run(mandateTopUp({ mandateId: m.id, amount: BigInt(Math.round(Number(topUp) * 1e6)) })); setTopUp(""); await refetch(); }, "Mandate topped up", "Topping up the mandate…")}><Plus className="h-4 w-4" /> Top up</Button>
-              <Button variant="ghost" loading={busy === "pause"} onClick={() => act("pause", async () => { await run(mandateUpdate({ mandateId: m.id, perPaymentCap: BigInt(Math.round(m.perAdCap * 1e6)), expiresMs: BigInt(m.expiresMs), active: false })); await refetch(); }, "Scout paused", "Pausing Scout…")}><Pause className="h-4 w-4" /> Pause</Button>
-              <Button variant="danger" loading={busy === "revoke"} onClick={() => act("revoke", async () => { await run(mandateRevoke({ mandateId: m.id })); await refetch(); await refresh(); }, "Mandate revoked, funds returned", "Revoking the mandate…")}><X className="h-4 w-4" /> Revoke</Button>
+              <Button variant="ghost" loading={busy === "pause"} onClick={() => act("pause", async () => { await run(mandateUpdate({ mandateId: m.id, perPaymentCap: BigInt(Math.round(m.perAdCap * 1e6)), expiresMs: BigInt(m.expiresMs), active: false })); api("/api/agent/sync", { method: "POST" }).catch(() => null); await refetch(); }, "Scout paused", "Pausing Scout…")}><Pause className="h-4 w-4" /> Pause</Button>
+              <Button variant="danger" loading={busy === "revoke"} onClick={() => act("revoke", async () => { await run(mandateRevoke({ mandateId: m.id })); api("/api/agent/sync", { method: "POST" }).catch(() => null); await refetch(); await refresh(); }, "Mandate revoked, funds returned", "Revoking the mandate…")}><X className="h-4 w-4" /> Revoke</Button>
             </div>
             <Button className="relative mt-6 w-full" size="lg" onClick={startRun} data-testid="run-scout">
               <Radar className="h-5 w-5" /> Run Scout
@@ -357,7 +364,7 @@ export default function AgentPage() {
 
       {m && m.active === false && !expired && (
         <div className="mt-4">
-          <Button variant="secondary" loading={busy === "resume"} onClick={() => act("resume", async () => { await run(mandateUpdate({ mandateId: m.id, perPaymentCap: BigInt(Math.round(m.perAdCap * 1e6)), expiresMs: BigInt(m.expiresMs), active: true })); await refetch(); }, "Scout resumed", "Resuming Scout…")}><Play className="h-4 w-4" /> Resume the paused mandate</Button>
+          <Button variant="secondary" loading={busy === "resume"} onClick={() => act("resume", async () => { await run(mandateUpdate({ mandateId: m.id, perPaymentCap: BigInt(Math.round(m.perAdCap * 1e6)), expiresMs: BigInt(m.expiresMs), active: true })); api("/api/agent/sync", { method: "POST" }).catch(() => null); await refetch(); }, "Scout resumed", "Resuming Scout…")}><Play className="h-4 w-4" /> Resume the paused mandate</Button>
         </div>
       )}
 

@@ -30,7 +30,7 @@ const STATUS: Record<string, { label: string; dot: string; text: string }> = {
 };
 const statusOf = (s: EnsStatus) => STATUS[s ?? "pending"] ?? STATUS.pending;
 
-export const KIND_LABEL: Record<string, string> = { platform: "Platform", account: "Account", object: "Object", space: "Ad space", lease: "Lease" };
+export const KIND_LABEL: Record<string, string> = { platform: "Platform", account: "Account", object: "Object", space: "Ad space", lease: "Lease", agent: "Agent", receipt: "Agent receipt" };
 
 /** A small ENS mark: a faceted diamond, drawn in the brand purple. */
 export function EnsGlyph({ className }: { className?: string }) {
@@ -242,8 +242,21 @@ export function EnsTree({ chain, current }: { chain: { name: string; kind: strin
   );
 }
 
-const prettyKey = (k: string) => k.replace(/^eth\.brandmystuff\./, "");
-const ACTION_COPY: Record<string, string> = { register: "Name registered", records: "Records written", reserve: "Label reserved", renew: "Expiry renewed", unregister: "Name released" };
+export const prettyKey = (k: string) => k.replace(/^eth\.brandmystuff\./, "");
+export const ACTION_COPY: Record<string, string> = {
+  register: "Name registered",
+  records: "Records written",
+  reserve: "Label reserved",
+  renew: "Expiry renewed",
+  unregister: "Name released",
+  resolver: "Own resolver deployed",
+  grant: "Role granted",
+  revoke: "Role revoked",
+  set_resolver: "Moved to its own resolver",
+  agent_records: "Agent wrote its records",
+  agent_register: "Agent registered a receipt",
+  gas: "Gas for self-signing",
+};
 
 /** The records the relayer last wrote to this name. */
 export function EnsRecords({ records, live }: { records: any; live?: Record<string, string | null> | null }) {

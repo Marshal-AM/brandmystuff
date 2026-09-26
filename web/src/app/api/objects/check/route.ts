@@ -34,7 +34,7 @@ export const POST = handler(async (req) => {
   let label = base;
   for (let i = 2; ; i++) {
     const taken = await q(db().from("objects").select("id").eq("ens_name", `${label}.${u.ens_name}`).maybeSingle());
-    if (!taken) break;
+    if (!taken && label !== "scout") break; // "scout" is the brand agent's name
     label = `${base}-${i}`;
   }
   const ensName = normalize(`${label}.${u.ens_name}`);

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ENS_DEPLOYMENT } from "@/lib/deployment";
 import { Badge, Card, Tabs, suiscan } from "./ui";
 import { EnsHint, EnsName, EnsRecords, EnsTree, EnsWrites, ensAppUrl } from "./ens";
+import { EnsPermissions } from "./ens-permissions";
 
 function CopyBtn({ text }: { text: string }) {
   const [done, setDone] = useState(false);
@@ -52,7 +53,7 @@ function Row({ label, value, href }: { label: string; value: string; href?: stri
   );
 }
 
-type Tab = "name" | "records" | "activity";
+type Tab = "name" | "records" | "activity" | "permissions";
 
 export function VerifyPanel({ name, suiId, v, ens, info, bare }: { name: string; suiId?: string | null; v: any; ens: any; info?: any; bare?: boolean }) {
   const [tab, setTab] = useState<Tab>("name");
@@ -87,9 +88,11 @@ export function VerifyPanel({ name, suiId, v, ens, info, bare }: { name: string;
             { id: "name", label: "Name" },
             { id: "records", label: <>Records{info?.records?.texts ? <span className="ml-1 text-[10px] opacity-60">{Object.keys(info.records.texts).length}</span> : null}</> },
             { id: "activity", label: <>Activity{info?.writes?.length ? <span className="ml-1 text-[10px] opacity-60">{info.writes.length}</span> : null}</> },
+            { id: "permissions", label: "Permissions" },
           ]}
           value={tab}
           onChange={setTab}
+          size="sm"
         />
       </div>
       <AnimatePresence mode="wait" initial={false}>
@@ -118,6 +121,7 @@ export function VerifyPanel({ name, suiId, v, ens, info, bare }: { name: string;
           )}
           {tab === "records" && <EnsRecords records={info?.records} live={v?.records} />}
           {tab === "activity" && <EnsWrites writes={info?.writes ?? []} />}
+          {tab === "permissions" && <EnsPermissions name={name} />}
         </motion.div>
       </AnimatePresence>
       <a href={ensAppUrl(name)} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-p hover:underline">

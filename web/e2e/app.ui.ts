@@ -43,7 +43,8 @@ test("sign in, onboard and browse", async ({ page }) => {
   const card = page.getByTestId("space-card").first();
   await expect(card).toBeVisible({ timeout: 30_000 });
   await card.click();
-  await expect(page.getByText("Ad-Space Quality Score")).toBeVisible({ timeout: 30_000 });
+  await expect(page).toHaveURL(/\.brandmystuff\.eth/, { timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Ad-Space Quality Score" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("Verify on-chain")).toBeVisible();
 
   for (const path of ["/dashboard", "/offerings", "/messages", "/brand-kit", "/verify", "/agents", "/list"]) {

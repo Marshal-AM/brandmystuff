@@ -50,6 +50,37 @@ export async function ensSuiAddr(name: string) {
   }
 }
 
+/**
+ * addr(784) and one text record, read strictly: a revert (no such name/record) resolves to null,
+ * a network failure is retried and then thrown, so callers can tell "wrong" from "unreachable".
+ */
+export async function strictAgentRecords(name: string, textKey: string) {
+  const node = namehash(name);
+  let last: unknown;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const [a, t] = await Promise.allSettled([
+        resolveCall(name, encodeFunctionData({ abi: profileAbi, functionName: "addr", args: [node, 784n] })),
+        resolveCall(name, encodeFunctionData({ abi: profileAbi, functionName: "text", args: [node, textKey] })),
+      ]);
+      for (const r of [a, t]) if (r.status === "rejected" && !isRevert(r.reason)) throw r.reason;
+      return {
+        addr: a.status === "fulfilled" ? (decodeAbiParameters([{ type: "bytes" }], a.value)[0] as string) : null,
+        text: t.status === "fulfilled" ? (decodeAbiParameters([{ type: "string" }], t.value)[0] as string) : null,
+      };
+    } catch (e) {
+      last = e;
+      await new Promise((r) => setTimeout(r, 700 * (i + 1)));
+    }
+  }
+  throw last;
+}
+
+const isRevert = (e: any) => {
+  for (let c = e; c; c = c.cause) if (c?.name === "ContractFunctionRevertedError" || /revert/i.test(c?.shortMessage ?? "")) return true;
+  return false;
+};
+
 /** Two-way commitment check: ENS → Sui object id, and the Sui object stores this name. */
 export async function verifyName(name: string, expectedSuiId: string | null, keys: string[] = []) {
   const [suiRef, ...texts] = await Promise.all([ensData(name, "eth.brandmystuff.sui.object"), ...keys.map((k) => ensText(name, k))]);

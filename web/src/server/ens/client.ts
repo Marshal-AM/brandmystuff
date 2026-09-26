@@ -186,4 +186,69 @@ export async function setRecords(c: EnsClients, resolver: Address, name: string,
 
 export const suiAddr = (sui: string) => ({ coinType: SUI_COIN_TYPE, value: suiAddressBytes(sui) });
 
+// ---------------- Enhanced Access Control (per-identity resolvers) ----------------
+
+/** Resolver-side EAC resource of a text key (PermissionedResolverLib.resource). */
+export const textResource = (key: string) => BigInt(keccak256(toBytes(key)));
+const ROLE_SET_TEXT = 1n << 4n;
+const ANY_NAME = "0x00" as Hex; // grantSetterRoles only reads the selector and the key
+
+/** Whether `account` may write text `key` on `resolver` (a key-scoped or resolver-wide grant). */
+export async function canSetText(c: EnsClients, resolver: Address, key: string, account: Address) {
+  return c.pub.readContract({ address: resolver, abi: resolverAbi, functionName: "hasRoles", args: [textResource(key), ROLE_SET_TEXT, account] }) as Promise<boolean>;
+}
+
+/** Grants `account` ROLE_SET_TEXT on each key it doesn't hold yet (one multicall). */
+export async function grantTextKeys(c: EnsClients, resolver: Address, account: Address, keys: readonly string[]) {
+  const missing: string[] = [];
+  for (const k of keys) if (!(await canSetText(c, resolver, k, account))) missing.push(k);
+  if (!missing.length) return { skipped: true as const, keys: [] as string[] };
+  const calls = missing.map((k) =>
+    encodeFunctionData({ abi: resolverAbi, functionName: "grantSetterRoles", args: [encodeFunctionData({ abi: resolverAbi, functionName: "setText", args: [ANY_NAME, k, ""] }), account] }),
+  );
+  return { ...(await send(c, { address: resolver, abi: resolverAbi, functionName: "multicall", args: [calls] })), keys: missing };
+}
+
+/** Revokes ROLE_SET_TEXT on each key `account` still holds (one multicall). */
+export async function revokeTextKeys(c: EnsClients, resolver: Address, account: Address, keys: readonly string[]) {
+  const held: string[] = [];
+  for (const k of keys) if (await canSetText(c, resolver, k, account)) held.push(k);
+  if (!held.length) return { skipped: true as const, keys: [] as string[] };
+  const calls = held.map((k) => encodeFunctionData({ abi: resolverAbi, functionName: "revokeRoles", args: [textResource(k), ROLE_SET_TEXT, account] }));
+  return { ...(await send(c, { address: resolver, abi: resolverAbi, functionName: "multicall", args: [calls] })), keys: held };
+}
+
+export async function getResolverOf(c: EnsClients, registry: Address, label: string) {
+  return (await c.pub.readContract({ address: registry, abi: registryAbi, functionName: "getResolver", args: [label] })) as Address;
+}
+
+/** Points a registered name at another resolver (platform holds SET_RESOLVER on the registry root). */
+export async function setResolver(c: EnsClients, registry: Address, label: string, resolver: Address) {
+  if ((await getResolverOf(c, registry, label)).toLowerCase() === resolver.toLowerCase()) return { skipped: true as const };
+  return send(c, { address: registry, abi: registryAbi, functionName: "setResolver", args: [labelId(label), resolver] });
+}
+
+/** Registry roles `account` holds on one name (the name's current EAC resource). */
+export async function nameRoles(c: EnsClients, registry: Address, label: string, account: Address) {
+  const st = await getState(c, registry, label);
+  if (st.status !== 2) return 0n;
+  return (await c.pub.readContract({ address: registry, abi: registryAbi, functionName: "roles", args: [st.resource, account] })) as bigint;
+}
+
+/** Revokes name-level registry roles (e.g. SET_RESOLVER) from the token owner. */
+export async function revokeNameRoles(c: EnsClients, registry: Address, label: string, account: Address, roles: bigint) {
+  const st = await getState(c, registry, label);
+  if (st.status !== 2) return { skipped: true as const };
+  const held = ((await c.pub.readContract({ address: registry, abi: registryAbi, functionName: "roles", args: [st.resource, account] })) as bigint) & roles;
+  if (!held) return { skipped: true as const };
+  return send(c, { address: registry, abi: registryAbi, functionName: "revokeRoles", args: [st.resource, held, account] });
+}
+
+/** Contract-wide registry roles (e.g. REGISTRAR on an agent's own subregistry). */
+export async function setRootRoles(c: EnsClients, registry: Address, account: Address, roles: bigint, grant: boolean) {
+  const has = (await c.pub.readContract({ address: registry, abi: registryAbi, functionName: "hasRootRoles", args: [roles, account] })) as boolean;
+  if (has === grant) return { skipped: true as const };
+  return send(c, { address: registry, abi: registryAbi, functionName: grant ? "grantRootRoles" : "revokeRootRoles", args: [roles, account] });
+}
+
 export { decodeEventLog, namehash };

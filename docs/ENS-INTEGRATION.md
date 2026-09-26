@@ -101,6 +101,8 @@ The platform key:
 
 Users and advertisers never sign ENS transactions. They do **own** their names, and hold the name-level roles listed below.
 
+> **Update: split permissions (§12).** Users with an embedded EVM wallet now get their own resolver. Their wallet signs edits to its profile keys, and their names carry **no** registry roles. The table below describes users who don't have one yet (Sui-wallet sign-ins).
+
 | Name | ERC1155 owner | Name-level roles granted at registration |
 |---|---|---|
 | `brandmystuff.eth` | Platform key | ETHRegistrar default set |
@@ -348,3 +350,69 @@ All exact ABIs (registrar `commit`/`register`, factory `deployProxy`, UserRegist
 | Everything is public | No PII; hashes and Walrus pointers only |
 | Platform key is a single point of trust (testnet) | Every write is logged against its Sui digest; the public audit feed shows it |
 | No Sui reverse resolution | `Profile.ens_name` on Sui + read model |
+
+---
+
+## 12. Split permissions with Enhanced Access Control
+
+Pitch: **"You can edit your description. You can't edit your score."** Every write rule below is enforced by ENSv2 contracts, not by our API.
+
+### 12.1 Why one resolver per identity
+`PermissionedResolver` roles are scoped per record **key** (for example `ROLE_SET_TEXT` on `"description"`) and apply **resolver-wide**; they are never scoped to a name (https://docs.ens.domains/ensv2/permissioned-resolver#resource-scheme). If we granted a user `description` on the shared platform resolver, that user could edit `description` on every name it serves.
+
+So each identity gets its own resolver proxy, deployed through the VerifiableFactory as ENSv2 recommends ("each account gets its own resolver instance"):
+
+| Resolver key (`ens_resolvers`) | Serves | Holds key-scoped `ROLE_SET_TEXT` | Keys |
+|---|---|---|---|
+| `user:<id>` | the user's account, object, space and lease names | the user's Privy EVM wallet | `name, description, avatar, url, com.twitter, location, eth.brandmystuff.brand` |
+| `agent:<id>` | `scout.<brand>…` and its `buy-<n>` receipts | the agent's own EVM key | `agent-context, agent-endpoint[x402], agent-endpoint[mcp], eth.brandmystuff.agent.last-run, …last-pick, eth.brandmystuff.receipt.pick, …reason` |
+
+- The platform key keeps every root role and admin role on each resolver (`RESOLVER_ROOT_ALL`), so it alone writes `eth.brandmystuff.attested.*`, `price`, `status` and `sui.object`, and it grants and revokes roles. Admin rights can't be scoped to a single key (`grantRoles` reverts on the resolver), so no user or agent is ever given an admin role.
+- Grants go through `grantSetterRoles(setText(…, key, …), account)`, batched in one `multicall` (it `delegatecall`s, so `msg.sender` is preserved). Revokes go through `revokeRoles(keccak256(key), ROLE_SET_TEXT, account)`.
+
+### 12.2 Moving a user onto their resolver (`ens_delegate` job)
+The `ens_delegate` job runs after the account name is registered, and only for users with an `evm_address`. It works in this order, and every step is idempotent:
+1. Deploy the resolver (salt `brandmystuff:resolver:user:<id>`), then grant the owner's keys.
+2. For each live name the wallet holds, copy its full record set onto the new resolver, then call `setResolver` on the parent registry. There is no window where the name resolves to nothing.
+3. Revoke the holder's registry `ROLE_SET_RESOLVER`. A delegated name then has **no** registry roles, so it can't be repointed at a resolver serving a forged score. It still can't be transferred (no `CAN_TRANSFER_ADMIN`).
+
+New names for a delegated user are registered straight onto their resolver, with `roleBitmap = 0`.
+
+`writeRecords` never overwrites the keys the identity manages; the platform only seeds them when a name is registered. So a relayer update (a new AQS, or a profile save in the app) can't clobber an owner's own edit.
+
+### 12.3 Leases: expiring names the advertiser holds
+- The lease name `l-<n>.<space>` is minted to the advertiser's wallet. For a Scout-booked lease, the brand's wallet holds it, and `eth.brandmystuff.booked-by` names the agent.
+- It lives on the advertiser's resolver, with expiry = lease end and no registry roles, so it is non-transferable and can't be repointed.
+- The advertiser signs `url`, `avatar` and `brand`. `attested.state`, `attested.proofs` and `attested.creative` are platform-only.
+- The platform (via the relayer's root `UNREGISTER`) releases the name on reject, expiry or refund.
+
+### 12.4 Brand agents as namespaces
+- **Name:** `scout.<brand>.brandmystuff.eth`, on its own resolver. The token is held by the brand's wallet with no roles.
+  - `addr(784)` is the agent's Sui address; `addr(60)` is its EVM key.
+  - `sui.object` holds the Sui address (32 bytes), used for the ENS ↔ Sui check.
+  - It carries the ENSIP-26 records `agent-context` and `agent-endpoint[x402|mcp]`.
+- **Attested by the platform** (`ens_agent_sync`, every 3 min and after pause, resume or revoke in the UI):
+  - `attested.agent.status`: `active | paused | exhausted | revoked | expired | no-mandate`
+  - `attested.mandate.{budget,remaining,cap,expires}`
+  - `data eth.brandmystuff.mandate` = the Sui mandate id
+- **Revocation.** When the brand revokes (or the mandate expires) on Sui, the platform revokes the agent key's text roles and its `REGISTRAR`. The key can then write nothing.
+- **Receipts.** The platform grants the agent key root `REGISTRAR` on the subregistry of its own name only.
+  - After each paid run, the agent registers `buy-<n>.scout.<brand>…` itself, with the token held by the brand, and writes `receipt.pick` and `receipt.reason`.
+  - The platform attests `attested.payment`, `attested.amount` and `attested.lease`.
+  - The agent can't register anywhere else, including in the brand's own registry.
+- **x402 identity.** A payer may send `x-agent-ens: <name>`. Before settling, the gate resolves `addr(784)` through the Universal Resolver and requires it to equal the paying Sui address, and it rejects `revoked` or `expired` agents. A mismatch never moves funds. Scout always sends it, and it is stored on the intent (`x402_intents.payer_ens`).
+
+### 12.5 Where it shows
+- **Permissions tab** in every name's on-chain panel (`GET /api/names/<name>/permissions[?probe=1]`):
+  - "Attested by brandmystuff" vs "Set by owner, advertiser or agent key"
+  - the name token's holder roles
+  - live `hasRoles` reads plus `eth_call` probes (for example, `setText("attested.aqs")` from the owner → `EACUnauthorizedAccountRoles`)
+  - the permission history (resolver deploy, grants, revokes, moves)
+- **Owners:** Settings saves the profile keys with the user's own wallet signature (Privy embedded wallet on Sepolia, with a small ETH top-up from `/api/ens/gas`). The Permissions tab lets the key holder sign one-off edits.
+- **Agents:** the agent page links Scout's ENS name; `/<scout name>` and `/<receipt name>` have their own views.
+
+### 12.6 Scope and limits
+- Users who sign in only with a Sui wallet have no EVM key, so they stay platform-managed on the shared resolver. Nothing changes for them.
+- The platform keeps admin on every resolver: this is *delegated, verifiable* rights, not full self-custody of the records.
+- Test: `pnpm e2e:ens` (live on Sepolia with a throwaway user and agent; cleans up after itself).
+
