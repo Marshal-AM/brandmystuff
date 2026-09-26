@@ -29,7 +29,6 @@ import { Logo } from "@/components/logo";
 import { Bot } from "@/components/scout-bot";
 import { cx } from "@/components/ui";
 
-const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 // ------------------------------------------------------------------ building blocks
 
@@ -42,13 +41,9 @@ function Kicker({ children }: { children: ReactNode }) {
   );
 }
 
-/** Staggered entrance for anything inside a slide. */
-function In({ children, d = 0, className, y = 24 }: { children: ReactNode; d?: number; className?: string; y?: number }) {
-  return (
-    <motion.div className={className} initial={{ opacity: 0, y, filter: "blur(8px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 0.7, delay: 0.15 + d, ease: EASE }}>
-      {children}
-    </motion.div>
-  );
+/** A block of slide content. Slides render instantly: no entrance animation. */
+function In({ children, className }: { children: ReactNode; d?: number; className?: string; y?: number }) {
+  return <div className={className}>{children}</div>;
 }
 
 function Title({ children, className }: { children: ReactNode; className?: string }) {
@@ -96,12 +91,11 @@ function Cover() {
               { l: "58%", t: "18%", r: 6, c: "bg-white text-ink", t2: "acme" },
               { l: "16%", t: "62%", r: 5, c: "bg-p-300 text-ink", t2: "orbit" },
               { l: "60%", t: "62%", r: -5, c: "border border-p/60 text-p", t2: "your ad?" },
-            ].map((s, i) => (
+            ].map((s) => (
               <motion.span
                 key={s.t2}
-                initial={{ opacity: 0, scale: 0.4, rotate: 0 }}
+                initial={false}
                 animate={{ opacity: 1, scale: 1, rotate: s.r }}
-                transition={{ delay: 0.6 + i * 0.15, type: "spring", stiffness: 260, damping: 14 }}
                 className={cx("absolute rounded-xl px-3 py-2 text-xs font-extrabold tracking-wide shadow-lg", s.c)}
                 style={{ left: s.l, top: s.t }}
               >
@@ -109,9 +103,9 @@ function Cover() {
               </motion.span>
             ))}
           </div>
-          <motion.div className="absolute -bottom-6 -right-6" animate={{ y: [0, -8, 0] }} transition={{ duration: 3.2, repeat: Infinity }}>
+          <div className="absolute -bottom-6 -right-6">
             <Bot pose="wave" mood="happy" size={96} />
-          </motion.div>
+          </div>
         </div>
       </In>
     </div>
@@ -147,7 +141,7 @@ function TweetStack() {
       </div>
       <AnimatePresence>
         {zoom !== null && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setZoom(null)} className="fixed inset-0 z-[80] grid cursor-zoom-out place-items-center bg-black/80 p-6 backdrop-blur-sm">
+          <motion.div initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setZoom(null)} className="fixed inset-0 z-[80] grid cursor-zoom-out place-items-center bg-black/80 p-6 backdrop-blur-sm">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={TWEETS[zoom].src} alt={TWEETS[zoom].who} className="max-h-[88vh] max-w-[92vw] rounded-2xl shadow-2xl" />
           </motion.div>
@@ -253,7 +247,7 @@ function Insight() {
             <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-p/15 text-p"><t.icon className="h-6 w-6" /></span>
             <div className="flex-1 font-bold">{t.name}</div>
             <div className="relative h-2 w-28 overflow-hidden rounded-full bg-white/[0.06] sm:w-44">
-              <motion.div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-p-600 to-p" initial={{ width: 0 }} animate={{ width: `${[25, 55, 95, 38][i]}%` }} transition={{ delay: 0.5 + i * 0.1, duration: 1, ease: EASE }} />
+              <motion.div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-p-600 to-p" initial={false} animate={{ width: `${[25, 55, 95, 38][i]}%` }} />
             </div>
             <div className="w-36 text-right text-sm text-muted">{t.seen}</div>
           </In>
@@ -276,7 +270,7 @@ function Solution() {
       <In><Kicker>The solution</Kicker></In>
       <In d={0.1}><Title className="mt-5 max-w-4xl">A marketplace where <span className="text-p">everyone is protected.</span></Title></In>
       <div className="relative mt-12 grid gap-4 md:grid-cols-4">
-        <motion.div aria-hidden className="absolute left-[12%] right-[12%] top-7 hidden h-px origin-left bg-gradient-to-r from-p/0 via-p to-p/0 md:block" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.5, duration: 1.2, ease: EASE }} />
+        <motion.div aria-hidden className="absolute left-[12%] right-[12%] top-7 hidden h-px origin-left bg-gradient-to-r from-p/0 via-p to-p/0 md:block" initial={false} animate={{ scaleX: 1 }} />
         {steps.map((s, i) => (
           <In key={s.t} d={0.25 + i * 0.15} className="relative text-center md:text-left">
             <span className="relative z-10 mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-p text-ink shadow-[0_0_40px_rgba(171,159,242,0.5)] md:mx-0"><s.icon className="h-6 w-6" /></span>
@@ -350,15 +344,14 @@ function Hype() {
         <In d={0.3} className="relative rounded-3xl border border-line-strong bg-white/[0.03] p-5">
           <div className="flex items-center justify-between text-xs font-bold uppercase tracking-[0.12em] text-faint">
             <span>Brands wanting this spot</span>
-            <motion.span initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.4, type: "spring", stiffness: 300, damping: 14 }} className="rounded-full bg-p px-2.5 py-1 text-[10px] text-ink">Post goes viral</motion.span>
+            <motion.span initial={false} animate={{ opacity: 1, scale: 1 }} className="rounded-full bg-p px-2.5 py-1 text-[10px] text-ink">Post goes viral</motion.span>
           </div>
           <div className="mt-4 flex h-36 items-end gap-1.5">
             {bars.map((h, i) => (
               <motion.div
                 key={i}
-                initial={{ height: 0 }}
+                initial={false}
                 animate={{ height: `${h}%` }}
-                transition={{ delay: 0.5 + i * 0.08, duration: 0.6, ease: EASE }}
                 className={cx("flex-1 rounded-t-md", i >= 6 ? "bg-gradient-to-t from-p-600 to-p shadow-[0_0_18px_-4px_rgba(171,159,242,0.7)]" : "bg-white/15")}
               />
             ))}
@@ -434,8 +427,8 @@ function Different() {
             <div key={i} className={cx("px-4 py-3", i === 4 && "bg-p/15 text-p")}>{h}</div>
           ))}
         </div>
-        {rows.map((r, ri) => (
-          <motion.div key={r[0]} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + ri * 0.07, duration: 0.5, ease: EASE }} className="grid grid-cols-[1.6fr_repeat(4,1fr)] border-t border-line text-sm">
+        {rows.map((r) => (
+          <motion.div key={r[0]} initial={false} animate={{ opacity: 1, x: 0 }} className="grid grid-cols-[1.6fr_repeat(4,1fr)] border-t border-line text-sm">
             {r.map((c, ci) => (
               <div key={ci} className={cx("px-4 py-3", ci === 0 ? "font-semibold text-white" : "text-white/55", ci === 4 && "bg-p/[0.08] font-bold text-p")}>{c}</div>
             ))}
@@ -515,7 +508,7 @@ function Gtm() {
       <In><Kicker>Go-to-market</Kicker></In>
       <In d={0.1}><Title className="mt-5 max-w-4xl">Start where the trend was born. <span className="text-p">Then widen the circle.</span></Title></In>
       <div className="relative mt-10 grid gap-4 md:grid-cols-4">
-        <motion.div aria-hidden className="absolute left-0 right-0 top-[22px] hidden h-px origin-left bg-gradient-to-r from-p via-p/60 to-p/10 md:block" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.4, duration: 1.4, ease: EASE }} />
+        <motion.div aria-hidden className="absolute left-0 right-0 top-[22px] hidden h-px origin-left bg-gradient-to-r from-p via-p/60 to-p/10 md:block" initial={false} animate={{ scaleX: 1 }} />
         {phases.map((p, i) => (
           <In key={p.n} d={0.25 + i * 0.15} className="relative">
             <div className="relative z-10 flex items-center gap-3">
@@ -562,18 +555,18 @@ function Growth() {
         </div>
       </div>
       <In d={0.3} className="relative mx-auto aspect-square w-full max-w-[420px]">
-        <motion.div className="absolute inset-0 rounded-full border border-dashed border-p/40" animate={{ rotate: 360 }} transition={{ duration: 40, repeat: Infinity, ease: "linear" }} />
+        <div className="absolute inset-0 rounded-full border border-dashed border-p/40" />
         <div className="absolute inset-[18%] rounded-full bg-p/10 blur-2xl" />
         {[
           { t: "More owners", a: -90 },
           { t: "More spots", a: 0 },
           { t: "More brands", a: 90 },
           { t: "More earnings", a: 180 },
-        ].map((n, i) => {
+        ].map((n) => {
           const r = 44;
           const x = 50 + r * Math.cos((n.a * Math.PI) / 180), y = 50 + r * Math.sin((n.a * Math.PI) / 180);
           return (
-            <motion.div key={n.t} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5 + i * 0.15, type: "spring", stiffness: 220, damping: 16 }} className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-p/40 bg-p-950 px-4 py-2 text-sm font-bold shadow-[0_0_30px_-6px_rgba(171,159,242,0.6)]" style={{ left: `${x}%`, top: `${y}%` }}>
+            <motion.div key={n.t} initial={false} animate={{ opacity: 1, scale: 1 }} className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-p/40 bg-p-950 px-4 py-2 text-sm font-bold shadow-[0_0_30px_-6px_rgba(171,159,242,0.6)]" style={{ left: `${x}%`, top: `${y}%` }}>
               {n.t}
             </motion.div>
           );
@@ -686,7 +679,7 @@ const SLIDES = [
 // ------------------------------------------------------------------ deck
 
 export default function Pitch() {
-  const [[i, dir], setState] = useState<[number, number]>([0, 1]);
+  const [[i], setState] = useState<[number, number]>([0, 1]);
   const go = useCallback((n: number) => setState(([cur]) => [Math.max(0, Math.min(SLIDES.length - 1, n)), n >= cur ? 1 : -1]), []);
   const next = useCallback(() => setState(([cur]) => [Math.min(SLIDES.length - 1, cur + 1), 1]), []);
   const prev = useCallback(() => setState(([cur]) => [Math.max(0, cur - 1), -1]), []);
@@ -731,28 +724,16 @@ export default function Pitch() {
 
       {/* slide */}
       <div className="relative z-10 flex-1 overflow-hidden">
-        <AnimatePresence mode="wait" custom={dir} initial={false}>
-          <motion.section
-            key={S.id}
-            custom={dir}
-            variants={{
-              enter: (d: number) => ({ x: d > 0 ? 120 : -120, opacity: 0, filter: "blur(10px)" }),
-              center: { x: 0, opacity: 1, filter: "blur(0px)" },
-              exit: (d: number) => ({ x: d > 0 ? -120 : 120, opacity: 0, filter: "blur(10px)" }),
-            }}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.55, ease: EASE }}
-            className="absolute inset-0 overflow-y-auto px-5 pb-28 sm:px-10 lg:px-20"
-            aria-roledescription="slide"
-            aria-label={`${i + 1} of ${SLIDES.length}: ${S.label}`}
-          >
-            <div className="mx-auto h-full min-h-[560px] max-w-7xl">
-              <S.C />
-            </div>
-          </motion.section>
-        </AnimatePresence>
+        <section
+          key={S.id}
+          className="absolute inset-0 overflow-y-auto px-5 pb-28 sm:px-10 lg:px-20"
+          aria-roledescription="slide"
+          aria-label={`${i + 1} of ${SLIDES.length}: ${S.label}`}
+        >
+          <div className="mx-auto h-full min-h-[560px] max-w-7xl">
+            <S.C />
+          </div>
+        </section>
       </div>
 
       {/* bottom bar: progress + arrows (bottom right) */}
