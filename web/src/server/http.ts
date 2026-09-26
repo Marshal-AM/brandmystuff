@@ -33,3 +33,30 @@ export async function body<T>(req: Request, schema: ZodType<T>): Promise<T> {
   }
   return schema.parse(raw);
 }
+
+/** Streams NDJSON: `fn` gets an emit(line) callback; errors become {t:"error"} lines. */
+export function ndjson(fn: (emit: (e: Record<string, unknown>) => void) => Promise<unknown>) {
+  const enc = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (e: Record<string, unknown>) => {
+        try {
+          controller.enqueue(enc.encode(JSON.stringify({ ...e, at: Date.now() }) + "\n"));
+        } catch {
+          /* client went away */
+        }
+      };
+      try {
+        await fn(send);
+        send({ t: "done" });
+      } catch (e: any) {
+        send({ t: "error", error: e?.message ?? "Something went wrong", status: e instanceof HttpError ? e.status : 500 });
+      } finally {
+        try {
+          controller.close();
+        } catch {}
+      }
+    },
+  });
+  return new Response(stream, { headers: { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" } });
+}

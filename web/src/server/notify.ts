@@ -11,6 +11,9 @@ export async function notifyAddress(address: string | null | undefined, n: { kin
   if (data) return notify(data.id, n);
   const { data: lw } = await db().from("linked_wallets").select("user_id").eq("address", address).maybeSingle();
   if (lw) return notify(lw.user_id, n);
+  // A brand's agent address belongs to the brand.
+  const { data: ag } = await db().from("brand_agents").select("user_id").eq("agent_address", address).maybeSingle();
+  if (ag) return notify(ag.user_id, n);
 }
 
 export async function activity(a: {

@@ -6,7 +6,7 @@ import * as T from "@/lib/sui/tx";
 import { HttpError } from "./auth";
 import { db, q, ok } from "./db";
 import { ingestDigest } from "./indexer";
-import { execute, findEvent } from "./sui";
+import { chainNowMs, execute, findEvent } from "./sui";
 import { storeBlob } from "./walrus";
 import { sui } from "./sui";
 import { requirements, type PaymentRequirements } from "./x402";
@@ -28,7 +28,8 @@ export async function quoteLease(s: any, weeks: number, startWeek?: number) {
   if (s.status !== "available") throw new HttpError(409, "Space is not available");
   if (!(weeks >= 1 && weeks <= 52)) throw new HttpError(400, "weeks must be 1-52");
   const wk = Number(s.week_ms);
-  const current = Math.floor(Date.now() / wk);
+  // Quote against the chain clock: the contract rejects a start week the chain considers past.
+  const current = Math.floor((await chainNowMs()) / wk);
   const booked = await bookedWeeks(s.id);
   let start = startWeek ?? current;
   if (startWeek == null) {

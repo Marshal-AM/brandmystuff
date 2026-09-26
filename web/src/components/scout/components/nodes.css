@@ -1,0 +1,275 @@
+/* Scoped copy of the reference Scout UI styles (see scripts in commit). */
+.scout-root .nodes {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+.scout-root .nodes-wires {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+.scout-root .packet {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 99px;
+  background: var(--p);
+  box-shadow: 0 0 0 3px rgba(171, 159, 242, 0.25), 0 0 16px var(--p);
+  offset-rotate: 0deg;
+}
+.scout-root .nodes-light .packet {
+  background: var(--ink);
+  box-shadow: 0 0 0 3px rgba(10, 10, 11, 0.12), 0 0 12px rgba(171, 159, 242, 0.9);
+}
+.scout-root .node {
+  position: absolute;
+}
+.scout-root .node-float {
+  position: relative;
+  padding: 14px 14px 14px;
+  border-radius: 22px;
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  transition: box-shadow 0.6s var(--ease-out), background-color 0.6s var(--ease-out);
+}
+.scout-root .nodes-light .node-float {
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--ink);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 20px 50px rgba(31, 29, 44, 0.12), 0 2px 6px rgba(31, 29, 44, 0.05);
+}
+.scout-root .nodes-dark .node-float {
+  background: rgba(18, 17, 23, 0.62);
+  color: var(--white);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+.scout-root .node-float::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(from var(--spin), transparent 0 55%, var(--p) 78%, #fff 88%, transparent 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: sc-spin 1.8s linear infinite;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out);
+}
+.scout-root .node.is-running .node-float::before {
+  opacity: 1;
+}
+.scout-root .nodes-light .node.is-running .node-float {
+  box-shadow: 0 24px 60px rgba(111, 103, 157, 0.35), 0 0 0 1px rgba(171, 159, 242, 0.3);
+}
+.scout-root .nodes-dark .node.is-running .node-float {
+  box-shadow: 0 24px 70px rgba(171, 159, 242, 0.18), 0 0 0 1px rgba(171, 159, 242, 0.2);
+}
+.scout-root .node.is-done .node-float {
+  border-color: rgba(171, 159, 242, 0.7);
+}
+.scout-root .node.is-pending .node-float {
+  opacity: 0.72;
+}
+.scout-root .node-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.scout-root .node-ico {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--p);
+  color: var(--ink);
+}
+.scout-root .nodes-dark .node-ico {
+  background: rgba(171, 159, 242, 0.14);
+  color: var(--p);
+}
+.scout-root .node.is-running .node-ico {
+  animation: sc-node-ico 1.4s var(--ease-in-out) infinite;
+}
+@keyframes sc-node-ico {
+  50% { transform: scale(1.1) rotate(-6deg); }
+}
+.scout-root .node-title {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.015em;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scout-root .node-status {
+  display: inline-flex;
+  height: 22px;
+  overflow: hidden;
+  border-radius: 99px;
+}
+.scout-root .node-status-in {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 99px;
+}
+.scout-root .nodes-light .node-status-in {
+  background: rgba(10, 10, 11, 0.06);
+  color: rgba(10, 10, 11, 0.6);
+}
+.scout-root .nodes-dark .node-status-in {
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.6);
+}
+.scout-root .node.is-running .node-status-in {
+  background: var(--ink);
+  color: var(--p);
+}
+.scout-root .nodes-dark .node.is-running .node-status-in {
+  background: var(--p);
+  color: var(--ink);
+}
+.scout-root .node.is-done .node-status-in {
+  background: var(--p);
+  color: var(--ink);
+}
+.scout-root .node-live {
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: currentColor;
+  animation: sc-live 1s ease-in-out infinite;
+}
+@keyframes sc-live {
+  50% { opacity: 0.25; transform: scale(0.7); }
+}
+.scout-root .node-bar {
+  height: 3px;
+  margin: 12px 0 10px;
+  border-radius: 9px;
+  overflow: hidden;
+}
+.scout-root .nodes-light .node-bar { background: rgba(10, 10, 11, 0.07); }
+.scout-root .nodes-dark .node-bar { background: rgba(255, 255, 255, 0.07); }
+.scout-root .node-bar i {
+  display: block;
+  height: 100%;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, var(--p), var(--p-600));
+  border-radius: inherit;
+}
+.scout-root .nodes-dark .node-bar i {
+  background: linear-gradient(90deg, var(--p-600), var(--p), #fff);
+}
+.scout-root .node-logs {
+  font-size: 11.5px;
+  line-height: 1.6;
+  height: 56px;
+  overflow: hidden;
+}
+.scout-root .node-line {
+  display: flex;
+  gap: 7px;
+  align-items: baseline;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.scout-root .node-gt {
+  color: var(--p-600);
+  font-weight: 700;
+}
+.scout-root .nodes-dark .node-gt { color: var(--p); }
+.scout-root .node-txt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scout-root .node-caret {
+  display: inline-block;
+  width: 6px;
+  height: 12px;
+  margin-left: 1px;
+  background: currentColor;
+  translate: 0 2px;
+  animation: sc-caret 0.8s steps(1) infinite;
+}
+@keyframes sc-caret {
+  50% { opacity: 0; }
+}
+.scout-root .node-skel {
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+}
+.scout-root .node-skel i {
+  display: block;
+  height: 7px;
+  border-radius: 9px;
+  background: linear-gradient(90deg, rgba(128, 120, 180, 0.12), rgba(128, 120, 180, 0.28), rgba(128, 120, 180, 0.12));
+  background-size: 200% 100%;
+  animation: sc-skel 1.6s linear infinite;
+}
+.scout-root .node-skel i:nth-child(1) { width: 78%; }
+.scout-root .node-skel i:nth-child(2) { width: 56%; }
+.scout-root .node-skel i:nth-child(3) { width: 66%; }
+@keyframes sc-skel {
+  to { background-position: -200% 0; }
+}
+.scout-root .node-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  border-radius: 13px;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+}
+.scout-root .nodes-light .node-result {
+  background: var(--ink);
+  color: var(--white);
+}
+.scout-root .nodes-dark .node-result {
+  background: var(--p);
+  color: var(--ink);
+}
+.scout-root .node-result-ico {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 99px;
+  background: var(--p);
+  color: var(--ink);
+}
+.scout-root .nodes-dark .node-result-ico {
+  background: var(--ink);
+  color: var(--p);
+}
+@media (max-width: 760px) {
+  .scout-root .node-float { padding: 10px; border-radius: 16px; }
+  .scout-root .node-logs { font-size: 10px; min-height: 32px; max-height: 32px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+  .scout-root .node-bar { margin: 8px 0 6px; }
+  .scout-root .node-result { font-size: 11px; padding: 6px 8px; }
+  .scout-root .node-ico { width: 24px; height: 24px; }
+  .scout-root .node-line { flex: none; }
+  .scout-root .node-status { display: none; }
+  .scout-root .node-title { font-size: 12.5px; }
+}

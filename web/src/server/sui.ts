@@ -69,3 +69,25 @@ export async function balances(owner: string) {
   ]);
   return { sui: BigInt((s as any).balance.balance), usdc: BigInt((u as any).balance.balance) };
 }
+
+/**
+ * The Sui chain's clock (0x6). Anything the contracts check against `clock.timestamp_ms()`
+ * (e.g. "start week is not in the past") must be quoted from this, not the server's clock,
+ * which can drift by minutes. Cached briefly.
+ */
+let chainClock: { at: number; chain: number } | null = null;
+export async function chainNowMs() {
+  const local = Date.now();
+  if (chainClock && local - chainClock.at < 10_000) return chainClock.chain + (local - chainClock.at);
+  try {
+    const r: any = await sui().getObject({ objectId: "0x6", include: { json: true } } as any);
+    const chain = Number(r.object?.json?.timestamp_ms);
+    if (Number.isFinite(chain) && chain > 0) {
+      chainClock = { at: local, chain };
+      return chain;
+    }
+  } catch {
+    /* fall back to the local clock */
+  }
+  return local;
+}

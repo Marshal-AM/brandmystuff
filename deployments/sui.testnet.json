@@ -25,5 +25,12 @@
         "offering::transfer_units"
       ]
     }
-  ]
+  ],
+  "mandate": {
+    "packageId": "0x04edf0fa352278e44954e97c557844d3dcb76ab0ff13be1c1eb0f601219f7572",
+    "upgradeCapId": "0xeacac15f25cf2e1a5c7c85f4d474501c1d2c1ce805f499809be02b2976503faa",
+    "publishDigest": "FjmmhghkW1U7oz81auWCKWdrBtb6KEwrMwCfdj6GfCkN",
+    "module": "mandate",
+    "publishedAt": "2026-09-26T05:54:40.194Z"
+  }
 }

@@ -1,0 +1,649 @@
+/* Scoped copy of the reference Scout UI styles (see scripts in commit). */
+.scout-root .tx-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 76px 16px 16px;
+  background: rgba(10, 10, 11, 0.62);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.scout-root .tx-modal {
+  position: relative;
+  width: min(392px, 100%);
+  display: flex;
+  flex-direction: column;
+  border-radius: 26px;
+  background: linear-gradient(180deg, var(--p-900) 0%, var(--p-950) 40%);
+  border: 1px solid rgba(171, 159, 242, 0.22);
+  color: #fff;
+  overflow: hidden;
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 0 80px rgba(171, 159, 242, 0.12);
+}
+.scout-root .tx-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 0;
+}
+.scout-root .tx-acct {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.scout-root .tx-acct > div {
+  display: grid;
+}
+.scout-root .tx-acct b {
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+}
+.scout-root .tx-acct span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.scout-root .tx-avatar {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--p);
+}
+.scout-root .tx-net {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 600;
+}
+.scout-root .tx-net i {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  background: var(--p);
+  box-shadow: 0 0 8px var(--p);
+  animation: sc-live 1.6s ease-in-out infinite;
+}
+.scout-root .tx-balance {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 18px 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+}
+.scout-root .tx-balance > div {
+  display: grid;
+}
+.scout-root .tx-balance span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.scout-root .tx-balance b {
+  font-size: 16px;
+}
+.scout-root .tx-token {
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, var(--p-100) 70%);
+  box-shadow: inset 0 0 0 2px var(--p);
+}
+.scout-root .tx-body {
+  position: relative;
+  height: min(492px, calc(100vh - 280px));
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.scout-root .tx-pane {
+  padding: 16px 18px 18px;
+}
+.scout-root .tx-origin {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 10px 0 5px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 600;
+}
+.scout-root .tx-origin-ico {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 99px;
+  background: var(--p);
+}
+.scout-root .tx-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--p);
+  font-size: 11px;
+}
+.scout-root .tx-title {
+  margin: 14px 0 12px;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.scout-root .tx-send {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(171, 159, 242, 0.16), rgba(171, 159, 242, 0.04));
+  border: 1px solid rgba(171, 159, 242, 0.25);
+}
+.scout-root .tx-send > div {
+  display: grid;
+  gap: 2px;
+}
+.scout-root .tx-send span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.scout-root .tx-send b {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.scout-root .tx-rows {
+  display: grid;
+  margin-top: 10px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.scout-root .tx-rows > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--line);
+}
+.scout-root .tx-rows > div:last-child {
+  border-bottom: 0;
+}
+.scout-root .tx-rows span {
+  color: var(--muted);
+}
+.scout-root .tx-rows b {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.scout-root .tx-rows em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted);
+}
+.scout-root .tx-checks {
+  display: grid;
+  gap: 6px;
+  margin: 12px 2px 0;
+  font-size: 11.5px;
+  color: var(--p);
+}
+.scout-root .tx-checks div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.scout-root .tx-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+.scout-root .tx-btn {
+  position: relative;
+  height: 48px;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 15px;
+  cursor: default;
+  overflow: hidden;
+}
+.scout-root .tx-btn.ghost {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+}
+.scout-root .tx-btn.primary {
+  background: var(--p);
+  color: var(--ink);
+  box-shadow: 0 10px 30px rgba(171, 159, 242, 0.35);
+}
+.scout-root .tx-btn-in {
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+}
+.scout-root .tx-btn-in > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.scout-root .tx-sign-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.55));
+}
+.scout-root .tx-sending {
+  padding-top: 14px;
+}
+.scout-root .tx-status {
+  display: grid;
+  gap: 3px;
+  margin: 14px 0 12px;
+  text-align: center;
+}
+.scout-root .tx-status b {
+  display: inline-flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 2px;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+.scout-root .tx-status span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.scout-root .tx-status.is-success b {
+  font-size: 20px;
+}
+.scout-root .tx-dots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 3px;
+}
+.scout-root .tx-dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 99px;
+  background: #fff;
+  animation: sc-tx-dot 1s ease-in-out infinite;
+}
+.scout-root .tx-dots i:nth-child(2) { animation-delay: 0.15s; }
+.scout-root .tx-dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes sc-tx-dot {
+  0%, 100% { opacity: 0.2; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}
+.scout-root .tx-confirm {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  margin: 0 6px 12px;
+}
+.scout-root .tx-confirm-track {
+  position: absolute;
+  left: 39px;
+  right: 39px;
+  top: 5px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.scout-root .tx-confirm-track i {
+  display: block;
+  height: 100%;
+  transform-origin: 0 50%;
+  background: var(--p);
+  box-shadow: 0 0 8px var(--p);
+}
+.scout-root .tx-confirm-step {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: 78px;
+  font-size: 10.5px;
+  white-space: nowrap;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  transition: color 0.4s;
+}
+.scout-root .tx-confirm-step span {
+  width: 12px;
+  height: 12px;
+  border-radius: 99px;
+  background: var(--p-800);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.4s var(--ease-out);
+}
+.scout-root .tx-confirm-step.is-on {
+  color: #fff;
+}
+.scout-root .tx-confirm-step.is-on span {
+  background: var(--p);
+  border-color: var(--p);
+  box-shadow: 0 0 10px var(--p);
+}
+.scout-root .tx-payouts {
+  display: grid;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+}
+.scout-root .tx-payout {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 8px;
+  border-radius: 9px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  transition: color 0.3s, background-color 0.3s;
+}
+.scout-root .tx-payout.is-done {
+  color: #fff;
+  background: rgba(171, 159, 242, 0.08);
+}
+.scout-root .tx-payout-st {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 99px;
+}
+.scout-root .tx-payout.is-done .tx-payout-st {
+  background: var(--p);
+  color: var(--ink);
+}
+.scout-root .tx-spin {
+  width: 13px;
+  height: 13px;
+  border-radius: 99px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-top-color: var(--p);
+  animation: sc-rotate 0.7s linear infinite;
+}
+.scout-root .tx-payout-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scout-root .tx-payout-addr {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.scout-root .tx-payout-amt {
+  width: 44px;
+  text-align: right;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.scout-root .tx-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 11px;
+  border-top: 1px solid var(--line);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.scout-root .tx-stage {
+  position: relative;
+  height: 150px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--p-950) 0%, var(--p-800) 50%, var(--p-950) 100%);
+  border: 1px solid var(--line);
+  isolation: isolate;
+}
+.scout-root .tx-streaks {
+  position: absolute;
+  inset: -30% -10%;
+  transform: rotate(-16deg);
+}
+.scout-root .tx-streaks i {
+  position: absolute;
+  left: 0;
+  width: 70%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, transparent, rgba(171, 159, 242, 0.9) 35%, rgba(255, 255, 255, 0.85) 55%, rgba(171, 159, 242, 0.5) 75%, transparent);
+  filter: blur(12px);
+  mix-blend-mode: screen;
+  opacity: 0.95;
+  animation: sc-tx-streak linear infinite;
+}
+@keyframes sc-tx-streak {
+  from { transform: translateX(160%); }
+  to { transform: translateX(-120%); }
+}
+.scout-root .tx-lines {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.scout-root .tx-lines.front {
+  z-index: 4;
+}
+.scout-root .tx-lines i {
+  position: absolute;
+  left: 0;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #fff, rgba(255, 255, 255, 0));
+  animation: sc-tx-line linear infinite;
+}
+@keyframes sc-tx-line {
+  from { transform: translateX(420px); }
+  to { transform: translateX(-160px); }
+}
+.scout-root .tx-lines, .scout-root .tx-streaks {
+  transition: opacity 0.7s var(--ease-out);
+}
+.scout-root .tx-stage.is-done .tx-lines {
+  opacity: 0;
+}
+.scout-root .tx-stage.is-done .tx-streaks {
+  opacity: 0.35;
+}
+.scout-root .tx-coin-wrap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  width: 92px;
+  height: 92px;
+  margin: -46px 0 0 -46px;
+  perspective: 500px;
+  animation: sc-tx-bob 0.9s ease-in-out infinite;
+}
+.scout-root .tx-stage.is-done .tx-coin-wrap {
+  animation: none;
+}
+@keyframes sc-tx-bob {
+  0%, 100% { transform: translateY(-4px) rotate(-6deg); }
+  50% { transform: translateY(4px) rotate(-3deg); }
+}
+.scout-root .tx-trail {
+  position: absolute;
+  right: 70%;
+  top: 0;
+  width: 90px;
+  height: 100%;
+}
+.scout-root .tx-trail i {
+  position: absolute;
+  right: 0;
+  height: 4px;
+  width: 100%;
+  margin-top: -2px;
+  border-radius: 99px;
+  background: linear-gradient(270deg, rgba(255, 255, 255, 0.9), transparent);
+  transform-origin: 100% 50%;
+  animation: sc-tx-trail 0.35s ease-out infinite;
+}
+.scout-root .tx-trail i:nth-child(2) { animation-delay: -0.12s; width: 130%; }
+.scout-root .tx-trail i:nth-child(3) { animation-delay: -0.24s; }
+@keyframes sc-tx-trail {
+  from { transform: scaleX(0.3); opacity: 1; }
+  to { transform: scaleX(1); opacity: 0; }
+}
+.scout-root .tx-stage.is-done .tx-trail {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.scout-root .tx-coin-flip {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+.scout-root .tx-coin {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  animation: sc-tx-wobble 1.8s ease-in-out infinite;
+}
+.scout-root .tx-stage.is-done .tx-coin {
+  animation: none;
+}
+@keyframes sc-tx-wobble {
+  0%, 100% { transform: rotateY(-24deg) rotateX(6deg); }
+  50% { transform: rotateY(24deg) rotateX(-4deg); }
+}
+.scout-root .tx-coin-edge {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--p-600);
+  box-shadow: inset 0 0 0 2px var(--p-700);
+}
+.scout-root .tx-coin-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.scout-root .tx-coin-face.front {
+  transform: translateZ(5px);
+  background:
+    radial-gradient(circle at 32% 26%, #fff 0 18%, transparent 44%),
+    radial-gradient(circle at 50% 50%, #fff 0%, var(--p-100) 60%, var(--p-300) 100%);
+  box-shadow:
+    inset 0 0 0 5px var(--p),
+    inset 0 0 0 7px var(--p-600),
+    inset 0 -8px 16px rgba(31, 29, 44, 0.18);
+}
+.scout-root .tx-coin-face.back {
+  transform: rotateY(180deg) translateZ(5px);
+  background: radial-gradient(circle at 32% 26%, #fff 0%, var(--p) 70%);
+  box-shadow: inset 0 0 0 5px #fff, inset 0 0 0 7px var(--p-600);
+}
+.scout-root .tx-coin-shadow {
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: -26px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(10, 10, 11, 0.55);
+  filter: blur(5px);
+  animation: sc-tx-shadow 0.9s ease-in-out infinite;
+}
+@keyframes sc-tx-shadow {
+  0%, 100% { transform: scaleX(0.85); opacity: 0.5; }
+  50% { transform: scaleX(1); opacity: 0.8; }
+}
+.scout-root .tx-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  width: 92px;
+  height: 92px;
+  margin: -46px 0 0 -46px;
+  border-radius: 50%;
+  border: 2px solid var(--p);
+}
+.scout-root .tx-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 20;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 10px rgba(10, 10, 11, 0.35));
+}
+.scout-root .tx-cursor svg {
+  display: block;
+}
+.scout-root .tx-cursor-tag {
+  position: absolute;
+  left: 18px;
+  top: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px 0 5px;
+  border-radius: 99px;
+  background: var(--p);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  border: 1.5px solid var(--ink);
+}
+.scout-root .tx-ripple {
+  position: absolute;
+  left: -18px;
+  top: -18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(171, 159, 242, 0.6);
+  border: 2px solid var(--p);
+}
+@media (max-height: 800px) {
+  .scout-root .tx-overlay { padding-top: 70px; }
+  .scout-root .tx-balance { margin-top: 10px; padding: 9px 12px; }
+  .scout-root .tx-body { height: min(440px, calc(100vh - 250px)); }
+  .scout-root .tx-pane { padding: 12px 16px 14px; }
+  .scout-root .tx-stage { height: 112px; }
+  .scout-root .tx-status { margin: 10px 0 8px; }
+  .scout-root .tx-confirm { margin-bottom: 8px; }
+  .scout-root .tx-payout { padding: 4px 8px; }
+  .scout-root .tx-title { margin: 10px 0 8px; font-size: 19px; }
+  .scout-root .tx-send { padding: 10px 14px; }
+  .scout-root .tx-rows > div { padding: 8px 14px; }
+  .scout-root .tx-actions { margin-top: 12px; }
+}
+
+/* ---- live data additions ---- */
+.scout-root .tx-fail { display: grid; gap: 6px; margin-top: 18px; padding: 14px; border-radius: 16px; border: 1px dashed rgba(171, 159, 242, 0.4); background: rgba(171, 159, 242, 0.06); }
+.scout-root .tx-fail b { font-size: 14px; }
+.scout-root .tx-fail span { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.scout-root .tx-fail .tx-btn { margin-top: 6px; }
+.scout-root .tx-wait { display: block; width: 8px; height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.2); }

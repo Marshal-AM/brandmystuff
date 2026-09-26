@@ -13,6 +13,8 @@
     "ens:bootstrap": "tsx scripts/ens-bootstrap.ts",
     "e2e:scoring": "tsx e2e/scoring.e2e.ts",
     "e2e:flows": "tsx e2e/flows.e2e.ts",
+    "e2e:agent": "tsx e2e/agent.e2e.ts",
+    "mandate:publish": "tsx scripts/publish-mandate.ts",
     "e2e:ui": "playwright test"
   },
   "dependencies": {

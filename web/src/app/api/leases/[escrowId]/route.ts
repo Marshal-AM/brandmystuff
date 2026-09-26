@@ -14,7 +14,8 @@ export const GET = handler(async (req, ctx: { params: Promise<{ escrowId: string
     db().from("clicks").select("*", { count: "exact", head: true }).eq("escrow_id", escrowId),
     me ? q(db().from("conversations").select("id").eq("escrow_id", escrowId).maybeSingle()) : null,
   ]);
-  const role = me?.sui_address === l.owner ? "owner" : me?.sui_address === l.advertiser ? "advertiser" : me?.is_admin ? "admin" : "public";
+  const myAgent = me ? await q(db().from("brand_agents").select("agent_address").eq("user_id", me.id).maybeSingle()) : null;
+  const role = me?.sui_address === l.owner ? "owner" : me?.sui_address === l.advertiser || (myAgent && myAgent.agent_address === l.advertiser) ? "advertiser" : me?.is_admin ? "admin" : "public";
   const periods = Array.from({ length: l.weeks + 1 }, (_, k) => {
     const w = periodWindow(l, k);
     const t = tranches.find((x: any) => x.period === k);

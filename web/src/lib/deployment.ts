@@ -14,6 +14,8 @@ export const SUI = {
   platformAddress: "0xc01af55e5dd68d924bd50e9c1556e07cd07cc1582e0f14cc0fdea17017c03848",
   usdcType: "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC",
   usdcDecimals: 6,
+  /** Brand-agent budget mandates (move/mandate, published separately). */
+  mandatePackageId: "0x04edf0fa352278e44954e97c557844d3dcb76ab0ff13be1c1eb0f601219f7572",
   weekMs: 600_000,
   explorer: "https://suiscan.xyz/testnet",
 };

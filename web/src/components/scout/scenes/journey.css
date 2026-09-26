@@ -1,0 +1,204 @@
+/* Scoped copy of the reference Scout UI styles (see scripts in commit). */
+.scout-root .journey {
+  background: var(--ink);
+}
+.scout-root .nodes-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+.scout-root .bot-anchor {
+  position: absolute;
+  z-index: 30;
+}
+.scout-root .bot-motion {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+.scout-root .bot-motion svg {
+  display: block;
+}
+.scout-root .say {
+  position: absolute;
+  z-index: 2;
+  transform-origin: 0% 100%;
+  padding: 12px 18px;
+  border-radius: 20px 20px 20px 6px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25), 0 0 0 3px var(--ink);
+  translate: 0 -100%;
+}
+.scout-root .say span {
+  display: inline-block;
+}
+.scout-root .speed {
+  position: absolute;
+  right: 70%;
+  top: 0;
+  width: 150px;
+  height: 100%;
+}
+.scout-root .speed i {
+  position: absolute;
+  right: 0;
+  height: 4px;
+  width: 70px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, transparent, #fff);
+  animation: sc-speed 0.55s linear infinite;
+  opacity: 0;
+}
+.scout-root .speed-light i {
+  background: linear-gradient(90deg, transparent, var(--ink));
+}
+@keyframes sc-speed {
+  0% { transform: translateX(20px) scaleX(0.3); opacity: 0; }
+  30% { opacity: 0.9; }
+  100% { transform: translateX(-90px) scaleX(1); opacity: 0; }
+}
+.scout-root .dust-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 29;
+  pointer-events: none;
+}
+.scout-root .dust {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+.scout-root .dust i {
+  position: absolute;
+  left: -12px;
+  top: -12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+.scout-root .dust-light {
+  background: #fff;
+  box-shadow: inset -3px -3px 0 var(--p-200);
+}
+.scout-root .dust-dark {
+  background: var(--p-300);
+  opacity: 0.6;
+}
+.scout-root .ltitle {
+  position: absolute;
+  left: 50%;
+  top: max(84px, 9vh);
+  translate: -50% 0;
+  z-index: 25;
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.scout-root .ltitle-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 12px 0 4px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.scout-root .ltitle-kicker span {
+  display: grid;
+  place-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 99px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.scout-root .ltitle-light .ltitle-kicker {
+  background: rgba(10, 10, 11, 0.06);
+  color: var(--ink);
+}
+.scout-root .ltitle-light .ltitle-kicker span {
+  background: var(--ink);
+  color: var(--p);
+}
+.scout-root .ltitle-dark .ltitle-kicker {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.scout-root .ltitle-dark .ltitle-kicker span {
+  background: var(--p);
+  color: var(--ink);
+}
+.scout-root .ltitle-name {
+  margin: 10px 0 6px;
+  font-size: clamp(30px, 3.6vw, 50px);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  perspective: 600px;
+}
+.scout-root .ltitle-name span {
+  display: inline-block;
+  transform-origin: 50% 100%;
+}
+.scout-root .ltitle-light .ltitle-name { color: var(--ink); }
+.scout-root .ltitle-dark .ltitle-name { color: #fff; }
+.scout-root .ltitle-blurb {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+.scout-root .ltitle-light .ltitle-blurb { color: rgba(10, 10, 11, 0.55); }
+.scout-root .ltitle-dark .ltitle-blurb { color: var(--muted); }
+.scout-root .lbadge {
+  position: absolute;
+  left: 50%;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 18px 0 7px;
+  border-radius: 99px;
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.scout-root .lbadge-light {
+  background: var(--ink);
+  color: #fff;
+  box-shadow: 0 16px 40px rgba(31, 29, 44, 0.3);
+}
+.scout-root .lbadge-dark {
+  background: var(--p);
+  color: var(--ink);
+  box-shadow: 0 16px 50px rgba(171, 159, 242, 0.45);
+}
+.scout-root .lbadge-ico {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 99px;
+}
+.scout-root .lbadge-light .lbadge-ico { background: var(--p); color: var(--ink); }
+.scout-root .lbadge-dark .lbadge-ico { background: var(--ink); color: var(--p); }
+.scout-root .lbadge-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid var(--p);
+}
+@media (max-width: 760px) {
+  .scout-root .ltitle { top: auto; bottom: 20px; }
+  .scout-root .say { font-size: 13px; padding: 9px 12px; }
+}

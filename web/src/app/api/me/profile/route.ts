@@ -13,6 +13,10 @@ const schema = z.object({
   twitter: z.string().max(40).optional(),
   website: z.string().url().max(200).optional().or(z.literal("")),
   brandName: z.string().max(60).optional(),
+  accountType: z.enum(["owner", "brand"]).optional(),
+  brandAbout: z.string().max(600).optional(),
+  brandLogoBlobId: z.string().max(120).optional(),
+  brandLocation: z.string().max(120).optional(),
   avatarBlobId: z.string().optional(),
 });
 
@@ -25,9 +29,14 @@ export const POST = handler(async (req) => {
     twitter: b.twitter ?? undefined,
     website: b.website || undefined,
     brand_name: b.brandName ?? undefined,
+    brand_about: b.brandAbout ?? undefined,
+    brand_logo_blob_id: b.brandLogoBlobId ?? undefined,
+    brand_location: b.brandLocation ?? undefined,
     avatar_blob_id: b.avatarBlobId ?? undefined,
   };
   let ensName = u.ens_name;
+  if (b.accountType && !u.handle) patch.account_type = b.accountType;
+  if (b.accountType === "brand" && !u.handle && !b.brandName) throw new HttpError(400, "Tell us your brand name");
   if (b.handle && !u.handle) {
     if (RESERVED.has(b.handle) || b.handle.startsWith("l-")) throw new HttpError(400, "That handle is reserved");
     const taken = await q(db().from("users").select("id").eq("handle", b.handle).maybeSingle());

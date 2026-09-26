@@ -1,0 +1,454 @@
+/* Scoped copy of the reference Scout UI styles (see scripts in commit). */
+.scout-root .scout {
+  background: var(--ink);
+}
+.scout-root .sc-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.scout-root .sc-tunnel {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.scout-root .sc-space {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+.scout-root .sc-floor {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 3000px;
+  height: 5000px;
+  margin: -2500px 0 0 -1500px;
+  background-image:
+    linear-gradient(rgba(171, 159, 242, 0.22) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, rgba(171, 159, 242, 0.22) 1.5px, transparent 1.5px);
+  background-size: 120px 120px;
+  animation: sc-floor 0.9s linear infinite;
+  mask-image: radial-gradient(ellipse at 50% 50%, #000 10%, transparent 55%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 50%, #000 10%, transparent 55%);
+}
+.scout-root .sc-floor {
+  transform: translateY(330px) rotateX(90deg);
+}
+@keyframes sc-floor {
+  to { background-position: 0 120px; }
+}
+.scout-root .sc-card {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  will-change: transform, opacity;
+}
+.scout-root .sc-card-in {
+  position: relative;
+  height: 100%;
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--p-950);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+}
+.scout-root .sc-art {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+}
+.scout-root .sc-meta {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px 14px;
+}
+.scout-root .sc-meta b {
+  font-size: 14.5px;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scout-root .sc-meta span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.scout-root .sc-verdict {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+  z-index: 2;
+}
+.scout-root .is-match .sc-verdict {
+  background: var(--p);
+  color: var(--ink);
+  box-shadow: 0 0 20px rgba(171, 159, 242, 0.8);
+}
+.scout-root .is-skip .sc-verdict {
+  background: rgba(10, 10, 11, 0.8);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--line-strong);
+}
+.scout-root .sc-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 11, 0.55);
+  pointer-events: none;
+}
+.scout-root .sc-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 10px;
+  z-index: 2;
+  background: linear-gradient(180deg, transparent, rgba(171, 159, 242, 0.9) 45%, #fff 50%, rgba(171, 159, 242, 0.9) 55%, transparent);
+  box-shadow: 0 0 24px rgba(171, 159, 242, 0.9);
+  pointer-events: none;
+}
+.scout-root .sc-drift .sc-card-in {
+  border-radius: 14px;
+  box-shadow: none;
+}
+.scout-root .sc-beam {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.scout-root .sc-portal {
+  position: absolute;
+  left: -90px;
+  top: -90px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 60px var(--p), inset 0 0 40px var(--p);
+  pointer-events: none;
+}
+.scout-root .sc-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2.5px var(--p), inset 0 0 40px rgba(171, 159, 242, 0.5);
+  pointer-events: none;
+}
+.scout-root .sc-bot {
+  position: absolute;
+  z-index: 5;
+  width: 0;
+  height: 0;
+}
+.scout-root .sc-orbit {
+  position: absolute;
+  left: 0;
+  top: 0;
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 1px solid rgba(171, 159, 242, 0.25);
+  transform: rotateX(72deg);
+  animation: sc-orbit-tilt 6s ease-in-out infinite;
+}
+@keyframes sc-orbit-tilt {
+  50% { transform: rotateX(72deg) rotateY(14deg); }
+}
+.scout-root .sc-orbit i {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: sc-rotate 2.4s linear infinite;
+}
+.scout-root .sc-orbit i::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: var(--p);
+  box-shadow: 0 0 16px var(--p);
+}
+.scout-root .sc-orbit i:nth-child(2) {
+  animation-delay: -1.2s;
+}
+.scout-root .sc-orbit i:nth-child(2)::before {
+  background: #fff;
+}
+.scout-root .sc-thought {
+  position: absolute;
+  left: 0;
+  z-index: 3;
+  translate: 0 -100%;
+  padding-bottom: 26px;
+}
+.scout-root .sc-thought-dot {
+  position: absolute;
+  left: 50%;
+  border-radius: 50%;
+  background: #fff;
+}
+.scout-root .sc-thought-dot.d1 {
+  bottom: 12px;
+  width: 10px;
+  height: 10px;
+  margin-left: -2px;
+}
+.scout-root .sc-thought-dot.d2 {
+  bottom: 0;
+  width: 6px;
+  height: 6px;
+  margin-left: 4px;
+}
+.scout-root .sc-thought-txt {
+  display: inline-block;
+}
+.scout-root .sc-cloud {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 10px 10px;
+  border-radius: 22px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), 0 0 0 6px rgba(255, 255, 255, 0.12);
+  transition: box-shadow 0.4s var(--ease-out);
+}
+.scout-root .sc-cloud.is-match {
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), 0 0 0 6px rgba(171, 159, 242, 0.45), 0 0 40px rgba(171, 159, 242, 0.5);
+}
+.scout-root .sc-think-ico {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 99px;
+  background: var(--ink);
+  color: var(--p);
+}
+.scout-root .sc-think-ico span {
+  display: grid;
+}
+.scout-root .sc-hud-top {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: max(84px, 10vh);
+  z-index: 6;
+  text-align: center;
+  pointer-events: none;
+}
+.scout-root .sc-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--p);
+}
+.scout-root .sc-live {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  background: var(--p);
+  box-shadow: 0 0 10px var(--p);
+  animation: sc-live 1s infinite;
+}
+.scout-root .sc-hud-top h2 {
+  margin: 8px 0 0;
+  font-size: clamp(28px, 3.4vw, 46px);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+}
+.scout-root .sc-dock {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  translate: -50% 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 12px 12px 18px;
+  border-radius: 22px;
+  background: rgba(18, 17, 23, 0.72);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.scout-root .sc-map {
+  position: relative;
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 2px;
+}
+.scout-root .sc-tray {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 196px;
+  height: 52px;
+  padding: 0 14px 0 8px;
+  border-radius: 14px;
+  background: rgba(171, 159, 242, 0.08);
+  border: 1px solid rgba(171, 159, 242, 0.2);
+}
+.scout-root .sc-tray-stack {
+  position: relative;
+  flex: 1;
+  height: 36px;
+}
+.scout-root .sc-tray-count {
+  display: grid;
+  justify-items: center;
+  line-height: 1;
+}
+.scout-root .sc-tray-count b {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--p);
+}
+.scout-root .sc-tray-count span {
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.scout-root .sc-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.scout-root .sc-progress-bar {
+  width: 140px;
+  height: 3px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.scout-root .sc-progress-bar i {
+  display: block;
+  height: 100%;
+  transform-origin: 0 50%;
+  background: var(--p);
+  box-shadow: 0 0 8px var(--p);
+}
+.scout-root .sc-map-track {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  top: 12px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.scout-root .sc-map-fill {
+  display: block;
+  height: 100%;
+  transform-origin: 0 50%;
+  background: var(--p);
+  box-shadow: 0 0 10px var(--p);
+}
+.scout-root .sc-map-node {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: 44px;
+}
+.scout-root .sc-map-dot {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 99px;
+  background: var(--p-900);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.4s var(--ease-out);
+}
+.scout-root .is-done .sc-map-dot {
+  background: var(--p);
+  border-color: var(--p);
+  color: var(--ink);
+}
+.scout-root .is-active .sc-map-dot {
+  background: #fff;
+  border-color: #fff;
+  transform: scale(1.15);
+}
+.scout-root .sc-map-ping {
+  position: absolute;
+  inset: -2px;
+  border-radius: 99px;
+  border: 2px solid #fff;
+  animation: sc-ping 1.2s ease-out infinite;
+}
+@keyframes sc-ping {
+  to { transform: scale(2.2); opacity: 0; }
+}
+.scout-root .sc-map-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+}
+.scout-root .is-active .sc-map-label {
+  color: #fff;
+}
+.scout-root .is-done .sc-map-label {
+  color: var(--p);
+}
+.scout-root .sc-tray-item {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 0 2px var(--ink), 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+.scout-root .sc-tray-item svg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+}
+.scout-root .sc-whiteout {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, #fff 0%, var(--p) 30%, var(--p-800) 60%, var(--ink) 90%);
+}
+@media (max-width: 760px) {
+  .scout-root .sc-dock { bottom: 12px; padding: 10px; gap: 10px; }
+  .scout-root .sc-map-label { display: none; }
+  .scout-root .sc-tray { width: 120px; }
+  .scout-root .sc-cloud { font-size: 12px; }
+}
+.scout-root .sc-tray-item img { display: block; width: 100%; aspect-ratio: 16 / 10; }

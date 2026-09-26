@@ -1,0 +1,8 @@
+[package]
+name = "brandmystuff_mandate"
+edition = "2024"
+
+[dependencies]
+
+[addresses]
+brandmystuff_mandate = "0x0"

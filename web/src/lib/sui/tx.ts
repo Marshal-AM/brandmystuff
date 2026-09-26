@@ -453,3 +453,50 @@ export function planFills<T extends { units: number; price_per_unit: string | nu
   const cost = fills.reduce((a, f) => a + BigInt(f.order.price_per_unit) * BigInt(f.units), 0n);
   return { fills, filled: units - left, left, cost, avg: units - left > 0 ? Number(cost) / (units - left) : 0 };
 }
+
+// === brand-agent budget mandates (separate package: move/mandate) ===
+const mt = (f: string) => `${SUI.mandatePackageId}::mandate::${f}`;
+export const MANDATE_TYPE = `${SUI.mandatePackageId}::mandate::BudgetMandate<${U}>`;
+
+/** Brand-signed: fund a mandate for its agent. Only `payee` can ever receive payments. */
+export function createMandate(p: { amount: bigint; agent: string; payee: string; perPaymentCap: bigint; expiresMs: bigint }) {
+  const tx = new Transaction();
+  tx.moveCall({
+    target: mt("create"),
+    typeArguments: [U],
+    arguments: [tx.coin({ type: U, balance: p.amount }), tx.pure.address(p.agent), tx.pure.address(p.payee), tx.pure.u64(p.perPaymentCap), tx.pure.u64(p.expiresMs), tx.object.clock()],
+  });
+  return tx;
+}
+
+/** Agent-signed: pay the mandate's payee (used as the x402 payment transaction). */
+export function mandateSpend(p: { mandateId: string; amount: bigint; memo: string }) {
+  const tx = new Transaction();
+  tx.moveCall({ target: mt("spend"), typeArguments: [U], arguments: [tx.object(p.mandateId), tx.pure.u64(p.amount), bytes(tx, new TextEncoder().encode(p.memo.slice(0, 120))), tx.object.clock()] });
+  return tx;
+}
+
+export function mandateTopUp(p: { mandateId: string; amount: bigint }) {
+  const tx = new Transaction();
+  tx.moveCall({ target: mt("top_up"), typeArguments: [U], arguments: [tx.object(p.mandateId), tx.coin({ type: U, balance: p.amount })] });
+  return tx;
+}
+
+export function mandateUpdate(p: { mandateId: string; perPaymentCap: bigint; expiresMs: bigint; active: boolean }) {
+  const tx = new Transaction();
+  tx.moveCall({ target: mt("update"), typeArguments: [U], arguments: [tx.object(p.mandateId), tx.pure.u64(p.perPaymentCap), tx.pure.u64(p.expiresMs), tx.pure.bool(p.active)] });
+  return tx;
+}
+
+export function mandateRevoke(p: { mandateId: string }) {
+  const tx = new Transaction();
+  tx.moveCall({ target: mt("revoke"), typeArguments: [U], arguments: [tx.object(p.mandateId)] });
+  return tx;
+}
+
+/** Returns a refunded coin into the mandate (anyone may call). */
+export function mandateRefund(p: { mandateId: string; amount: bigint }) {
+  const tx = new Transaction();
+  tx.moveCall({ target: mt("refund"), typeArguments: [U], arguments: [tx.object(p.mandateId), tx.coin({ type: U, balance: p.amount })] });
+  return tx;
+}

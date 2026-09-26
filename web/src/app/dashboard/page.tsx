@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUpRight, BellRing, Camera, Clock, Plus } from "lucide-react";
@@ -42,6 +42,11 @@ function Urgent({ icon: Icon, title, children }: { icon: any; title: string; chi
 export default function Dashboard() {
   const { authenticated, api, ready, me } = useSession();
   const [tab, setTab] = useState<"owner" | "advertiser" | "investor">("owner");
+  const isBrand = me?.user?.account_type === "brand";
+  // Brands only buy ads, so their dashboard is the advertiser view.
+  useEffect(() => {
+    if (isBrand && tab !== "advertiser") setTab("advertiser");
+  }, [isBrand, tab]);
   const { data, isLoading } = useQuery({ queryKey: ["dashboard"], queryFn: () => api<any>("/api/dashboard"), enabled: authenticated, refetchInterval: 20000 });
   const { data: pf } = useQuery({ queryKey: ["portfolio"], queryFn: () => api<any>("/api/portfolio"), enabled: authenticated && tab === "investor" });
   if (ready && !authenticated)
@@ -56,7 +61,7 @@ export default function Dashboard() {
   const name = me?.user?.display_name ?? me?.user?.handle ?? "there";
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6">
-      <PageHeader kicker="Dashboard" title={`Welcome back, ${name}`} sub="Everything you own, lease and hold, updated live from Sui." actions={<Tabs value={tab} onChange={setTab} tabs={[{ id: "owner", label: "Owner" }, { id: "advertiser", label: "Advertiser" }, { id: "investor", label: "Investor" }]} />} />
+      <PageHeader kicker="Dashboard" title={`Welcome back, ${name}`} sub="Everything you own, lease and hold, updated live from Sui." actions={isBrand ? undefined : <Tabs value={tab} onChange={setTab} tabs={[{ id: "owner", label: "Owner" }, { id: "advertiser", label: "Advertiser" }, { id: "investor", label: "Investor" }]} />} />
       <AnimatePresence mode="wait">
         <motion.div key={tab} initial={{ opacity: 0, y: 16, filter: "blur(6px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -10, filter: "blur(6px)" }} transition={{ duration: 0.45, ease: EASE }}>
           {tab === "owner" && (

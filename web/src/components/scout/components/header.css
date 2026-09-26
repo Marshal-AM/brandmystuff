@@ -1,0 +1,189 @@
+/* Scoped copy of the reference Scout UI styles (see scripts in commit). */
+.scout-root .hdr {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  pointer-events: none;
+}
+.scout-root .hdr > * {
+  pointer-events: auto;
+}
+.scout-root .hdr-pill {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  border-radius: 999px;
+  background: rgba(10, 10, 11, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+}
+.scout-root .hdr-brand {
+  gap: 10px;
+  padding: 0 16px 0 6px;
+}
+.scout-root .hdr-logo {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--p);
+}
+.scout-root .hdr-name {
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: -0.02em;
+}
+.scout-root .hdr-dim {
+  color: var(--muted);
+  font-weight: 500;
+}
+.scout-root .hdr-steps {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  padding: 4px;
+  gap: 2px;
+}
+.scout-root .hdr-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px 0 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
+  transition: color 0.4s var(--ease-out);
+  white-space: nowrap;
+}
+.scout-root .hdr-step.is-active {
+  color: var(--ink);
+}
+.scout-root .hdr-step.is-done {
+  color: rgba(255, 255, 255, 0.85);
+}
+.scout-root .hdr-step-hl {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--p);
+  box-shadow: 0 0 24px rgba(171, 159, 242, 0.45);
+}
+.scout-root .hdr-step-dot, .scout-root .hdr-step-label {
+  position: relative;
+}
+.scout-root .hdr-step-dot {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.scout-root .hdr-step.is-active .hdr-step-dot {
+  background: var(--ink);
+  color: var(--p);
+}
+.scout-root .hdr-step.is-done .hdr-step-dot {
+  background: var(--p);
+  color: var(--ink);
+}
+.scout-root .hdr-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.scout-root .hdr-chip {
+  gap: 9px;
+  padding: 0 16px 0 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.scout-root .hdr-chip-av {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--white);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 14px;
+}
+.scout-root .run {
+  position: relative;
+  height: 44px;
+  min-width: 108px;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: var(--p);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.25) inset,
+    0 10px 30px rgba(171, 159, 242, 0.35);
+}
+.scout-root .run:disabled {
+  cursor: default;
+}
+.scout-root .run-running {
+  background: var(--white);
+}
+.scout-root .run-inner {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+.scout-root .run-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.65) 50%, transparent 70%);
+  translate: -120% 0;
+  animation: sc-run-shine 3.2s var(--ease-in-out) infinite;
+}
+.scout-root .run-idle .run-shine {
+  animation-duration: 2.4s;
+}
+@keyframes sc-run-shine {
+  0%,
+  55% { translate: -120% 0; }
+  100% { translate: 120% 0; }
+}
+.scout-root .run-spin {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2.2px solid rgba(10, 10, 11, 0.2);
+  border-top-color: var(--ink);
+  animation: sc-rotate 0.7s linear infinite;
+}
+@media (max-width: 980px) {
+  .scout-root .hdr-step-label { display: none; }
+  .scout-root .hdr-step { padding: 0 8px; }
+}
+@media (max-width: 640px) {
+  .scout-root .hdr { padding: 12px; }
+  .scout-root .hdr-chip, .scout-root .hdr-dim { display: none; }
+  .scout-root .hdr-steps { top: 64px; }
+}

@@ -5,10 +5,13 @@ import { db, q } from "@/server/db";
 export const GET = handler(async (req) => {
   const u = await requireUser(req);
   const addr = u.sui_address ?? "";
+  // Leases a brand's agent booked (via x402) belong to the brand too.
+  const agentRow = await q(db().from("brand_agents").select("agent_address").eq("user_id", u.id).maybeSingle());
+  const advAddrs = [addr, agentRow?.agent_address].filter(Boolean) as string[];
   const [objects, ownerLeases, advLeases, brandAssets] = await Promise.all([
     q(db().from("objects").select("*").eq("owner_address", addr).order("created_at", { ascending: false })),
     q(db().from("leases").select("*, spaces(label, ens_name, closeup_blob_id, offering_id)").eq("owner", addr).order("created_at", { ascending: false })),
-    q(db().from("leases").select("*, spaces(label, ens_name, closeup_blob_id)").eq("advertiser", addr).order("created_at", { ascending: false })),
+    q(db().from("leases").select("*, spaces(label, ens_name, closeup_blob_id)").in("advertiser", advAddrs.length ? advAddrs : [""]).order("created_at", { ascending: false })),
     q(db().from("brand_assets").select("*").eq("user_id", u.id).order("created_at", { ascending: false })),
   ]);
   const spaces = objects.length ? await q(db().from("spaces").select("*").in("object_id", objects.map((o: any) => o.id)).order("created_at")) : [];

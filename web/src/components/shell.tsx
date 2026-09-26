@@ -18,6 +18,14 @@ const APP_NAV = [
   ["/messages", "Messages"],
 ] as const;
 
+/** Brands don't list objects or invest: they get their agent, the marketplace and their ads. */
+const BRAND_NAV = [
+  ["/agent", "Agent"],
+  ["/explore", "Explore"],
+  ["/dashboard", "My ads"],
+  ["/messages", "Messages"],
+] as const;
+
 const LANDING_NAV = [
   ["how-it-works", "How it works"],
   ["marketplace", "Marketplace"],
@@ -266,6 +274,8 @@ export default function Shell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [mobile, setMobile] = useState(false);
   const landing = path === "/";
+  const isBrand = me?.user?.account_type === "brand";
+  const nav = isBrand ? BRAND_NAV : APP_NAV;
   // Fixed-height, app-style pages: no footer so nothing scrolls past the viewport.
   const fixedPage = path.startsWith("/objects/") || /^\/messages\/[^/]+$/.test(path) || (path.endsWith(".brandmystuff.eth") && path.slice(1).split(".").length === 4);
   useEffect(() => {
@@ -279,6 +289,9 @@ export default function Shell({ children }: { children: ReactNode }) {
       sessionStorage.setItem("bms:return-to", path + window.location.search);
     } catch {}
   }, [path]);
+  useEffect(() => {
+    if (isBrand && (path === "/list" || path.startsWith("/offerings") || path === "/trade")) router.replace("/agent");
+  }, [isBrand, path, router]);
 
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
@@ -319,7 +332,7 @@ export default function Shell({ children }: { children: ReactNode }) {
                       {label}
                     </button>
                   ))
-                : APP_NAV.map(([href, label]) => (
+                : nav.map(([href, label]) => (
                     <Link key={href} href={href} className={cx("relative rounded-full px-3.5 py-2 text-sm font-medium transition-colors duration-300", active(href) ? "text-ink" : "text-white/60 hover:text-white")}>
                       {active(href) && <motion.span layoutId="nav-pill" className="absolute inset-0 rounded-full bg-p shadow-[0_0_24px_rgba(171,159,242,0.4)]" transition={{ type: "spring", stiffness: 380, damping: 32 }} />}
                       <span className="relative">{label}</span>
@@ -353,7 +366,7 @@ export default function Shell({ children }: { children: ReactNode }) {
             {mobile && (
               <motion.nav initial={{ opacity: 0, y: -10, height: 0 }} animate={{ opacity: 1, y: 0, height: "auto" }} exit={{ opacity: 0, y: -10, height: 0 }} transition={{ duration: 0.4, ease: EASE }} className="mx-auto mt-2 max-w-7xl overflow-hidden rounded-2xl border border-white/10 bg-ink/95 backdrop-blur-xl lg:hidden">
                 <div className="grid gap-1 p-2">
-                  {(landing ? LANDING_NAV.map(([id, label]) => ({ key: id, label, on: () => scrollTo(id) })) : APP_NAV.map(([href, label]) => ({ key: href, label, on: () => router.push(href) }))).map((n, i) => (
+                  {(landing ? LANDING_NAV.map(([id, label]) => ({ key: id, label, on: () => scrollTo(id) })) : nav.map(([href, label]) => ({ key: href, label, on: () => router.push(href) }))).map((n, i) => (
                     <motion.button key={n.key} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }} onClick={n.on} className="rounded-xl px-4 py-3 text-left text-sm font-semibold text-white/80 hover:bg-white/[0.06]">
                       {n.label}
                     </motion.button>
