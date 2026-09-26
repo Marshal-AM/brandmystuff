@@ -1,1 +1,26 @@
-{}
+{
+  "eth-sepolia": {
+    "address": "0xde0Ef453B6233549CbfcDe781838FAd7761A710C",
+    "deployTx": "0xe7cce738c3d2ccfc15d251eab7898527bdbc0e53eeafa824ec695d219859d4d5",
+    "startingBlock": 11785659,
+    "deployedAt": "2026-09-26T10:29:13.351Z"
+  },
+  "base-sepolia": {
+    "address": "0x436e6DbF5C73f416ce5D0D74495794647ab85118",
+    "deployTx": "0xf7828e27ef1c43f0e8e24384adfcf9470807f1164ea1f747da65ff62649e7f7d",
+    "startingBlock": 47325184,
+    "deployedAt": "2026-09-26T10:29:18.309Z"
+  },
+  "arb-sepolia": {
+    "address": "0x5273087816B636ab98455F9892A551E5E2935289",
+    "deployTx": "0xda9612c9ba430e44369fd03e11e2f3a5ac0d16949f1decefa5bccb6eabb44c0b",
+    "startingBlock": 312893043,
+    "deployedAt": "2026-09-26T10:29:21.355Z"
+  },
+  "op-sepolia": {
+    "address": "0x2AA2a1264a5a19f7d14Bf8a806f1fdaa12F3E226",
+    "deployTx": "0x3668433ac52c53b408831065cabc6333c335eb28addbf8f651651f31691f3b08",
+    "startingBlock": 49308062,
+    "deployedAt": "2026-09-26T10:29:27.431Z"
+  }
+}

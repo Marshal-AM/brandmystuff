@@ -90,7 +90,8 @@ export async function uploadContract(c: MbChain, label: string, a: { contractNam
     contractName: a.contractName,
     version: a.version,
     rawAbi: JSON.stringify(a.abi),
-    ...(a.bytecode ? { bin: a.bytecode } : {}),
+    // MultiBaas requires bytecode; ABI-only entries (Circle, USDC) are linked to existing addresses, never deployed.
+    bin: a.bytecode ?? "0x",
     ...(a.devdoc ? { developerDoc: JSON.stringify(a.devdoc) } : {}),
     ...(a.userdoc ? { userDoc: JSON.stringify(a.userdoc) } : {}),
   });
