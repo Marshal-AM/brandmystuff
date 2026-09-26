@@ -125,7 +125,10 @@ async function userIdByAddress(addr: string): Promise<string | null> {
   const u = await q(db().from("users").select("id").eq("sui_address", addr).maybeSingle());
   if (u) return u.id;
   const w = await q(db().from("linked_wallets").select("user_id").eq("address", addr).maybeSingle());
-  return w?.user_id ?? null;
+  if (w) return w.user_id;
+  // A brand's Scout agent books with its own wallet: the lease (and its chat) belongs to the brand.
+  const a = await q(db().from("brand_agents").select("user_id").eq("agent_address", addr).maybeSingle());
+  return a?.user_id ?? null;
 }
 
 async function project(e: Ev) {
