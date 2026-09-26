@@ -19,6 +19,7 @@ This README covers everything that has been built: the product, the architecture
 | Submission URL | _To be added_ |
 | Live App URL | _To be added_ (the app runs locally on `http://localhost:3010`) |
 | Source code | [github.com/Marshal-AM/brandmystuff](https://github.com/Marshal-AM/brandmystuff) |
+| Pitch deck | `/pitch` in the app ([source](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/pitch/page.tsx)) |
 | Product docs | [docs/](https://github.com/Marshal-AM/brandmystuff/tree/main/docs) |
 | Sui deployment manifest | [deployments/sui.testnet.json](https://github.com/Marshal-AM/brandmystuff/blob/main/deployments/sui.testnet.json) |
 | ENS deployment manifest | [deployments/ens.sepolia.json](https://github.com/Marshal-AM/brandmystuff/blob/main/deployments/ens.sepolia.json) |
@@ -150,9 +151,17 @@ The chain events that took the protocol from nothing to a working marketplace, a
 
 1. [Introduction](#1-introduction)
 2. [The problem](#2-the-problem)
+   - [2.1 The trend that proved the demand](#21-the-trend-that-proved-the-demand)
+   - [2.2 Real-world advertising is priced for giants](#22-real-world-advertising-is-priced-for-giants)
+   - [2.3 Then trust broke the cheaper option](#23-then-trust-broke-the-cheaper-option)
+   - [2.4 What is actually broken](#24-what-is-actually-broken)
+   - [2.5 Who feels it](#25-who-feels-it)
 3. [The solution](#3-the-solution)
    - [3.1 The economics in one table](#31-the-economics-in-one-table)
    - [3.2 How brandmystuff compares](#32-how-brandmystuff-compares)
+   - [3.3 Why people buy a slice of a spot](#33-why-people-buy-a-slice-of-a-spot)
+   - [3.4 The viral upside](#34-the-viral-upside)
+   - [3.5 Go-to-market](#35-go-to-market)
 4. [System architecture](#4-system-architecture)
    - [4.1 The big picture](#41-the-big-picture)
    - [4.2 Repository map](#42-repository-map)
@@ -168,6 +177,7 @@ The chain events that took the protocol from nothing to a working marketplace, a
    - [4.12 End-to-end journeys](#412-end-to-end-journeys)
    - [4.13 Testing](#413-testing)
    - [4.14 Running it locally](#414-running-it-locally)
+   - [4.15 Demo mode and the pitch deck](#415-demo-mode-and-the-pitch-deck)
 5. [Sui](#5-sui)
    - [5.1 Why Sui](#51-why-sui)
    - [5.2 What runs on Sui](#52-what-runs-on-sui)
@@ -236,9 +246,24 @@ Four ideas carry the whole product:
 
 ## 2. The problem
 
-### 2.1 A viral trend, a broken market
+### 2.1 The trend that proved the demand
 
-On 26 August 2026 a developer auctioned sticker spots on the lid of a MacBook Pro they did not even own yet. The post drew 10.38 million views. The lid was cut into three sizes of spot, and palm-rest, charger and mouse spots followed in week two. The results, documented in [docs/IDEA-AND-FLOWS.md](https://github.com/Marshal-AM/brandmystuff/blob/main/docs/IDEA-AND-FLOWS.md):
+In 2025–2026 people started selling ad space on their own things, and the internet loved it. Three posts show the pattern:
+
+<table>
+<tr>
+<td width="33%"><img src="web/public/pitch/ads1.jpeg" alt="A developer auctions sticker spots on his MacBook lid"></td>
+<td width="33%"><img src="web/public/pitch/ads2.jpeg" alt="Solana sells ad space on its own logo"></td>
+<td width="33%"><img src="web/public/pitch/ads3.jpeg" alt="A groom sells ad space on his wedding tuxedo"></td>
+</tr>
+<tr>
+<td><b>10.3M views</b><br>A developer's MacBook: 10 sticker spots auctioned in 14 days</td>
+<td><b>951.6K views</b><br>Solana's own logo: 9 ad spots on the brand's profile picture</td>
+<td><b>448.5K views</b><br>A groom's tuxedo: sponsors paid for the wedding suit</td>
+</tr>
+</table>
+
+The MacBook auction, documented in [docs/IDEA-AND-FLOWS.md](https://github.com/Marshal-AM/brandmystuff/blob/main/docs/IDEA-AND-FLOWS.md), is the clearest case:
 
 | Signal | Number |
 |---|---|
@@ -247,16 +272,44 @@ On 26 August 2026 a developer auctioned sticker spots on the lid of a MacBook Pr
 | Raised | €7,955, 315% of the €2,529 goal |
 | Bids | 150, from 64 brands |
 | Top spot | €1,715 |
-| **Winners who defaulted** | **6 of 20** |
 
-Demand was obviously real. Brands wanted in, and a lot of people would happily rent out their stuff. Then **30% of the winners walked away**. The model was a 20% deposit followed by an invoice, and nothing enforced the rest.
+These posts went viral for one reason: **small and mid-size brands finally saw real-world advertising they could afford.**
 
-The originator went on to launch a laptop-only marketplace. Its public stats show **1,632 free spots against 32 taken**, and a median of 14 page views for small sellers. Variants appeared for Teslas, suitcases, backpacks and even foreheads. Vehicle-wrap incumbents such as Carvertise and Wrapify prove that the underlying business works when display can be verified, but they are closed, vertical and slow.
+- **Affordable.** A spot cost a few hundred euros, not the tens of thousands a billboard campaign costs.
+- **It travels.** The ad goes wherever the person goes: cafés, campuses, flights, conferences, even a wedding.
+- **It's human.** A real person carrying your brand feels like a recommendation, not an interruption.
 
-### 2.2 What is actually broken
+The buyers weren't global giants. They were startups, indie tools and small brands putting their name into the physical world for the first time.
+
+### 2.2 Real-world advertising is priced for giants
+
+Most brands in the world are small or mid-size. They can afford to be seen online, but the physical world, where people actually spend their day, is priced for large advertisers:
+
+| Barrier | What it means for a small brand |
+|---|---|
+| **Too expensive** | Billboards, transit and venue ads are sold in big blocks, often thousands a month, with long minimum terms. |
+| **Built for big budgets** | Media agencies and ad networks want large clients. A $500 brand isn't worth their time. |
+| **Stuck in one place** | A billboard reaches whoever passes one corner. A small brand can't afford to be on every corner. |
+| **Hard to judge** | There is no simple way to know whether a placement is any good before paying for it. |
+
+Everyday objects fix the first three problems at once: they are cheap, they move, and they are carried by real people. What was missing was a way to buy them safely.
+
+### 2.3 Then trust broke the cheaper option
+
+The viral auctions proved demand, then showed exactly why nobody could build a business on it:
+
+- **6 of 20 MacBook winners never paid.** The model was a 20% deposit followed by an invoice, and nothing enforced the rest.
+- **No quality signal.** Brands had no way to compare one spot with another.
+- **No proof.** Nobody could show the sticker actually went up, week after week.
+- **No discovery.** The laptop-only marketplace that followed shows **1,632 free spots against 32 taken**, with a median of 14 page views for small sellers.
+
+Vehicle-wrap incumbents such as Carvertise and Wrapify prove the business works when display can be verified, but they are closed, vertical and slow.
+
+### 2.4 What is actually broken
 
 | Gap | Why it hurts |
 |---|---|
+| **Real-world ads priced out of reach** | Small and mid-size brands can't buy billboards, transit or venue ads at their budgets. |
 | **No enforceable payment** | Deposit-then-invoice invites defaults. Owners install a sticker and are never paid. |
 | **No quality signal** | A laptop lid seen by 400 people a day and one kept in a drawer are listed identically, so brands can't rank and don't buy. |
 | **No proof of display** | Brands pay and hope. Owners have no standard way to prove the ad is up, week after week. |
@@ -265,7 +318,7 @@ The originator went on to launch a laptop-only marketplace. Its public stats sho
 | **No machine buyers** | AI marketing agents with budgets can't find, evaluate or pay for this inventory programmatically. |
 | **Payouts locked to one chain** | An investor who lives on Base or Arbitrum shouldn't have to bridge manually to collect a few dollars of ad income. |
 
-### 2.3 Who feels it
+### 2.5 Who feels it
 
 The product docs ([docs/PRD.md](https://github.com/Marshal-AM/brandmystuff/blob/main/docs/PRD.md)) are written around real personas:
 
@@ -326,6 +379,51 @@ On testnet a lease "week" lasts **10 minutes** (`weekMs = 600000` in [deployment
 
 Every "manual" in the first three columns is a trust assumption. brandmystuff replaces each one with a rule that runs on a public chain.
 
+### 3.3 Why people buy a slice of a spot
+
+Tokenisation splits one ad space into 10,000 revenue units. Owners get money upfront, and anyone who passes identity checks can own part of the spot's future ad income, like owning a tiny piece of a building that pays rent.
+
+| Reason | What the holder gets |
+|---|---|
+| **Income from the real world** | Every time a brand rents the spot, a share of the rent is paid to holders. It is actual ad money, not a speculative price. |
+| **A tiny entry ticket** | 10,000 units per spot, so a holder can start with pocket change. |
+| **Visible performance** | Every week the owner posts a photo proving the ad is up, so holders can watch the asset earn. |
+| **Paid where they are** | Income arrives on Sui or, through [Curvegrid MultiBaas](#6-curvegrid-multibaas), on Ethereum, Base, Arbitrum or Optimism. |
+| **Liquidity** | Units trade on the [secondary market](#537-market-a-compliant-order-book) with other verified holders. |
+| **Backing people early** | Own part of a creator's laptop, a driver's car or a café's window, and grow with them. |
+
+A worked example: a laptop spot rents for $40 a week, and the owner sold a 60% revenue share. Holders receive $24 of every week's rent, so **a 1% holder earns $0.24 a week** while the spot is rented. The owner was already paid upfront for the units sold. The split is exactly what [`lease::accept_proof_tokenised`](https://github.com/Marshal-AM/brandmystuff/blob/main/move/brandmystuff/sources/lease.move#L364) and [`offering::distribute`](https://github.com/Marshal-AM/brandmystuff/blob/main/move/brandmystuff/sources/offering.move#L348-L361) do on-chain.
+
+### 3.4 The viral upside
+
+The trend itself shows why holding units early can pay off. A spot can go viral, the same way a token takes off after good marketing:
+
+1. **Post it.** The owner shares their spot on X, TikTok or Instagram: "brand my laptop".
+2. **It goes viral.** Attention snowballs, as it did for the MacBook, the Solana logo and the tuxedo.
+3. **Brands pile in.** More brands want that object, book its spaces and push weekly prices up.
+4. **Everyone earns.** The owner earns far more than expected from new leases and from selling units at a higher value. Holders receive more rent every week, and their units are worth more to the next buyer.
+
+So hype creates value for everyone attached to the spot, and holders capture it automatically through the revenue accumulator, without doing anything.
+
+### 3.5 Go-to-market
+
+The plan starts where the trend was born and widens from there. The phase goals below are targets, not commitments.
+
+| Phase | When | Focus | Tactics | Goal |
+|---|---|---|---|---|
+| 1 | Months 0–3 | **Win the campus** | Student ambassadors at 10 universities, a "brand my laptop" challenge on X and TikTok, free listing plus a first-lease bonus | 2,000 listed spots |
+| 2 | Months 3–6 | **Bring the brands** | Indie founders, DTC and crypto brands first; sticker drops at hackathons and conferences; self-serve booking in minutes | 300 paying brands |
+| 3 | Months 6–12 | **Go beyond laptops** | Rideshare drivers and delivery riders, shop windows through local business networks, units in top spots for fans and investors | 10 cities, 3 object types |
+| 4 | Year 2 | **Let the agents buy** | An open catalogue for AI marketing agents, agency and ad-network integrations, always-on programmatic demand | Agents book 30% of leases |
+
+Three loops keep growth compounding:
+
+- **Every lid is an ad for us.** Each sticker can carry a small brandmystuff tag and QR code.
+- **Owners recruit owners.** Referral rewards when a friend's first lease completes.
+- **Brands come back.** Proof photos and quality scores make results visible, so a good first campaign becomes a repeat buyer.
+
+The whole story is also told as a 15-slide, non-technical deck at `/pitch` ([source](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/pitch/page.tsx)).
+
 ---
 
 ## 4. System architecture
@@ -385,7 +483,8 @@ The main surfaces:
 | [`/`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/page.tsx) | The landing page: features, fees, tokenisation, agents, proof |
 | [`/onboarding`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/onboarding/page.tsx) | A typeform-style flow: handle (which becomes an ENS name), profile, **payout chain**, or a brand profile for advertisers |
 | [`/list`](https://github.com/Marshal-AM/brandmystuff/tree/main/web/src/app/list) | A four-step wizard to list an object, with live camera capture from a phone |
-| [`/explore`](https://github.com/Marshal-AM/brandmystuff/tree/main/web/src/app/explore) | Ranked marketplace search with filters and sponsored slots |
+| [`/explore`](https://github.com/Marshal-AM/brandmystuff/tree/main/web/src/app/explore) | Ranked marketplace search. One search bar holds the sort and a single **Filters** panel (quality, placement, price, city, tags, tokenised, sponsored), with removable chips for active filters |
+| [`/pitch`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/pitch/page.tsx) | The full-screen pitch deck, reached from the landing page header |
 | [`/[name]`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/%5Bname%5D/page.tsx) | Public ENS-named pages for spaces, objects, accounts and leases, with on-chain verification |
 | [`/leases/[escrowId]`](https://github.com/Marshal-AM/brandmystuff/tree/main/web/src/app/leases) | The lease cockpit: approval, print files, proofs, tranches, disputes |
 | [`/offerings`](https://github.com/Marshal-AM/brandmystuff/tree/main/web/src/app/offerings) | Tokenised offerings, the legal pack, the primary sale |
@@ -687,6 +786,25 @@ Secrets live in one root `.env.local`, which git ignores:
 - optionally, a public `MULTIBAAS_WEBHOOK_URL`.
 
 The platform wallet pays operator gas and the test-funds faucet, so keep it topped up with testnet SUI and USDC.
+
+### 4.15 Demo mode and the pitch deck
+
+Live demos need to move fast, so the app has a demo mode, **on by default**.
+
+- **Prefilled forms.** Every text form starts with editable example content from [`lib/client/demo.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/lib/client/demo.ts): onboarding (handle, name, brand profile), listing an object, adding a space and its price, identity verification, checkout brand and landing URL, profile settings and the first chat message.
+- **Demo submit.** Every photo step also offers a **Demo submit** button next to the normal flow. The normal buttons are unchanged.
+  - It loads a bundled sample image from `web/public/demo`.
+  - It submits that image with a demo flag, and [`server/demo.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/demo.ts) approves it with a high score instead of calling Gemini.
+  - The object hero is accepted, the space scores A+ (88 or higher), and the proof passes at 96% creative and 95% object match. The proof then releases its tranche on Sui like any other proof.
+  - Real image metrics are still computed, the photo is still stored on Walrus, and the score and proof still go on-chain.
+  - Logo uploads (onboarding, brand kit, checkout) get a demo button too.
+- **QR codes for camera links.** When a camera link is created, [`PhotoCapture`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/components/photo-capture.tsx) shows a scannable QR code next to the link, so a phone can open the camera instantly.
+- **Switching it off.** Set `DEMO_SUBMIT=0` on the server and `NEXT_PUBLIC_DEMO_SUBMIT=0` in the frontend.
+
+The **pitch deck** at `/pitch` is a full-screen, 15-slide story for non-technical audiences:
+
+- **Story:** inspiration (with the three viral posts), the small-brand problem, the insight, the solution, why people buy a slice, why buy early, why each party uses it, how it differs, market fit, go-to-market, the growth flywheel, the business model, what works today, and the vision.
+- **Navigation:** it moves left and right, with arrows at the bottom right, keyboard and swipe support, and progress dots.
 
 ---
 
@@ -1094,7 +1212,8 @@ MultiBaas is also the **read side** of the EVM world:
   - the current route;
   - lifetime delivered USDC (from the MultiBaas event query);
   - the live destination balance (from a MultiBaas read);
-  - an animated **journey** for every payout: sent from Sui, Circle attested, minting, arrived, with links to the Sui burn and the EVM mint.
+  - an animated **journey** for every payout: sent from Sui, Circle attested, minting, arrived, with links to the Sui burn and the EVM mint;
+  - a **"Powered by Curvegrid"** credit with the Curvegrid logo, shown only when the route is an EVM chain, because MultiBaas runs only the cross-chain leg. Holders paid on Sui don't see it.
 - **Data.** [`/api/payouts/chains`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/payouts/chains/route.ts) and [`/api/me/payouts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/me/payouts/route.ts) serve the UI.
 
 ### 6.8 Setup, operations and safety
@@ -1118,6 +1237,8 @@ MultiBaas is also the **read side** of the EVM world:
   - tokenisation;
   - a lease and an AI-verified install proof;
   - then an assertion that exactly the investor's share (8,000/10,000 units × 60% share × the install tranche) arrives at a fresh EVM address. That balance and the relayer event are read **directly from the destination chain** as well as through MultiBaas.
+
+- **Deploying.** The payout stages run in the long-lived worker ([`scripts/worker.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/worker.ts)), not in request handlers. A serverless host such as Vercel runs the web app but not the worker. So in production, either run the worker on an always-on host with the same environment, or trigger a job pass from a scheduled route. Without one, routes are recorded and payouts are queued, but nothing delivers them.
 
 ### 6.9 Failure handling
 
@@ -1287,6 +1408,18 @@ The same pattern applies to spaces: price changes, pauses and tokenisation updat
 - **Run the cross-chain e2e continuously.** The [payout e2e](https://github.com/Marshal-AM/brandmystuff/blob/main/web/e2e/payouts.e2e.ts) and the rest of the suite should run on a schedule against all four EVM chains.
 - **Real KYC providers.** Swap the mock identity flow for a real provider. The on-chain `KycRegistry` interface stays the same.
 - **Content credentials.** Move from the byte-level C2PA scan to full manifest validation.
+
+### Deeper ENSv2 integration
+
+ENSv2's shared role-based permissions (Enhanced Access Control), per-name registries and Permissioned Resolvers map naturally onto the marketplace. The plan:
+
+1. **Role-scoped records.** Owners get resolver roles for their own profile text keys only, such as name, bio, avatar and socials. The platform keeps exclusive write access to `eth.brandmystuff.attested.*`, `sui.*` and `price`. Readers can then tell attested facts from user claims by who is allowed to write them.
+2. **Agents as namespaces.** Every brand's Scout gets `scout.<brand>.brandmystuff.eth`, carrying its Sui address, the mandate ID and budget records, with rights only over its own `agent-context` and endpoint records. The brand's wallet can revoke it, and each run can be recorded as a `run-<id>` subname.
+3. **A lease registry per space.** `l-*` names are issued by a registry whose rules mirror the Move lease: register on approval, expire at the lease end, revoke on refund. Advertisers get delegated rights to update their creative and landing records during the campaign.
+4. **Per-name Permissioned Resolvers.** Accounts own their data outright. Tokenised spaces lock their `token`, `price` and `sui.object` records when an offering opens.
+5. **Record and namespace aliasing.** Attestation records resolve from one platform source. Campaigns appear under both the space and `campaigns.<brand>`, and currently sponsored objects under a shared `sponsored.brandmystuff.eth`.
+6. **Wildcard resolution.** Queries such as `top.laptop.brandmystuff.eth` answer live from the catalogue, without registering anything.
+7. **A deliberate lifecycle per name.** Non-transferable accounts; takedowns wired to unregistration; expiring leases; and **forever** campaign-completion badges with all parent roles renounced.
 
 ### Medium term
 

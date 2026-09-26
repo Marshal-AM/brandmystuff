@@ -301,7 +301,7 @@ export default function Shell({ children }: { children: ReactNode }) {
   const active = (href: string) => path === href || path.startsWith(`${href}/`);
 
   // The phone camera page opened from a photo link: no app chrome, no sign-in.
-  if (path.startsWith("/capture/")) return <>{children}</>;
+  if (path.startsWith("/capture/") || path === "/pitch") return <>{children}</>;
 
   return (
     <div className="relative flex min-h-screen flex-col">
@@ -342,9 +342,9 @@ export default function Shell({ children }: { children: ReactNode }) {
 
             <div className="ml-auto flex items-center gap-1.5">
               {landing && (
-                <button type="button" data-testid="pitch" className="hidden rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white/85 transition-colors hover:border-p/60 hover:text-white md:block">
+                <Link href="/pitch" data-testid="pitch" className="hidden rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white/85 transition-colors hover:border-p/60 hover:text-white md:block">
                   Pitch
-                </button>
+                </Link>
               )}
               {landing && (
                 <Link href="/explore" className="hidden px-3 text-sm font-semibold text-white/75 transition-colors hover:text-white md:block">
@@ -377,9 +377,9 @@ export default function Shell({ children }: { children: ReactNode }) {
                     </motion.button>
                   ))}
                   {landing && (
-                    <button type="button" className="rounded-xl border border-white/15 px-4 py-3 text-left text-sm font-semibold text-white/85">
+                    <Link href="/pitch" className="rounded-xl border border-white/15 px-4 py-3 text-left text-sm font-semibold text-white/85">
                       Pitch
-                    </button>
+                    </Link>
                   )}
                   {landing && (
                     <Link href="/explore" className="rounded-xl bg-p px-4 py-3 text-sm font-bold text-ink">
