@@ -2,9 +2,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { BadgeCheck, Check, FileUp, IdCard, ScrollText, ShieldCheck, UserRound } from "lucide-react";
+import { BadgeCheck, Check, IdCard, ScrollText, ShieldCheck, UserRound } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { Badge, Button, EASE, Empty, Field, Input, PageHeader, PageLoader, Spinner, cx, useAction } from "@/components/ui";
+import { PhotoCapture } from "@/components/photo-capture";
 import { SignInButtons } from "@/components/shell";
 
 const ATTEST: Record<string, string[]> = {
@@ -31,6 +32,7 @@ export default function Verify() {
   const [f, setF] = useState({ legalName: "", dateOfBirth: "", country: "", addressLine: "", investorType: "non_us" });
   const [att, setAtt] = useState<string[]>([]);
   const [doc, setDoc] = useState<File | null>(null);
+  const [docUrl, setDocUrl] = useState<string | null>(null);
   const { busy, run } = useAction();
   if (!authenticated)
     return (
@@ -143,16 +145,14 @@ export default function Verify() {
             )}
             {step === 3 && (
               <>
-                <Field label="ID document (passport, national ID or driving licence)" hint="Checked for type and size, then discarded — never stored.">
-                  <label className={cx("group relative flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-dashed p-8 text-center transition-colors", doc ? "border-p/60 bg-p/[0.08]" : "border-line-strong hover:border-p/50")}>
-                    <input type="file" className="absolute inset-0 cursor-pointer opacity-0" accept="image/*,application/pdf" capture="environment" onChange={(e) => setDoc(e.target.files?.[0] ?? null)} data-testid="kyc-doc" />
-                    <motion.span animate={{ y: doc ? 0 : [0, -4, 0] }} transition={{ repeat: doc ? 0 : Infinity, duration: 2 }} className={cx("grid h-12 w-12 place-items-center rounded-2xl", doc ? "bg-p text-ink" : "bg-p/15 text-p")}>
-                      {doc ? <Check className="h-5 w-5" strokeWidth={3} /> : <FileUp className="h-5 w-5" />}
-                    </motion.span>
-                    <span className="text-sm font-semibold">{doc ? doc.name : "Drop or choose a file"}</span>
-                    <span className="text-xs text-muted">Image or PDF</span>
-                  </label>
-                </Field>
+                <PhotoCapture
+                  purpose="kyc"
+                  label="ID document (passport, national ID or driving licence)"
+                  testId="kyc-doc"
+                  preview={docUrl}
+                  onChange={(file) => { setDoc(file); setDocUrl(URL.createObjectURL(file)); }}
+                />
+                <p className="-mt-1 text-xs text-muted">Checked for type and size, then discarded. Never stored.</p>
                 <AnimatePresence>
                   {busy === "kyc" && (
                     <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="flex items-center gap-2 text-sm text-p">

@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Box, Camera, Check, Eye, Fingerprint, Loader2, MapPin, PenLine, Rocket, ScanSearch, ShieldCheck, Sun, Tag } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { createObject } from "@/lib/sui/tx";
-import { Badge, Button, Card, EASE, Empty, Field, Input, PageHeader, PhotoInput, Textarea, cx, useAction } from "@/components/ui";
+import { Badge, Button, Card, EASE, Empty, Field, Input, PageHeader, Textarea, cx, useAction } from "@/components/ui";
+import { PhotoCapture } from "@/components/photo-capture";
 import { SignInButtons } from "@/components/shell";
 
 const CHECKS = [
@@ -240,7 +241,7 @@ export default function ListObject() {
                   <Tip icon={Sun}>Good, even light</Tip>
                   <Tip icon={Fingerprint}>Code clearly visible</Tip>
                 </div>
-                <PhotoInput label="Photo of the whole object" testId="hero-photo" preview={photo?.url} scanning={busy === "check"} onChange={(file, source) => { setPhoto({ file, source, url: URL.createObjectURL(file) }); setCheck(null); }} />
+                <PhotoCapture purpose="hero" label="Photo of the whole object" testId="hero-photo" preview={photo?.url} scanning={busy === "check"} onChange={(file, source) => { setPhoto({ file, source, url: URL.createObjectURL(file) }); setCheck(null); }} />
                 {!accepted && (
                   <Button onClick={doCheck} loading={busy === "check"} disabled={!photo} data-testid="check-hero" size="lg">
                     <ScanSearch className="h-4 w-4" /> {busy === "check" ? "Checking photo…" : check ? "Check again" : "Check photo"}

@@ -63,7 +63,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // token/api/refresh keep a stable identity; otherwise every consumer effect
   // re-runs, /api/me is refetched in a loop and forms seeded from `me` get wiped.
   const privyRef = useRef(privy);
-  privyRef.current = privy;
+  useEffect(() => {
+    privyRef.current = privy;
+  }, [privy]);
   const token = useCallback(async () => (privyRef.current.authenticated ? await privyRef.current.getAccessToken() : null), []);
 
   const api = useCallback(

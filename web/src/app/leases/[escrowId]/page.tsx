@@ -6,7 +6,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Bot, Check, Clock, Download, ExternalLink, Fingerprint, MessageCircle, Plus, ScanSearch, X } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { approveCreative, extendLease, openDispute, rejectCreative } from "@/lib/sui/tx";
-import { Badge, Button, Card, EASE, Empty, Img, PageLoader, PhotoInput, Stat, cx, suiscan, useAction, usdc, ScrollArea } from "@/components/ui";
+import { Badge, Button, Card, EASE, Empty, Img, PageLoader, Stat, cx, suiscan, useAction, usdc, ScrollArea } from "@/components/ui";
+import { PhotoCapture } from "@/components/photo-capture";
 
 const STATUS: Record<string, { label: string; tone: any }> = {
   pending_approval: { label: "Waiting for owner approval", tone: "warn" },
@@ -67,7 +68,7 @@ function ProofUpload({ escrowId, next, onDone }: { escrowId: string; next: any; 
               </span>
             </div>
           </div>
-          <PhotoInput label="Proof photo" testId="proof-photo" preview={photo?.url} scanning={busy === "proof"} onChange={(file) => { setPhoto({ file, url: URL.createObjectURL(file) }); setRes(null); }} />
+          <PhotoCapture purpose="proof" label="Proof photo" testId="proof-photo" preview={photo?.url} scanning={busy === "proof"} onChange={(file) => { setPhoto({ file, url: URL.createObjectURL(file) }); setRes(null); }} />
           <Button
             size="lg"
             disabled={!photo}

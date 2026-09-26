@@ -9,7 +9,8 @@ import { addSpace, buySponsorship, setPrice, spaceStatus } from "@/lib/sui/tx";
 import { MATERIALS, PLACEMENTS } from "@/lib/categories";
 import { toAtomic } from "@/lib/deployment";
 import { AqsPanel } from "@/components/aqs";
-import { Badge, Button, Card, EASE, Empty, Field, GradeBadge, Img, Input, Modal, PageLoader, PhotoInput, Select, cx, useAction, usdc } from "@/components/ui";
+import { Badge, Button, Card, EASE, Empty, Field, GradeBadge, Img, Input, Modal, PageLoader, Select, cx, useAction, usdc } from "@/components/ui";
+import { PhotoCapture } from "@/components/photo-capture";
 
 const STEPS = ["Checking photo quality…", "Checking authenticity…", "Scoring the space…", "Scoring the space (second opinion)…"];
 
@@ -77,7 +78,7 @@ function AddSpace({ objectId, onDone, onClose }: { objectId: string; onDone: () 
         </Field>
       </div>
       <div className="mt-5">
-        <PhotoInput label="Close-up of this section only (place an ID card for scale if you can)" testId="space-photo" preview={photo?.url} scanning={busy === "analyze"} onChange={(file, source) => { setPhoto({ file, source, url: URL.createObjectURL(file) }); setRes(null); }} />
+        <PhotoCapture purpose="space" label="Close-up of this section only (place an ID card for scale if you can)" testId="space-photo" preview={photo?.url} scanning={busy === "analyze"} onChange={(file, source) => { setPhoto({ file, source, url: URL.createObjectURL(file) }); setRes(null); }} />
       </div>
       <Button className="mt-5" size="lg" onClick={analyze} loading={busy === "analyze"} disabled={!photo || !f.label || !f.widthCm || !f.heightCm} data-testid="analyze">
         <ScanSearch className="h-4 w-4" /> Analyse space

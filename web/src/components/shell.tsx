@@ -257,7 +257,7 @@ export default function Shell({ children }: { children: ReactNode }) {
   const [mobile, setMobile] = useState(false);
   const landing = path === "/";
   useEffect(() => {
-    if (ready && authenticated && me?.needsOnboarding && path !== "/onboarding" && path !== "/wallet") router.push(`/onboarding?next=${encodeURIComponent(path)}`);
+    if (ready && authenticated && me?.needsOnboarding && path !== "/onboarding" && path !== "/wallet" && !path.startsWith("/capture/")) router.push(`/onboarding?next=${encodeURIComponent(path)}`);
   }, [ready, authenticated, me?.needsOnboarding, path, router]);
   useEffect(() => setMobile(false), [path]);
 
@@ -267,6 +267,9 @@ export default function Shell({ children }: { children: ReactNode }) {
     setMobile(false);
   };
   const active = (href: string) => path === href || path.startsWith(`${href}/`);
+
+  // The phone camera page opened from a photo link: no app chrome, no sign-in.
+  if (path.startsWith("/capture/")) return <>{children}</>;
 
   return (
     <div className="relative flex min-h-screen flex-col">

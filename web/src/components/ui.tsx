@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useInView, type HTMLMotionProps } from "framer-motion";
-import { AlertTriangle, Camera, Check, Info, Upload, X } from "lucide-react";
+import { AlertTriangle, Check, Info, X } from "lucide-react";
 import {
   createContext,
   useCallback,
@@ -608,68 +608,6 @@ export function useAction() {
     [toast],
   );
   return { busy, run };
-}
-
-/** Camera-first photo picker with an animated preview frame and optional scan overlay. */
-export function PhotoInput({ onChange, label = "Photo", preview, testId, scanning }: { onChange: (f: File, source: "camera" | "upload") => void; label?: string; preview?: string | null; testId?: string; scanning?: boolean }) {
-  const [drag, setDrag] = useState(false);
-  return (
-    <div className="space-y-2">
-      <span className="text-[13px] font-semibold text-white/80">{label}</span>
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDrag(true);
-        }}
-        onDragLeave={() => setDrag(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDrag(false);
-          const f = e.dataTransfer.files?.[0];
-          if (f?.type.startsWith("image/")) onChange(f, "upload");
-        }}
-        className={cx(
-          "flex flex-col items-stretch gap-4 rounded-3xl border border-dashed p-3 transition-colors duration-300 sm:flex-row sm:items-center",
-          drag ? "border-p bg-p/10" : "border-line-strong bg-white/[0.02]",
-        )}
-      >
-        <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-2xl bg-white/[0.03] sm:h-32 sm:w-32">
-          <AnimatePresence mode="popLayout" initial={false}>
-            {preview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <motion.img key={preview} src={preview} alt="preview" className="h-full w-full object-cover" initial={{ opacity: 0, scale: 1.15, filter: "blur(10px)" }} animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }} exit={{ opacity: 0 }} transition={{ duration: 0.6, ease: EASE }} />
-            ) : (
-              <motion.div key="empty" className="grid h-full w-full place-items-center text-p" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <motion.span animate={{ y: [0, -4, 0] }} transition={{ duration: 2.4, repeat: Infinity }}>
-                  <Camera className="h-8 w-8" strokeWidth={1.6} />
-                </motion.span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          {scanning && preview && (
-            <>
-              <div className="absolute inset-0 bg-p/10" />
-              <div className="absolute inset-x-0 h-1 bg-p shadow-[0_0_20px_4px_var(--p)] [animation:scan-y_1.6s_ease-in-out_infinite]" />
-            </>
-          )}
-          {["left-2 top-2 border-l-2 border-t-2", "right-2 top-2 border-r-2 border-t-2", "bottom-2 left-2 border-b-2 border-l-2", "bottom-2 right-2 border-b-2 border-r-2"].map((c) => (
-            <span key={c} className={cx("absolute h-4 w-4 rounded-sm border-p/70", c)} />
-          ))}
-        </div>
-        <div className="flex flex-1 flex-col gap-2">
-          <label className="relative inline-flex h-11 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full bg-p px-5 text-sm font-semibold text-ink transition-shadow hover:shadow-[0_10px_30px_-8px_rgba(171,159,242,0.7)]">
-            <Camera className="h-4 w-4" /> Take photo
-            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => e.target.files?.[0] && onChange(e.target.files[0], "camera")} />
-          </label>
-          <label className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-full border border-line-strong bg-white/[0.04] px-5 text-sm font-semibold transition-colors hover:border-p/50 hover:bg-p/10">
-            <Upload className="h-4 w-4" /> Upload
-            <input data-testid={testId} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onChange(e.target.files[0], "upload")} />
-          </label>
-          <span className="text-center text-[11px] text-faint sm:text-left">or drop an image here</span>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export function TestnetBanner() {
