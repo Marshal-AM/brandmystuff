@@ -72,7 +72,7 @@ function Cover() {
           </h1>
         </In>
         <In d={0.25}>
-          <p className="mt-6 max-w-xl text-lg text-white/70 sm:text-xl">brandmystuff lets anyone rent out the space on the things they own, like a laptop lid, a car or a shop window, to brands that want real-world attention. Safely, fairly, and with proof.</p>
+          <p className="mt-6 max-w-xl text-lg text-white/70 sm:text-xl">Rent the space on your laptop, car or shop window to brands. Paid safely, with proof.</p>
         </In>
         <In d={0.4} className="mt-8 flex flex-wrap gap-2">
           <Pill on>Rent</Pill>
@@ -113,9 +113,9 @@ function Cover() {
 }
 
 const TWEETS = [
-  { src: "/pitch/ads1.jpeg", w: 709, h: 855, who: "A developer's MacBook", short: "MacBook", views: "10.3M", note: "10 sticker spots auctioned in 14 days" },
-  { src: "/pitch/ads2.jpeg", w: 553, h: 880, who: "Solana's own logo", short: "Solana logo", views: "951.6K", note: "9 ad spots sold on a brand's profile picture" },
-  { src: "/pitch/ads3.jpeg", w: 561, h: 566, who: "A groom's tuxedo", short: "Tuxedo", views: "448.5K", note: "Sponsors paid for the wedding suit" },
+  { src: "/pitch/ads1.jpeg", w: 709, h: 855, who: "A developer's MacBook", short: "MacBook", views: "10.3M", note: "10 sticker spots sold" },
+  { src: "/pitch/ads2.jpeg", w: 553, h: 880, who: "Solana's own logo", short: "Solana logo", views: "951.6K", note: "9 ad spots on a logo" },
+  { src: "/pitch/ads3.jpeg", w: 561, h: 566, who: "A groom's tuxedo", short: "Tuxedo", views: "448.5K", note: "Sponsors paid for the suit" },
 ];
 
 /** The viral posts behind the idea, side by side with their numbers. Click one to see it full size. */
@@ -153,9 +153,9 @@ function TweetStack() {
 
 function Inspiration() {
   const why = [
-    { icon: Coins, t: "Affordable", d: "A spot cost a few hundred euros, not the tens of thousands a billboard campaign does." },
-    { icon: Globe2, t: "It travels", d: "The ad goes wherever the person goes: cafés, campuses, flights, even a wedding." },
-    { icon: Users, t: "It's human", d: "A real person carrying your brand feels like a recommendation, not an interruption." },
+    { icon: Coins, t: "Affordable", d: "hundreds, not thousands" },
+    { icon: Globe2, t: "It travels", d: "goes wherever the owner goes" },
+    { icon: Users, t: "It's human", d: "feels like a recommendation" },
   ];
   return (
     <div className="relative grid h-full items-center gap-10 lg:grid-cols-[1fr_1fr]">
@@ -164,18 +164,18 @@ function Inspiration() {
         <In><Kicker>Where it started</Kicker></In>
         <In d={0.1}><Title className="mt-5">People started selling ad space <span className="text-p">on their stuff.</span></Title></In>
         <In d={0.2}>
-          <p className="mt-6 max-w-xl text-lg text-white/70">A MacBook lid. A brand&apos;s logo. A wedding tuxedo. Each post went viral for the same reason: <span className="font-semibold text-white">small and mid-size brands finally saw real-world advertising they could afford.</span></p>
+          <p className="mt-6 max-w-xl text-lg text-white/70">Why it went viral: <span className="font-semibold text-white">small brands could finally afford real-world ads.</span></p>
         </In>
         <div className="mt-7 space-y-2.5">
           {why.map((w, i) => (
             <In key={w.t} d={0.3 + i * 0.1} className="flex items-start gap-3">
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-p/15 text-p"><w.icon className="h-4 w-4" /></span>
-              <div><span className="font-bold">{w.t}.</span> <span className="text-white/65">{w.d}</span></div>
+              <div><span className="font-bold">{w.t}</span> <span className="text-white/60">· {w.d}</span></div>
             </In>
           ))}
         </div>
         <In d={0.65} className="mt-7 flex flex-wrap gap-x-8 gap-y-3">
-          {[["11.7M+", "views across three posts"], ["64", "brands bid on one laptop"], ["20 / 20", "MacBook spots sold"]].map(([v, l]) => (
+          {[["11.7M+", "views"], ["64", "brands bid"], ["20 / 20", "spots sold"]].map(([v, l]) => (
             <div key={l}>
               <div className="text-2xl font-extrabold tracking-tight">{v}</div>
               <div className="text-xs text-muted">{l}</div>
@@ -190,21 +190,21 @@ function Inspiration() {
 
 function Problem() {
   const barriers = [
-    { icon: Coins, t: "Too expensive", d: "Billboards, transit and venue ads are sold in big blocks, often thousands a month, with long minimum terms." },
-    { icon: Handshake, t: "Built for big budgets", d: "Media agencies and ad networks want large clients. A $500 brand isn't worth their phone call." },
-    { icon: Globe2, t: "Stuck in one place", d: "A billboard reaches whoever drives past one corner. Small brands can't afford to be on every corner." },
+    { icon: Coins, t: "Too expensive", d: "Thousands a month, long contracts" },
+    { icon: Handshake, t: "Built for big budgets", d: "Agencies ignore $500 brands" },
+    { icon: Globe2, t: "Stuck in one place", d: "One corner, one audience" },
   ];
   const broke = [
-    "6 of 20 winning brands never paid",
-    "No way to judge if a spot is any good",
-    "No proof the sticker ever went up",
-    "98% of spots on copycat sites sit empty",
+    "30% of winners never paid",
+    "No quality signal",
+    "No proof of display",
+    "98% of spots sit empty",
   ];
   return (
     <div className="relative flex h-full flex-col justify-center">
       <In><Kicker>The problem</Kicker></In>
       <In d={0.1}><Title className="mt-5 max-w-5xl">Real-world advertising is <span className="text-p">locked away from small brands.</span></Title></In>
-      <In d={0.2}><p className="mt-5 max-w-3xl text-lg text-white/70">Most brands in the world are small or mid-size. They can afford to be seen online, but the physical world, where people actually live, is priced for the giants.</p></In>
+      <In d={0.2}><p className="mt-5 max-w-3xl text-lg text-white/70">Small brands can afford online ads. The real world is priced for giants.</p></In>
       <div className="mt-8 grid gap-4 md:grid-cols-3">
         {barriers.map((c, i) => (
           <In key={c.t} d={0.3 + i * 0.1} className="rounded-3xl border border-line-strong bg-white/[0.03] p-5">
@@ -216,7 +216,7 @@ function Problem() {
       </div>
       <In d={0.65} className="mt-4 rounded-3xl border border-line-strong bg-white/[0.02] p-5">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <span className="text-sm font-bold text-white">And when a cheaper option appeared, trust broke it:</span>
+          <span className="text-sm font-bold text-white">Cheaper options broke on trust:</span>
           {broke.map((b) => (
             <span key={b} className="inline-flex items-center gap-2 text-sm text-white/60"><X className="h-3.5 w-3.5 text-p" strokeWidth={3} />{b}</span>
           ))}
@@ -239,7 +239,7 @@ function Insight() {
       <div>
         <In><Kicker>The insight</Kicker></In>
         <In d={0.1}><Title className="mt-5">Everyday objects are <span className="text-p">billboards nobody is renting.</span></Title></In>
-        <In d={0.2}><p className="mt-6 max-w-lg text-lg text-white/70">Billions of things people own are looked at every day. Rented spot by spot, they become an ad network small brands can afford, and income for the people who carry them.</p></In>
+        <In d={0.2}><p className="mt-6 max-w-lg text-lg text-white/70">Seen every day. Earning nothing. Until now.</p></In>
       </div>
       <div className="space-y-3">
         {things.map((t, i) => (
@@ -252,7 +252,7 @@ function Insight() {
             <div className="w-36 text-right text-sm text-muted">{t.seen}</div>
           </In>
         ))}
-        <In d={0.7} className="text-right text-xs text-faint">Illustrative daily views, by where the object is used.</In>
+        <In d={0.7} className="text-right text-xs text-faint">Illustrative daily views</In>
       </div>
     </div>
   );
@@ -260,10 +260,10 @@ function Insight() {
 
 function Solution() {
   const steps = [
-    { icon: Camera, t: "Snap", d: "Photograph your object and mark the spots an ad could go." },
-    { icon: Sparkles, t: "Score", d: "Our AI rates every spot on how well it will be seen, like a credit score for ad space." },
-    { icon: Handshake, t: "Lease", d: "A brand books it. Their money is locked safely until the ad goes up." },
-    { icon: BadgeCheck, t: "Prove & earn", d: "Snap a photo each week. Proof releases your pay, automatically." },
+    { icon: Camera, t: "Snap", d: "Photo your object, mark the spots" },
+    { icon: Sparkles, t: "Score", d: "AI rates every spot" },
+    { icon: Handshake, t: "Lease", d: "Brand pays into escrow" },
+    { icon: BadgeCheck, t: "Prove & earn", d: "Weekly photo releases pay" },
   ];
   return (
     <div className="relative flex h-full flex-col justify-center">
@@ -283,7 +283,7 @@ function Solution() {
       <In d={0.9} className="mt-10 flex flex-wrap items-center gap-3 rounded-3xl border border-p/30 bg-p/[0.07] p-5">
         <Coins className="h-5 w-5 text-p" />
         <span className="font-bold">Bonus:</span>
-        <span className="text-white/75">a great spot can be split into shares, so fans and investors can own a slice of its future ad income.</span>
+        <span className="text-white/75">split a great spot into shares anyone can own.</span>
       </In>
     </div>
   );
@@ -291,12 +291,12 @@ function Solution() {
 
 function Ownership() {
   const reasons = [
-    { icon: TrendingUp, t: "Income from the real world", d: "Every time a brand rents the spot, a share of the rent is paid to you. Not a meme price, actual ad money." },
-    { icon: Coins, t: "Start with pocket change", d: "A spot is split into 10,000 shares, so you can own a piece for less than a coffee." },
-    { icon: BadgeCheck, t: "You can see it working", d: "Every week the owner posts a photo proving the ad is up. You watch your asset earn." },
-    { icon: Wallet, t: "Paid where you are", d: "Your share arrives on its own, on the network you already use. No chasing, no invoices." },
-    { icon: Handshake, t: "Sell whenever you like", d: "Shares can be traded with other verified holders, so you're never stuck." },
-    { icon: Users, t: "Back people before they blow up", d: "Own a slice of a creator's laptop or a café's window early. If their post goes viral, you grow with them." },
+    { icon: TrendingUp, t: "Real income", d: "A cut of every rent" },
+    { icon: Coins, t: "Tiny entry", d: "10,000 shares per spot" },
+    { icon: BadgeCheck, t: "Visible", d: "Weekly proof photos" },
+    { icon: Wallet, t: "Paid anywhere", d: "Sui, Base, Arbitrum…" },
+    { icon: Handshake, t: "Liquid", d: "Sell any time" },
+    { icon: Users, t: "Back people early", d: "Grow if they go viral" },
   ];
   return (
     <div className="relative grid h-full items-center gap-10 lg:grid-cols-[0.8fr_1.2fr]">
@@ -304,10 +304,10 @@ function Ownership() {
       <div>
         <In><Kicker>Why own a slice</Kicker></In>
         <In d={0.1}><Title className="mt-5">Own the billboard, <span className="text-p">not just the ad.</span></Title></In>
-        <In d={0.2}><p className="mt-6 max-w-md text-lg text-white/70">Great spots can be turned into shares. Owners get money today, and anyone can earn from the spot&apos;s future ad income, like owning a tiny piece of a building that pays rent.</p></In>
+        <In d={0.2}><p className="mt-6 max-w-md text-lg text-white/70">Like owning a tiny piece of a building that pays rent.</p></In>
         <In d={0.35} className="mt-7 rounded-3xl border border-p/30 bg-p/[0.07] p-5">
           <div className="text-xs font-bold uppercase tracking-[0.14em] text-p">A simple example</div>
-          <p className="mt-2 text-white/80">A laptop spot rents for <b>$40 a week</b> and 60% of the rent goes to shareholders. Own <b>1% of it</b> and you receive <b className="text-p">$0.24 every week</b> it&apos;s rented, while the owner has already been paid upfront for the shares they sold.</p>
+          <p className="mt-2 text-white/80"><b>$40/week</b> rent · 60% to holders · own <b>1%</b> = <b className="text-p">$0.24 every week</b></p>
         </In>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -325,10 +325,10 @@ function Ownership() {
 
 function Hype() {
   const steps = [
-    { icon: Camera, t: "Post it", d: "The owner shares their spot on X, TikTok or Instagram: \u201cbrand my laptop\u201d." },
-    { icon: Rocket, t: "It goes viral", d: "Just like a token after good marketing, attention snowballs. Everyone wants to be on that lid." },
-    { icon: Megaphone, t: "Brands pile in", d: "More brands book the spot and its other spaces. Demand pushes weekly prices up." },
-    { icon: Coins, t: "Everyone earns", d: "The owner makes far more than expected, and every shareholder gets a bigger cut of the rent." },
+    { icon: Camera, t: "Post it", d: "Share the spot on socials" },
+    { icon: Rocket, t: "It goes viral", d: "Like a token after marketing" },
+    { icon: Megaphone, t: "Brands pile in", d: "More leases, higher prices" },
+    { icon: Coins, t: "Everyone earns", d: "Owner and holders win" },
   ];
   // Illustrative demand curve for one spot before and after a viral post.
   const bars = [8, 9, 8, 10, 11, 12, 30, 58, 76, 88, 94, 100];
@@ -339,7 +339,7 @@ function Hype() {
         <div>
           <In><Kicker>Why buy early</Kicker></In>
           <In d={0.1}><Title className="mt-5">One viral post <span className="text-p">can make a spot famous.</span></Title></In>
-          <In d={0.2}><p className="mt-5 max-w-xl text-lg text-white/70">The MacBook lid proved it: a single post turned a laptop into a must-have ad space. When that happens to a listed spot, the people who already hold its shares ride the wave with the owner.</p></In>
+          <In d={0.2}><p className="mt-5 max-w-xl text-lg text-white/70">Early holders ride the wave with the owner.</p></In>
         </div>
         <In d={0.3} className="relative rounded-3xl border border-line-strong bg-white/[0.03] p-5">
           <div className="flex items-center justify-between text-xs font-bold uppercase tracking-[0.12em] text-faint">
@@ -373,8 +373,8 @@ function Hype() {
         ))}
       </div>
       <In d={1.1} className="mt-6 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-p/30 bg-p/[0.07] p-4 text-sm text-white/80"><span className="font-bold text-p">Owners</span> earn from the rush of new leases, and from selling shares at a higher value.</div>
-        <div className="rounded-2xl border border-p/30 bg-p/[0.07] p-4 text-sm text-white/80"><span className="font-bold text-p">Shareholders</span> earn more rent every week, and their shares are worth more to the next buyer.</div>
+        <div className="rounded-2xl border border-p/30 bg-p/[0.07] p-4 text-sm text-white/80"><span className="font-bold text-p">Owners</span> · more leases, pricier shares</div>
+        <div className="rounded-2xl border border-p/30 bg-p/[0.07] p-4 text-sm text-white/80"><span className="font-bold text-p">Holders</span> · more rent, shares worth more</div>
       </In>
     </div>
   );
@@ -382,10 +382,10 @@ function Hype() {
 
 function WhyUse() {
   const who = [
-    { icon: Laptop, t: "For owners", pts: ["Earn from things you already carry", "Guaranteed payment, locked upfront", "Raise money early by selling shares of a great spot"] },
-    { icon: Megaphone, t: "For small brands", pts: ["Real-world ads from a few dollars a week", "Your brand travels wherever its carrier goes", "Pay only for weeks the ad is proven to be up"] },
-    { icon: TrendingUp, t: "For shareholders", pts: ["Earn a share of real ad rent, weekly", "Start with less than a coffee", "Sell your shares any time"] },
-    { icon: BotIcon, t: "For AI agents", pts: ["Find and book ads with no human involved", "Spend only inside a budget the brand sets", "Pay instantly, per booking"] },
+    { icon: Laptop, t: "Owners", pts: ["Earn from your stuff", "Paid upfront, guaranteed", "Raise money on a spot"] },
+    { icon: Megaphone, t: "Small brands", pts: ["Ads from $1 a week", "Your brand travels", "Pay only for proven weeks"] },
+    { icon: TrendingUp, t: "Shareholders", pts: ["Weekly ad rent", "Start tiny", "Sell any time"] },
+    { icon: BotIcon, t: "AI agents", pts: ["Book with no human", "Stay inside a budget", "Pay instantly"] },
   ];
   return (
     <div className="relative flex h-full flex-col justify-center">
@@ -410,11 +410,11 @@ function WhyUse() {
 
 function Different() {
   const rows: [string, string, string, string, string][] = [
-    ["Works with any object", "✕", "Laptops", "Cars", "✓"],
-    ["Brand pays before the ad goes up", "20% deposit", "~", "Contract", "100% locked"],
-    ["Proof the ad is really up", "✕", "✕", "Monthly photos", "Every week"],
-    ["Quality score for each spot", "✕", "✕", "✕", "✓"],
-    ["Owners can raise money on a spot", "✕", "✕", "✕", "✓"],
+    ["Any object", "✕", "Laptops", "Cars", "✓"],
+    ["Paid upfront", "20% deposit", "~", "Contract", "100% escrow"],
+    ["Proof it's up", "✕", "✕", "Monthly", "Weekly"],
+    ["Quality score", "✕", "✕", "✕", "✓"],
+    ["Shares in a spot", "✕", "✕", "✕", "✓"],
     ["AI agents can buy", "✕", "✕", "✕", "✓"],
   ];
   return (
@@ -441,10 +441,10 @@ function Different() {
 
 function Pmf() {
   const signals = [
-    { icon: Users, t: "Pull from both sides", d: "64 brands bid on one laptop within a week, and thousands of people listed their laptops for free on copycat sites." },
-    { icon: ShieldCheck, t: "The blocker is trust, not interest", d: "30% of winners defaulted and 98% of listed spots sit empty. We fix exactly that." },
-    { icon: Rocket, t: "The creator economy is ready", d: "Millions already monetise their faces and feeds. Monetising their stuff is the obvious next step." },
-    { icon: BotIcon, t: "A new buyer is arriving", d: "AI marketing agents are being handed budgets. They need inventory they can find, trust and pay for on their own." },
+    { icon: Users, t: "Demand on both sides", d: "64 brands, thousands of listings" },
+    { icon: ShieldCheck, t: "Trust was the blocker", d: "We fix defaults and empty spots" },
+    { icon: Rocket, t: "Creators are ready", d: "Next: monetise your stuff" },
+    { icon: BotIcon, t: "Agents are buying", d: "AI budgets need inventory" },
   ];
   return (
     <div className="relative grid h-full items-center gap-10 lg:grid-cols-[0.85fr_1.15fr]">
@@ -452,11 +452,11 @@ function Pmf() {
       <div>
         <In><Kicker>Product-market fit</Kicker></In>
         <In d={0.1}><Title className="mt-5">The market already <span className="text-p">tried to exist.</span></Title></In>
-        <In d={0.2}><p className="mt-6 max-w-md text-lg text-white/70">We didn&apos;t invent this demand. We watched it appear on its own, then break for predictable reasons. brandmystuff is built around those exact failure points.</p></In>
+        <In d={0.2}><p className="mt-6 max-w-md text-lg text-white/70">The demand appeared on its own, then broke on trust.</p></In>
         <In d={0.35} className="mt-8 rounded-3xl border border-p/30 bg-p/[0.07] p-5">
           <div className="text-xs font-bold uppercase tracking-[0.14em] text-p">Our first customer</div>
-          <div className="mt-2 text-lg font-bold">Students and creators with a laptop,</div>
-          <div className="text-white/70">and indie brands with $300 to $3,000 who want authentic, local reach.</div>
+          <div className="mt-2 text-lg font-bold">Creators with a laptop</div>
+          <div className="text-white/70">+ indie brands with $300–3,000</div>
         </In>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -478,28 +478,28 @@ function Gtm() {
       n: "01",
       when: "Months 0–3",
       t: "Win the campus",
-      pts: ["Student ambassadors at 10 universities", "\"Brand my laptop\" challenge on X & TikTok", "Free listing + first-lease bonus"],
+      pts: ["Campus ambassadors", "\"Brand my laptop\" challenge", "First-lease bonus"],
       kpi: "2,000 listed spots",
     },
     {
       n: "02",
       when: "Months 3–6",
       t: "Bring the brands",
-      pts: ["Indie founders, DTC & crypto brands first", "Hackathon & conference sticker drops", "Self-serve booking in minutes"],
+      pts: ["Indie & crypto brands", "Hackathon sticker drops", "Self-serve booking"],
       kpi: "300 paying brands",
     },
     {
       n: "03",
       when: "Months 6–12",
       t: "Go beyond laptops",
-      pts: ["Rideshare drivers & delivery riders", "Shop windows via local business networks", "Shares in top spots for fans & investors"],
+      pts: ["Drivers & riders", "Shop windows", "Shares for fans"],
       kpi: "10 cities · 3 object types",
     },
     {
       n: "04",
       when: "Year 2",
       t: "Let the agents buy",
-      pts: ["Open catalogue for AI marketing agents", "Agency & ad-network integrations", "Programmatic, always-on demand"],
+      pts: ["Open agent catalogue", "Ad-network plugs", "Always-on demand"],
       kpi: "Agents book 30% of leases",
     },
   ];
@@ -533,9 +533,9 @@ function Gtm() {
 
 function Growth() {
   const loops = [
-    { icon: Laptop, t: "Every lid is an ad for us", d: "Each sticker carries a tiny brandmystuff tag and QR code. The product markets itself wherever it goes." },
-    { icon: Users, t: "Owners recruit owners", d: "Referral rewards when a friend's first lease completes. Campuses spread by word of mouth." },
-    { icon: Megaphone, t: "Brands come back", d: "Proof photos and quality scores make results visible, so a good first campaign turns into a repeat buyer." },
+    { icon: Laptop, t: "Every lid markets us", d: "QR tag on each sticker" },
+    { icon: Users, t: "Owners recruit owners", d: "Referral rewards" },
+    { icon: Megaphone, t: "Brands come back", d: "Proof makes results visible" },
   ];
   return (
     <div className="relative grid h-full items-center gap-10 lg:grid-cols-2">
@@ -581,10 +581,10 @@ function Growth() {
 
 function Model() {
   const streams = [
-    { pct: "12%", t: "of every lease", d: "Taken only when the owner is paid. The owner keeps 88%." },
-    { pct: "3%", t: "when a spot raises money", d: "A one-time fee when shares of a spot sell out." },
-    { pct: "1%", t: "on share trades", d: "When fans and investors buy and sell shares." },
-    { pct: "$3–10", t: "per day to be featured", d: "Owners can boost a listing. It never changes the quality ranking." },
+    { pct: "12%", t: "of every lease", d: "Owner keeps 88%" },
+    { pct: "3%", t: "on a raise", d: "When shares sell out" },
+    { pct: "1%", t: "on share trades", d: "Buy or sell" },
+    { pct: "$3–10", t: "a day featured", d: "Never changes ranking" },
   ];
   return (
     <div className="relative flex h-full flex-col justify-center">
@@ -602,7 +602,7 @@ function Model() {
       </div>
       <In d={0.7} className="mt-8 flex flex-wrap items-center gap-3 text-white/70">
         <Wallet className="h-5 w-5 text-p" />
-        Example: a laptop spot rented at $40 a week earns its owner <span className="font-bold text-white">$35.20</span> a week, and us <span className="font-bold text-white">$4.80</span>.
+        $40/week lease → owner <span className="font-bold text-white">$35.20</span> · us <span className="font-bold text-white">$4.80</span>
       </In>
     </div>
   );
@@ -610,21 +610,21 @@ function Model() {
 
 function Today() {
   const built = [
-    "Anyone can sign up with just an email",
-    "List an object and get an AI quality score in under a minute",
-    "Brands book spots and money is locked until proof arrives",
-    "Weekly photo proof releases pay automatically",
-    "Spots can be split into shares and traded",
-    "An AI agent can find and book an ad by itself",
-    "Investors choose which network they get paid on",
-    "Every spot has a public, human-readable name",
+    "Email sign-up",
+    "AI score in a minute",
+    "Escrow until proof",
+    "Proof releases pay",
+    "Shares you can trade",
+    "AI agent books ads",
+    "Payouts on 5 chains",
+    "A public name per spot",
   ];
   return (
     <div className="relative grid h-full items-center gap-10 lg:grid-cols-[0.8fr_1.2fr]">
       <div>
         <In><Kicker>Where we are</Kicker></In>
         <In d={0.1}><Title className="mt-5">Not a mock-up. <span className="text-p">It works today.</span></Title></In>
-        <In d={0.2}><p className="mt-6 max-w-md text-lg text-white/70">Every step of the product runs end to end on public test networks, with real test money moving between real people.</p></In>
+        <In d={0.2}><p className="mt-6 max-w-md text-lg text-white/70">Every flow runs end to end on public testnets.</p></In>
       </div>
       <div className="grid gap-2.5 sm:grid-cols-2">
         {built.map((b, i) => (
@@ -649,12 +649,164 @@ function Close() {
           Turn the world&apos;s <span className="bg-gradient-to-r from-p via-p-300 to-white bg-clip-text text-transparent">stuff</span> into the world&apos;s biggest ad network.
         </h2>
       </In>
-      <In d={0.4}><p className="mt-6 max-w-2xl text-lg text-white/70">Owned by the people who carry it. Trusted by the brands who buy it. Open to the agents who will run it.</p></In>
+      <In d={0.4}><p className="mt-6 max-w-2xl text-lg text-white/70">Owned by people. Trusted by brands. Open to agents.</p></In>
       <In d={0.55} className="mt-10 flex flex-wrap justify-center gap-3">
         <Link href="/list" className="inline-flex items-center gap-2 rounded-full bg-p px-6 py-3 text-sm font-bold text-ink shadow-[0_0_40px_rgba(171,159,242,0.5)] transition-transform hover:scale-[1.03]">List your stuff <ArrowRight className="h-4 w-4" /></Link>
         <Link href="/explore" className="inline-flex items-center gap-2 rounded-full border border-line-strong px-6 py-3 text-sm font-bold text-white transition-colors hover:border-p/60">Explore the marketplace <Globe2 className="h-4 w-4" /></Link>
       </In>
     </div>
+  );
+}
+
+type Cell = { t: string; d: string };
+type Group = { label: string; cells: Cell[] };
+
+/** A quick, scannable grid of what was built on one partner technology. */
+function Matrix({ kicker, title, accent, sub, groups, badge }: { kicker: string; title: string; accent: string; sub: string; groups: Group[]; badge?: ReactNode }) {
+  return (
+    <div className="relative flex h-full flex-col justify-center">
+      <Glow className="-right-24 -top-10 h-[360px] w-[360px]" />
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <Kicker>{kicker}</Kicker>
+          <Title className="mt-5">{title} <span className="text-p">{accent}</span></Title>
+          <p className="mt-3 text-lg text-white/70">{sub}</p>
+        </div>
+        {badge}
+      </div>
+      <div className={cx("mt-8 grid gap-3", groups.length === 4 ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-3")}>
+        {groups.map((g) => (
+          <div key={g.label} className="rounded-3xl border border-line-strong bg-white/[0.03] p-4">
+            <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-p">{g.label}</div>
+            <ul className="space-y-2.5">
+              {g.cells.map((c) => (
+                <li key={c.t} className="flex gap-2.5">
+                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-p text-ink"><Check className="h-3 w-3" strokeWidth={3.5} /></span>
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold leading-tight">{c.t}</div>
+                    <div className="text-xs text-white/55">{c.d}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OnSui() {
+  return (
+    <Matrix
+      kicker="Built on Sui"
+      title="Every rule and every dollar"
+      accent="lives on Sui."
+      sub="10 Move modules · 3 live upgrades · testnet"
+      groups={[
+        { label: "Marketplace", cells: [
+          { t: "Objects & ad spaces", d: "Shared objects + calendars" },
+          { t: "AI score on-chain", d: "AQS, grade, report hash" },
+          { t: "No double booking", d: "Week-level calendar" },
+          { t: "Sponsored listings", d: "Paid tags, never ranking" },
+        ] },
+        { label: "Escrow & payouts", cells: [
+          { t: "USDC escrow", d: "Full amount upfront" },
+          { t: "Proof-gated tranches", d: "80% match enforced in Move" },
+          { t: "Auto refunds", d: "Anyone can trigger after deadlines" },
+          { t: "Fee waterfall", d: "12% · holders · owner" },
+          { t: "Disputes", d: "Admin-resolved, on-chain" },
+        ] },
+        { label: "Tokenisation", cells: [
+          { t: "10,000 units per spot", d: "Revenue-share offerings" },
+          { t: "KYC registry", d: "ERC-3643-style gating" },
+          { t: "Income accumulator", d: "Pro-rata, zero dust lost" },
+          { t: "Order book", d: "Asks, bids, expiries" },
+          { t: "Cross-chain routes", d: "Holder-signed payout.move" },
+        ] },
+        { label: "Agents & infra", cells: [
+          { t: "x402 on Sui", d: "Our own facilitator" },
+          { t: "Budget mandates", d: "Agent spend caps in Move" },
+          { t: "Admin & operator caps", d: "Governance vs backend rights" },
+          { t: "Walrus + Display", d: "Photos render in wallets" },
+          { t: "Privy + Sui wallets", d: "Email or wallet sign-in" },
+        ] },
+      ]}
+    />
+  );
+}
+
+function OnCurvegrid() {
+  return (
+    <Matrix
+      kicker="Powered by Curvegrid"
+      title="Four EVM chains,"
+      accent="one payout backend."
+      sub="MultiBaas runs every EVM step of cross-chain payouts"
+      badge={
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/brand/curvegrid.png" alt="Curvegrid" width={427} height={97} className="h-9 w-auto opacity-90 brightness-150" />
+      }
+      groups={[
+        { label: "Deploy & manage", cells: [
+          { t: "Relayer on 4 chains", d: "Ethereum, Base, Arbitrum, Optimism" },
+          { t: "Contract library", d: "Relayer, Circle, USDC ABIs" },
+          { t: "Aliases", d: "No hard-coded addresses" },
+          { t: "One-command setup", d: "Idempotent script" },
+        ] },
+        { label: "Move the money", cells: [
+          { t: "Tx composition", d: "Nonce, gas, EIP-1559" },
+          { t: "Submit & track", d: "Platform key signs only" },
+          { t: "Circle CCTP", d: "Native USDC, no wrapping" },
+          { t: "Receipts & retries", d: "Reverts re-delivered" },
+        ] },
+        { label: "See the results", cells: [
+          { t: "Event indexing", d: "Every PayoutDelivered" },
+          { t: "Event queries", d: "Lifetime delivered per holder" },
+          { t: "Contract reads", d: "Live USDC balance" },
+          { t: "Signed webhooks", d: "HMAC, deduplicated" },
+        ] },
+      ]}
+    />
+  );
+}
+
+function OnEns() {
+  return (
+    <Matrix
+      kicker="Named on ENS"
+      title="Every account, object, space"
+      accent="and agent has a name."
+      sub="ENSv2 on Sepolia · you can edit your bio, not your score"
+      groups={[
+        { label: "Naming", cells: [
+          { t: "brandmystuff.eth tree", d: "Account › object › space › lease" },
+          { t: "Subregistries on demand", d: "One per parent name" },
+          { t: "Lease labels from Move", d: "Sui and ENS always agree" },
+          { t: "Non-transferable", d: "Names stay meaningful" },
+        ] },
+        { label: "Enhanced Access Control", cells: [
+          { t: "Resolver per identity", d: "Permissioned Resolvers" },
+          { t: "Key-scoped roles", d: "Owners edit profile keys" },
+          { t: "Attested records", d: "Score & price platform-only" },
+          { t: "Expiring lease names", d: "Held by the advertiser" },
+          { t: "Live permission proofs", d: "Role reads + probes" },
+        ] },
+        { label: "Records & verification", cells: [
+          { t: "AQS datasheet on ENS", d: "Score, grade, price" },
+          { t: "Sui ↔ ENS two-way check", d: "sui.object record" },
+          { t: "Sui addresses (784)", d: "Resolve names to Sui" },
+          { t: "Auto relayer", d: "Sui events → ENS writes" },
+        ] },
+        { label: "Agents", cells: [
+          { t: "scout.<brand>.eth", d: "Agents as namespaces" },
+          { t: "Self-registered receipts", d: "buy-<n> per purchase" },
+          { t: "Revoke = rights gone", d: "Follows the Sui mandate" },
+          { t: "x402 ENS identity", d: "Name must match payer" },
+          { t: "ENSIP-26 discovery", d: "MCP + x402 endpoints" },
+        ] },
+      ]}
+    />
   );
 }
 
@@ -674,6 +826,9 @@ const SLIDES = [
   { id: "model", label: "Business model", C: Model },
   { id: "today", label: "Today", C: Today },
   { id: "close", label: "Vision", C: Close },
+  { id: "sui", label: "Built on Sui", C: OnSui },
+  { id: "curvegrid", label: "Powered by Curvegrid", C: OnCurvegrid },
+  { id: "ens", label: "Named on ENS", C: OnEns },
 ];
 
 // ------------------------------------------------------------------ deck
