@@ -95,7 +95,7 @@ function Onboarding() {
           <FlowQuestion n={2} title={<>Nice to meet you, <span className="text-p">@{handle}</span>. Anything else?</>} sub="Both optional. Your display name and brand are written to your ENS records, and you can change them later in settings.">
             <div className="grid gap-8 sm:grid-cols-2">
               <FlowInput value={displayName} onChange={(e) => setDisplayName(e.target.value)} onEnter={onEnter} placeholder="Display name" />
-              <FlowInput autoFocus={false} value={brandName} onChange={(e) => setBrandName(e.target.value)} onEnter={onEnter} placeholder="Brand (if you'll advertise)" />
+              <FlowInput autoFocus={false} value={brandName} onChange={(e) => setBrandName(e.target.value)} onEnter={onEnter} placeholder="Brand (if you'll advertise)" className="placeholder:text-lg sm:placeholder:text-xl" />
             </div>
             {gas}
             <FlowNext onClick={submit} loading={busy === "save"} disabled={!valid} label="Create my profile" testId="save-handle" />
