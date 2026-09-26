@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
@@ -60,11 +60,66 @@ function split(name: string) {
   return i < 0 ? { leaf: name, rest: "" } : { leaf: name.slice(0, i), rest: name.slice(i) };
 }
 
+/** Lets a long name wrap after its dots (only used when it can't fit on one line). */
+export function breakable(text: string) {
+  const parts = text.split(".");
+  return parts.map((p, i) => (
+    <span key={i}>
+      {i > 0 && "."}
+      {i > 0 && <wbr />}
+      {p}
+    </span>
+  ));
+}
+
+/**
+ * Shows a name in full on one line, shrinking the font to fit the space it has.
+ * Names too long even at `min` wrap at the dots instead of being cut off.
+ * The text stays wrappable in CSS so a long name never widens the layout around it.
+ */
+export function FitName({ text, base, min = Math.max(7, base * 0.62), className, children }: { text: string; base: number; min?: number; className?: string; children?: ReactNode }) {
+  const el = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const t = el.current;
+    if (!t) return;
+    const fit = () => {
+      t.style.fontSize = `${base}px`;
+      delete t.dataset.wrap;
+      const avail = t.clientWidth;
+      // Width of the whole name on one line (dot breaks switched off while measuring).
+      t.dataset.measure = "1";
+      t.style.whiteSpace = "nowrap";
+      const natural = t.scrollWidth;
+      t.style.whiteSpace = "";
+      delete t.dataset.measure;
+      if (!avail || natural <= avail + 0.5) return;
+      const f = Math.floor(((base * avail) / natural) * 10) / 10 - 0.1;
+      if (f >= min) t.style.fontSize = `${f}px`;
+      else {
+        t.style.fontSize = `${min}px`;
+        t.dataset.wrap = "1";
+      }
+    };
+    fit();
+    // Re-fit when the available space changes; fitting is idempotent, so our own size changes settle immediately.
+    const ro = new ResizeObserver(fit);
+    ro.observe(t);
+    if (t.parentElement?.parentElement) ro.observe(t.parentElement.parentElement);
+    return () => ro.disconnect();
+  }, [text, base, min]);
+  return (
+    // Chrome honours <wbr> even under nowrap, so the dot breaks are hidden while measuring.
+    <span ref={el} className={cx("block min-w-0 leading-tight [overflow-wrap:anywhere] [&[data-measure]_wbr]:hidden", className)} style={{ fontSize: base }}>
+      {children ?? breakable(text)}
+    </span>
+  );
+}
+
 /**
  * An ENS name as a chip: diamond mark, the leaf label up front, the parent path
  * dimmed, and a status dot. Hovering shows what the name is and where it resolves.
  */
-export function EnsName({ name, status, kind, size = "sm", className, card = true, full }: { name: string; status?: EnsStatus; kind?: string | null; size?: "xs" | "sm" | "md"; className?: string; card?: boolean; full?: boolean }) {
+export function EnsName({ name, status, kind, size = "sm", className, card = true }: { name: string; status?: EnsStatus; kind?: string | null; size?: "xs" | "sm" | "md"; className?: string; card?: boolean }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ x: number; y: number; up: boolean } | null>(null);
@@ -81,20 +136,21 @@ export function EnsName({ name, status, kind, size = "sm", className, card = tru
   const hide = () => {
     timer.current = setTimeout(() => setOpen(false), 120);
   };
-  const sz = size === "xs" ? "h-6 gap-1 px-2 text-[10.5px]" : size === "md" ? "h-9 gap-2 px-3.5 text-sm" : "h-7 gap-1.5 px-2.5 text-[11.5px]";
+  const sz = size === "xs" ? "min-h-6 gap-1 px-2 py-0.5" : size === "md" ? "min-h-9 gap-2 px-3.5 py-1" : "min-h-7 gap-1.5 px-2.5 py-0.5";
+  const base = size === "xs" ? 10.5 : size === "md" ? 14 : 11.5;
   return (
     <>
       <span
         ref={ref}
         onMouseEnter={show}
         onMouseLeave={hide}
-        className={cx("group/ens inline-flex max-w-full items-center rounded-full border border-p/25 bg-p/[0.08] font-mono text-white/90 transition-colors hover:border-p/50 hover:bg-p/[0.14]", sz, className)}
+        className={cx("group/ens inline-flex max-w-full items-center rounded-full border has-[[data-wrap]]:rounded-2xl border-p/25 bg-p/[0.08] font-mono text-white/90 transition-colors hover:border-p/50 hover:bg-p/[0.14]", sz, className)}
       >
         <EnsGlyph className={cx("text-p", size === "md" && "h-4 w-4")} />
-        <span className={cx("min-w-0", full ? "break-all" : "truncate")}>
+        <FitName text={name} base={base}>
           <span className="font-semibold text-white">{leaf}</span>
-          <span className="text-white/45">{rest}</span>
-        </span>
+          <span className="text-white/45">{breakable(rest)}</span>
+        </FitName>
         {status !== undefined && <span className={cx("h-1.5 w-1.5 shrink-0 rounded-full", st.dot)} title={st.label} />}
       </span>
       {card && typeof document !== "undefined" &&
@@ -174,9 +230,9 @@ export function EnsTree({ chain, current }: { chain: { name: string; kind: strin
                 <span className={cx("inline-flex items-center gap-1 text-[10px] font-semibold", st.text)}><span className={cx("h-1.5 w-1.5 rounded-full", st.dot)} />{n.status}</span>
               </div>
               {here || n.kind === "platform" ? (
-                <div className="truncate font-mono text-xs text-white/90">{n.name}</div>
+                <FitName text={n.name} base={12} className="font-mono text-white/90" />
               ) : (
-                <Link href={`/${n.name}`} className="block truncate font-mono text-xs text-white/75 hover:text-p">{n.name}</Link>
+                <Link href={`/${n.name}`} className="block font-mono text-white/75 hover:text-p"><FitName text={n.name} base={12} /></Link>
               )}
             </div>
           </motion.li>
@@ -302,7 +358,7 @@ export function EnsPulse({ className }: { className?: string }) {
           <AnimatePresence mode="wait">
             <motion.a key={w.id} href={w.eth_tx ? etherscanTx(w.eth_tx) : undefined} target="_blank" rel="noreferrer" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }} className="flex min-w-0 items-center gap-1.5 text-muted hover:text-white">
               <span className="shrink-0 font-semibold text-p">{ACTION_COPY[w.action] ?? w.action}</span>
-              <span className="truncate font-mono text-white/70">{w.name}</span>
+              <FitName text={w.name} base={12} min={8} className="flex-1 font-mono text-white/70" />
               <span className="shrink-0">{ago(w.created_at)}</span>
               <ArrowUpRight className="h-3 w-3 shrink-0" />
             </motion.a>

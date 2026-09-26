@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useInView } from "framer-motion"
 import { useEffect, useRef, useState } from "react"
 import { ProductArt } from "./brand-art"
 import { EASE, GradeBadge, SectionHeading } from "./section-kit"
+import { FitName } from "@/components/ens"
 
 // the 11 object-intrinsic criteria from the AQS rubric, scored 0–4
 const CRITERIA = [
@@ -73,7 +74,7 @@ function ScoreCard() {
             <ProductArt id="laptop" size={40} />
           </div>
           <div className="min-w-0">
-            <p className="truncate font-mono text-xs text-muted-foreground">lid-center.macbook.maya.brandmystuff.eth</p>
+            <FitName text="lid-center.macbook.maya.brandmystuff.eth" base={12} className="font-mono text-muted-foreground" />
             <p className="font-bold tracking-tight text-ink">Ad-Space Quality Score</p>
           </div>
         </div>

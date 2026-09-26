@@ -266,7 +266,7 @@ export default function ObjectPage({ params }: { params: Promise<{ id: string }>
               </div>
               {o.ens_name && (
                 <div className="space-y-2">
-                  <EnsName name={o.ens_name} status={data.ensStatus?.[o.ens_name]} kind="object" full />
+                  <EnsName name={o.ens_name} status={data.ensStatus?.[o.ens_name]} kind="object" />
                   {data.ensStatus?.[o.ens_name] !== "registered" && (
                     <div className="relative overflow-hidden rounded-xl border border-p/25 bg-p/[0.06] px-3 py-2 text-[11px] text-white/75">
                       <span aria-hidden className="absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-p/20 to-transparent [animation:sweep_2.2s_ease-in-out_infinite]" />

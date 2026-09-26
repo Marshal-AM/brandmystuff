@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSession } from "@/lib/client/session";
 import { Logo, LogoMark } from "./logo";
 import { Button, EASE, TestnetBanner, cx, useToast, usdc, shortAddr, BusyDock } from "./ui";
-import { EnsGlyph, EnsName } from "./ens";
+import { EnsGlyph, EnsName, FitName } from "./ens";
 
 const APP_NAV = [
   ["/explore", "Explore"],
@@ -155,7 +155,7 @@ function UserMenu() {
     <div className="relative" ref={ref}>
       <motion.button whileTap={{ scale: 0.96 }} onClick={() => setOpen(!open)} className="flex items-center gap-2 rounded-full border border-line-strong bg-white/[0.04] py-1 pl-1 pr-3.5 text-sm transition-colors hover:border-p/50" data-testid="user-menu">
         <Avatar letter={(u.handle ?? "?")[0]?.toUpperCase()} />
-        <span className="hidden max-w-[180px] items-center gap-1.5 font-semibold sm:inline-flex">{u.ens_name && <EnsGlyph className="text-p" />}<span className="truncate">{u.ens_name ?? shortAddr(u.sui_address)}</span></span>
+        <span className="hidden max-w-[200px] items-center gap-1.5 font-semibold sm:inline-flex">{u.ens_name && <EnsGlyph className="text-p" />}<FitName text={u.ens_name ?? shortAddr(u.sui_address)} base={14} min={9} /></span>
       </motion.button>
       <AnimatePresence>
         {open && (

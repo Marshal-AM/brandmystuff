@@ -239,7 +239,7 @@ export default function ListObject() {
               )}
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted">Your object&apos;s ENS name</div>
-                <div className="mt-2"><EnsName name={check.tx.ensName} status="pending" kind="object" size="md" full /></div>
+                <div className="mt-2"><EnsName name={check.tx.ensName} status="pending" kind="object" size="md" /></div>
                 <p className="mt-3 text-xs text-muted">Right after your Sui transaction, the relayer registers it on Sepolia ENS and writes these records:</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {["class: PhysicalAsset", "description", "avatar (your photo)", `type: ${check.profile?.objectType ?? "object"}`, ...(check.profile?.tags?.length ? ["tags"] : []), ...(f.city ? [`city: ${f.city}`] : []), "sui.object → this object"].map((r, i) => (

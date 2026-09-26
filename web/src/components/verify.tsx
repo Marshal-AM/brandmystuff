@@ -79,7 +79,7 @@ export function VerifyPanel({ name, suiId, v, ens, info, bare }: { name: string;
         )}
       </div>
       <div className="mt-3">
-        <EnsName name={name} status={status} kind={info?.kind ?? ens?.kind} size="md" full />
+        <EnsName name={name} status={status} kind={info?.kind ?? ens?.kind} size="md" />
       </div>
       <div className="mt-4">
         <Tabs<Tab>

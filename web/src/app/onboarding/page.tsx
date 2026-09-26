@@ -8,7 +8,7 @@ import { useSession } from "@/lib/client/session";
 import { createProfile, setPayoutRoute } from "@/lib/sui/tx";
 import { Bot } from "@/components/scout-bot";
 import { Button, Spinner, cx, useAction } from "@/components/ui";
-import { EnsHint } from "@/components/ens";
+import { EnsHint, FitName } from "@/components/ens";
 import { DEMO, DEMO_ENABLED, demoFile } from "@/lib/client/demo";
 
 import { PayoutChainPicker, routeReady, usePayoutChains, type PayoutChoice } from "@/components/payouts";
@@ -266,7 +266,7 @@ function Onboarding() {
               )}
               <div className="min-w-0">
                 <div className="truncate text-lg font-bold">{brand.name}</div>
-                <div className="truncate text-sm text-muted">@{handle}.brandmystuff.eth{brand.location && ` · ${brand.location}`}</div>
+                <FitName text={`@${handle}.brandmystuff.eth${brand.location ? ` · ${brand.location}` : ""}`} base={14} className="text-muted" />
               </div>
             </div>
             {gas}
