@@ -32,7 +32,7 @@ const handlers: Record<string, (p: any) => Promise<void>> = {
     if (u.evm_address) await enqueue("ens_delegate", { userId: p.userId }, { dedupe: `ens_delegate:${p.userId}` });
     if (u.account_type === "brand") {
       const a = await q(db().from("brand_agents").select("user_id").eq("user_id", p.userId).maybeSingle());
-      if (a) await enqueue("ens_agent", { userId: p.userId }, { dedupe: `ens_agent:${p.userId}` });
+      if (a) await enqueue("ens_agent", { userId: p.userId }, { dedupe: `ens_agent:${p.userId}:account-live` });
     }
   },
   // ENSv2 permissions (docs/ENS-INTEGRATION.md §12)
