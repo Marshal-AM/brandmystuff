@@ -5,7 +5,7 @@ import { Search, SlidersHorizontal, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { PLACEMENTS } from "@/lib/categories";
 import { SpaceCard } from "@/components/space-card";
-import { AnimatedNumber, EASE, Empty, Input, LinkButton, PageHeader, Select, Skeleton, cx } from "@/components/ui";
+import { AnimatedNumber, EASE, Empty, Input, PageHeader, Select, Skeleton, cx } from "@/components/ui";
 import { EnsPulse } from "@/components/ens";
 
 function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -37,12 +37,6 @@ export default function Explore() {
         kicker="Live marketplace"
         title="Find the space your brand belongs on"
         sub="Every space is scored by AI, paid into USDC escrow on Sui and released only when the owner proves your ad is on display."
-        actions={
-          <>
-            <LinkButton href="/list" variant="secondary">List your stuff</LinkButton>
-            <LinkButton href="/offerings">Invest in ad income</LinkButton>
-          </>
-        }
       />
 
       <EnsPulse className="mb-4" />

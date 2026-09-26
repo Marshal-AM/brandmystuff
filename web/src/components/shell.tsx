@@ -342,6 +342,11 @@ export default function Shell({ children }: { children: ReactNode }) {
 
             <div className="ml-auto flex items-center gap-1.5">
               {landing && (
+                <button type="button" data-testid="pitch" className="hidden rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white/85 transition-colors hover:border-p/60 hover:text-white md:block">
+                  Pitch
+                </button>
+              )}
+              {landing && (
                 <Link href="/explore" className="hidden px-3 text-sm font-semibold text-white/75 transition-colors hover:text-white md:block">
                   Launch app
                 </Link>
@@ -371,6 +376,11 @@ export default function Shell({ children }: { children: ReactNode }) {
                       {n.label}
                     </motion.button>
                   ))}
+                  {landing && (
+                    <button type="button" className="rounded-xl border border-white/15 px-4 py-3 text-left text-sm font-semibold text-white/85">
+                      Pitch
+                    </button>
+                  )}
                   {landing && (
                     <Link href="/explore" className="rounded-xl bg-p px-4 py-3 text-sm font-bold text-ink">
                       Launch app
