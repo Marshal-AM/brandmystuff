@@ -14,7 +14,7 @@ const faqs = [
   {
     question: "How is a space scored?",
     answer:
-      "A vision model checks your photo is real (capture code, no AI or stock images, the close-up really belongs to the object) and brand-safe, then grades the space on 11 criteria such as size, legibility, surface and durability. You get a score from 0 to 100, a grade, and the evidence behind it. Spaces below 40 aren't listed, and you get tips for a better retake.",
+      "A vision model checks your photo is real (taken live through the in-app camera link, no AI or stock images, the close-up really belongs to the object) and brand-safe, then grades the space on 11 criteria such as size, legibility, surface and durability. You get a score from 0 to 100, a grade, and the evidence behind it. Spaces below 40 aren't listed, and you get tips for a better retake.",
   },
   {
     question: "When do I get paid?",

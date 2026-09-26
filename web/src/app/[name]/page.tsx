@@ -1,17 +1,17 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { use, useState } from "react";
+import { use, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { CalendarDays, Camera, ChevronRight, Code2, Eye, Layers, MapPin, MessageCircle, Ruler, ShieldBan, Sparkles } from "lucide-react";
 import { useSession } from "@/lib/client/session";
 import { AqsPanel } from "@/components/aqs";
-import { ActivityFeed } from "@/components/activity";
+import { ActivityList } from "@/components/activity";
 import { Checkout, weekLabel } from "@/components/checkout";
 import { VerifyPanel } from "@/components/verify";
 import { SpaceCard } from "@/components/space-card";
-import { Badge, Button, Card, EASE, Empty, GradeBadge, Img, LinkButton, PageLoader, SectionTitle, cx, shortAddr, usdc, useAction, ScrollArea } from "@/components/ui";
+import { Badge, Button, Card, EASE, Empty, GradeBadge, Img, LinkButton, PageLoader, Tabs, cx, shortAddr, usdc, useAction } from "@/components/ui";
 import { EnsName } from "@/components/ens";
 import { SignInButtons } from "@/components/shell";
 
@@ -44,7 +44,7 @@ function Avatar({ letter, size = 40 }: { letter: string; size?: number }) {
 
 function Spec({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-line bg-white/[0.02] p-3">
+    <div className="flex items-start gap-2.5 rounded-xl border border-line bg-white/[0.02] px-3 py-2">
       <Icon className="mt-0.5 h-4 w-4 shrink-0 text-p" />
       <div className="min-w-0">
         <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-faint">{label}</div>
@@ -54,147 +54,186 @@ function Spec({ icon: Icon, label, value }: { icon: any; label: string; value: s
   );
 }
 
-function Gallery({ closeup, hero, label, title }: { closeup?: string; hero?: string; label: string; title: string }) {
-  const { scrollY } = useScroll();
-  const y = useTransform(scrollY, [0, 600], [0, 60]);
-  const scale = useTransform(scrollY, [0, 600], [1.04, 1.12]);
+/** Page height on desktop: the viewport minus header, breadcrumbs and a bottom gap. */
+const FIXED = "lg:h-[calc(100dvh-212px)] lg:min-h-[600px]";
+
+/** A glass panel with tabs on top and a body that scrolls inside (on desktop it fills its column). */
+function TabPanel<T extends string>({ tabs, value, onChange, children, className }: { tabs: { id: T; label: ReactNode }[]; value: T; onChange: (t: T) => void; children: ReactNode; className?: string }) {
   return (
-    <div className="relative">
-      <motion.div initial={{ opacity: 0, scale: 0.97, filter: "blur(10px)" }} animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }} transition={{ duration: 0.9, ease: EASE }} className="relative aspect-[16/10] overflow-hidden rounded-[2rem] border border-line">
-        <motion.div style={{ y, scale }} className="absolute inset-0">
-          <Img blob={closeup} alt={label} className="h-full w-full" />
-        </motion.div>
-        <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-transparent to-ink/20" />
-        <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-ink/60 px-3 py-1.5 text-[11px] font-bold text-white/85 backdrop-blur-md">
-          <Sparkles className="h-3.5 w-3.5 text-p" /> The ad space
-        </span>
-      </motion.div>
-      <motion.div initial={{ opacity: 0, y: 30, rotate: 4 }} animate={{ opacity: 1, y: 0, rotate: -3 }} transition={{ duration: 0.9, delay: 0.35, type: "spring", stiffness: 120, damping: 14 }} whileHover={{ rotate: 0, scale: 1.04 }} className="absolute -bottom-6 right-4 w-[38%] max-w-[240px] overflow-hidden rounded-2xl border-4 border-p-950 shadow-[0_20px_60px_rgba(0,0,0,0.6)] sm:right-6">
-        <Img blob={hero} alt={title} className="aspect-[4/3] w-full" />
-        <span className="absolute bottom-2 left-2 rounded-full bg-ink/70 px-2 py-0.5 text-[10px] font-bold text-white/85 backdrop-blur">Whole object</span>
-      </motion.div>
+    <div className={cx("glass flex min-h-0 flex-col overflow-hidden rounded-3xl", className)}>
+      <div className="shrink-0 border-b border-line px-3 py-2.5">
+        <Tabs size="sm" tabs={tabs} value={value} onChange={onChange} />
+      </div>
+      <div className="relative min-h-0 flex-1">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={value} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22 }} className="overflow-y-auto overscroll-contain p-5 lg:absolute lg:inset-0">
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
+
+function Gallery({ closeup, hero, label, title }: { closeup?: string; hero?: string; label: string; title: string }) {
+  return (
+    <motion.div initial={{ opacity: 0, scale: 0.98, filter: "blur(10px)" }} animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }} transition={{ duration: 0.8, ease: EASE }} className="group relative aspect-[16/10] shrink-0 overflow-hidden rounded-3xl border border-line lg:aspect-auto lg:h-[44%]">
+      <Img blob={closeup} alt={label} className="h-full w-full transition-transform duration-[1.2s] group-hover:scale-105" />
+      <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-transparent to-ink/20" />
+      <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-ink/60 px-3 py-1.5 text-[11px] font-bold text-white/85 backdrop-blur-md">
+        <Sparkles className="h-3.5 w-3.5 text-p" /> The ad space
+      </span>
+      <motion.div initial={{ opacity: 0, y: 20, rotate: 4 }} animate={{ opacity: 1, y: 0, rotate: -3 }} transition={{ duration: 0.8, delay: 0.3, type: "spring", stiffness: 120, damping: 14 }} whileHover={{ rotate: 0, scale: 1.04 }} className="absolute bottom-4 right-4 w-[30%] max-w-[200px] overflow-hidden rounded-2xl border-4 border-p-950 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+        <Img blob={hero} alt={title} className="aspect-[4/3] w-full" />
+        <span className="absolute bottom-1.5 left-1.5 rounded-full bg-ink/70 px-2 py-0.5 text-[10px] font-bold text-white/85 backdrop-blur">Whole object</span>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+type SpaceTab = "score" | "availability" | "proofs" | "leases" | "activity";
+type SideTab = "chain" | "owner" | "api" | "more";
 
 function SpaceView({ d }: { d: any }) {
   const s = d.space, o = d.object;
   const { authenticated, api, address } = useSession();
   const router = useRouter();
   const [checkout, setCheckout] = useState(false);
+  const [tab, setTab] = useState<SpaceTab>("score");
+  const [side, setSide] = useState<SideTab>("chain");
   const { busy, run } = useAction();
   const mine = address === s.owner_address;
   const weekMs = Number(s.week_ms);
   const current = Math.floor(Date.now() / weekMs);
   const booked = new Set<number>(d.bookedWeeks);
+  const count = (n: number) => (n ? <span className="ml-1 opacity-60">{n}</span> : null);
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6">
       <Crumbs items={[{ href: "/explore", label: "Explore" }, { href: `/${o.ens_name}`, label: o.title }, { label: s.label }]} />
-      <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
-        <div className="space-y-8">
+      <div className={cx("grid gap-5 lg:grid-cols-[1fr_400px]", FIXED)}>
+        {/* left: photos + details */}
+        <div className="flex min-h-0 flex-col gap-5">
           <Gallery closeup={s.closeup_blob_id} hero={o.hero_blob_id} label={s.label} title={o.title} />
-          <div className="pt-4" />
-          <Card>
-            <SectionTitle>Ad-Space Quality Score</SectionTitle>
-            <AqsPanel r={{ aqs: s.aqs, grade: s.grade, confidence: s.confidence_bps / 10000, subscores: s.subscores ?? {}, strengths: s.strengths, weaknesses: s.weaknesses }} />
-            <p className="mt-5 border-t border-line pt-4 text-xs text-muted">
-              Scored by <span className="font-mono text-white/70">{s.rubric_version}</span>
-              {s.report_blob_id && (
-                <>
-                  {" · "}
-                  <a className="font-semibold text-p hover:underline" href={`https://aggregator.walrus-testnet.walrus.space/v1/blobs/${s.report_blob_id}`} target="_blank" rel="noreferrer">
-                    full AI report on Walrus
-                  </a>
-                </>
-              )}
-            </p>
-          </Card>
-          <Card>
-            <SectionTitle action={<span className="flex items-center gap-3 text-[11px] text-muted"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-p" /> free</span><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-white/20" /> booked</span></span>}>
-              <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-p" /> Availability</span>
-            </SectionTitle>
-            <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-10">
-              {Array.from({ length: 20 }, (_, i) => current + i).map((w, i) => (
-                <motion.span
-                  key={w}
-                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.025, duration: 0.4, ease: EASE }}
-                  className={cx("grid h-10 place-items-center rounded-xl text-[11px] font-semibold", booked.has(w) ? "bg-white/[0.04] text-faint line-through" : "border border-p/30 bg-p/10 text-p")}
-                >
-                  {weekLabel(w, weekMs)}
-                </motion.span>
+          <TabPanel
+            className="min-h-[360px] flex-1 lg:min-h-0"
+            value={tab}
+            onChange={setTab}
+            tabs={[
+              { id: "score", label: "Quality score" },
+              { id: "availability", label: "Availability" },
+              { id: "proofs", label: <>Proofs{count(d.proofs.length)}</> },
+              { id: "leases", label: <>Leases{count(d.leases.length)}</> },
+              { id: "activity", label: <>Activity{count(d.activity?.length ?? 0)}</> },
+            ]}
+          >
+            {tab === "score" && (
+              <>
+                <h3 className="mb-4 font-bold">Ad-Space Quality Score</h3>
+                <AqsPanel r={{ aqs: s.aqs, grade: s.grade, confidence: s.confidence_bps / 10000, subscores: s.subscores ?? {}, strengths: s.strengths, weaknesses: s.weaknesses }} />
+                <p className="mt-5 border-t border-line pt-4 text-xs text-muted">
+                  Scored by <span className="font-mono text-white/70">{s.rubric_version}</span>
+                  {s.report_blob_id && (
+                    <>
+                      {" · "}
+                      <a className="font-semibold text-p hover:underline" href={`https://aggregator.walrus-testnet.walrus.space/v1/blobs/${s.report_blob_id}`} target="_blank" rel="noreferrer">
+                        full AI report on Walrus
+                      </a>
+                    </>
+                  )}
+                </p>
+              </>
+            )}
+            {tab === "availability" && (
+              <>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <h3 className="flex items-center gap-2 font-bold"><CalendarDays className="h-4 w-4 text-p" /> Next 20 weeks</h3>
+                  <span className="flex items-center gap-3 text-[11px] text-muted"><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-p" /> free</span><span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-white/20" /> booked</span></span>
+                </div>
+                <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-5 xl:grid-cols-10">
+                  {Array.from({ length: 20 }, (_, i) => current + i).map((w, i) => (
+                    <motion.span key={w} initial={{ opacity: 0, y: 8, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: i * 0.02, duration: 0.35, ease: EASE }} className={cx("grid h-10 place-items-center rounded-xl text-[11px] font-semibold", booked.has(w) ? "bg-white/[0.04] text-faint line-through" : "border border-p/30 bg-p/10 text-p")}>
+                      {weekLabel(w, weekMs)}
+                    </motion.span>
+                  ))}
+                </div>
+              </>
+            )}
+            {tab === "proofs" &&
+              (d.proofs.length ? (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-6">
+                  {d.proofs.map((p: any, i: number) => (
+                    <motion.div key={p.photo_blob_id} initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }} className="overflow-hidden rounded-xl border border-line">
+                      <Img blob={p.photo_blob_id} alt={`proof ${p.period}`} className="aspect-square w-full transition-transform duration-500 hover:scale-110" />
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted">No proofs of display yet. They appear here as owners prove each lease period.</p>
               ))}
-            </div>
-          </Card>
-          {d.proofs.length > 0 && (
-            <Card>
-              <SectionTitle><span className="flex items-center gap-2"><Camera className="h-4 w-4 text-p" /> Proof of display</span></SectionTitle>
-              <ScrollArea max={260}><div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-                {d.proofs.map((p: any, i: number) => (
-                  <motion.div key={p.photo_blob_id} initial={{ opacity: 0, scale: 0.85 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }} whileHover={{ scale: 1.06, zIndex: 2 }} className="overflow-hidden rounded-xl border border-line">
-                    <Img blob={p.photo_blob_id} alt={`proof ${p.period}`} className="aspect-square w-full" />
-                  </motion.div>
-                ))}
-              </div></ScrollArea>
-            </Card>
-          )}
-          {d.leases.length > 0 && (
-            <Card>
-              <SectionTitle>Lease history</SectionTitle>
-              <ScrollArea max={320}><div className="space-y-2 text-sm">
-                {d.leases.map((l: any) => (
-                  <Link key={l.escrow_id} href={`/leases/${l.escrow_id}`} className="group flex items-center justify-between gap-3 rounded-2xl border border-line bg-white/[0.02] p-3 transition-colors hover:border-p/40">
-                    <span className="flex min-w-0 items-center gap-3">
-                      <span className="checker h-10 w-10 shrink-0 overflow-hidden rounded-xl"><Img blob={l.creative_blob_id} alt="" className="h-full w-full object-contain" /></span>
-                      <span className="truncate"><b>{l.brand}</b> <span className="text-muted">· {l.weeks} week(s) from {new Date(Number(l.start_ms)).toLocaleDateString()}</span></span>
-                    </span>
-                    <Badge>{l.status.replace("_", " ")}</Badge>
-                  </Link>
-                ))}
-              </div></ScrollArea>
-            </Card>
-          )}
-          <ActivityFeed items={d.activity} />
+            {tab === "leases" &&
+              (d.leases.length ? (
+                <div className="space-y-2 text-sm">
+                  {d.leases.map((l: any) => (
+                    <Link key={l.escrow_id} href={`/leases/${l.escrow_id}`} className="group flex items-center justify-between gap-3 rounded-2xl border border-line bg-white/[0.02] p-3 transition-colors hover:border-p/40">
+                      <span className="flex min-w-0 items-center gap-3">
+                        <span className="checker h-10 w-10 shrink-0 overflow-hidden rounded-xl"><Img blob={l.creative_blob_id} alt="" className="h-full w-full object-contain" /></span>
+                        <span className="truncate"><b>{l.brand}</b> <span className="text-muted">· {l.weeks} week(s) from {new Date(Number(l.start_ms)).toLocaleDateString()}</span></span>
+                      </span>
+                      <Badge>{l.status.replace("_", " ")}</Badge>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted">No leases yet. Be the first brand on this space.</p>
+              ))}
+            {tab === "activity" && <ActivityList items={d.activity} />}
+          </TabPanel>
         </div>
 
-        <div className="space-y-4 lg:sticky lg:top-[140px] lg:self-start">
-          <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.15, ease: EASE }} className="ring-spin rounded-[2rem]">
-            <div className="glass relative overflow-hidden rounded-[2rem] p-6">
+        {/* right: booking + on-chain / owner / API */}
+        <div className="flex min-h-0 flex-col gap-5">
+          <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.15, ease: EASE }} className="ring-spin shrink-0 rounded-3xl">
+            <div className="glass relative overflow-hidden rounded-3xl p-5">
               <div aria-hidden className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-p/20 blur-3xl" />
               <div className="relative flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h1 className="truncate text-3xl font-extrabold tracking-tight">{s.label}</h1>
-                  <div className="mt-0.5 flex items-center gap-1.5 text-sm text-muted">
+                  <h1 className="truncate text-2xl font-extrabold tracking-tight">{s.label}</h1>
+                  <div className="mt-0.5 flex items-center gap-1.5 truncate text-sm text-muted">
                     {o.title}
                     {o.city && (
                       <>
-                        <MapPin className="h-3.5 w-3.5" /> {o.city}
+                        <MapPin className="h-3.5 w-3.5 shrink-0" /> {o.city}
                       </>
                     )}
                   </div>
                 </div>
                 <GradeBadge grade={s.grade} aqs={s.aqs} />
               </div>
-              <div className="relative mt-3"><EnsName name={s.ens_name} status={d.ensInfo?.status} kind="space" /></div>
-              <div className="relative mt-5 grid grid-cols-2 gap-2">
+              <div className="relative mt-2.5"><EnsName name={s.ens_name} status={d.ensInfo?.status} kind="space" /></div>
+              <div className="relative mt-3.5 grid grid-cols-2 gap-1.5">
                 <Spec icon={Ruler} label="Size" value={`${s.width_mm / 10} × ${s.height_mm / 10} cm`} />
                 <Spec icon={Layers} label="Placement" value={s.placement} />
                 <Spec icon={Sparkles} label="Surface" value={s.material ?? "—"} />
                 <Spec icon={Eye} label="Seen from" value={`~${s.viewing_distance_m ?? o.viewing_distance_m ?? "—"} m`} />
               </div>
               {o.prohibited_zones?.length > 0 && (
-                <div className="relative mt-2 flex items-start gap-2 rounded-2xl border border-line bg-white/[0.02] p-3 text-xs text-muted">
-                  <ShieldBan className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Not allowed on this {o.object_type ?? "object"}: {o.prohibited_zones.join(", ")}
-                </div>
+                <p className="relative mt-2 line-clamp-2 flex items-start gap-1.5 text-[11px] text-muted" title={o.prohibited_zones.join(", ")}>
+                  <ShieldBan className="mt-0.5 h-3 w-3 shrink-0" /> Not on: {o.prohibited_zones.join(", ")}
+                </p>
               )}
-              <div className="relative mt-5 rounded-3xl bg-gradient-to-br from-p to-p-600 p-5 text-ink">
+              <div className="relative mt-3.5 flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-br from-p to-p-600 px-4 py-3 text-ink">
                 <div aria-hidden className="absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/30 blur-2xl" />
-                <div className="relative text-3xl font-extrabold tracking-tight">{usdc(s.price_per_week)}</div>
-                <div className="relative text-xs font-semibold opacity-70">per {weekMs < 86400_000 ? `${weekMs / 60000}-minute demo week` : "week"} · fixed price set by the owner</div>
+                <div className="relative min-w-0">
+                  <div className="text-2xl font-extrabold leading-none tracking-tight">{usdc(s.price_per_week)}</div>
+                  <div className="mt-1 text-[11px] font-semibold opacity-70">per {weekMs < 86400_000 ? `${weekMs / 60000}-min demo week` : "week"} · fixed price</div>
+                </div>
+                {d.offering && (
+                  <Link href={`/offerings/${d.offering.id}`} className="relative shrink-0 rounded-full bg-ink/85 px-3 py-1.5 text-[11px] font-bold text-p hover:bg-ink">
+                    Tokenised ↗
+                  </Link>
+                )}
               </div>
-              <div className="relative mt-4">
+              <div className="relative mt-3">
                 {s.status !== "available" ? (
                   <Badge tone="warn">This space is {s.status}</Badge>
                 ) : mine ? (
@@ -202,12 +241,12 @@ function SpaceView({ d }: { d: any }) {
                     Manage this object
                   </LinkButton>
                 ) : authenticated ? (
-                  <div className="space-y-2">
-                    <Button className="w-full" size="lg" onClick={() => setCheckout(true)} data-testid="lease">
+                  <div className="flex gap-2">
+                    <Button className="flex-1" size="lg" onClick={() => setCheckout(true)} data-testid="lease">
                       Lease this space
                     </Button>
-                    <Button variant="secondary" className="w-full" loading={busy === "msg"} onClick={() => run("msg", async () => { const r = await api<any>("/api/conversations", { method: "POST", json: { spaceId: s.id } }); router.push(`/messages/${r.id}`); })}>
-                      <MessageCircle className="h-4 w-4" /> Message owner
+                    <Button variant="secondary" size="lg" aria-label="Message owner" loading={busy === "msg"} onClick={() => run("msg", async () => { const r = await api<any>("/api/conversations", { method: "POST", json: { spaceId: s.id } }); router.push(`/messages/${r.id}`); })}>
+                      <MessageCircle className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
@@ -217,57 +256,64 @@ function SpaceView({ d }: { d: any }) {
             </div>
           </motion.div>
 
-          <Card delay={0.1}>
-            <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-faint">Owner</div>
-            <Link href={`/${d.owner.ens_name ?? ""}`} className="group mt-3 flex items-center gap-3">
-              <Avatar letter={(d.owner.handle ?? "?")[0]?.toUpperCase()} />
-              <div className="min-w-0">
-                <div className="font-bold transition-colors group-hover:text-p">{d.owner.display_name ?? d.owner.handle ?? shortAddr(d.owner.address)}</div>
-                <div className="mt-1"><EnsName name={d.owner.ens_name} kind="account" size="xs" /></div>
-              </div>
-            </Link>
-            <div className="mt-4 grid grid-cols-2 gap-2 text-center">
-              <div className="rounded-2xl bg-white/[0.03] p-2.5"><div className="text-lg font-extrabold">{d.owner.completedLeases}</div><div className="text-[11px] text-muted">completed leases</div></div>
-              <div className="rounded-2xl bg-white/[0.03] p-2.5"><div className="text-lg font-extrabold">{d.owner.acceptedProofs}</div><div className="text-[11px] text-muted">accepted proofs</div></div>
-            </div>
-          </Card>
-
-          {d.offering && (
-            <Card delay={0.15} className="overflow-hidden">
-              <div aria-hidden className="absolute -left-10 -top-10 h-32 w-32 rounded-full bg-p/15 blur-2xl" />
-              <div className="relative flex items-center justify-between">
-                <div className="font-bold">Tokenised</div>
-                <Badge tone="brand">{d.offering.status}</Badge>
-              </div>
-              <p className="relative mt-2 text-sm text-muted">{(d.offering.revenue_share_bps / 100).toFixed(0)}% of this space&apos;s lease revenue is split across 10,000 units.</p>
-              <LinkButton href={`/offerings/${d.offering.id}`} variant="secondary" className="relative mt-4 w-full">
-                View offering
-              </LinkButton>
-            </Card>
-          )}
-
-          <VerifyPanel name={s.ens_name} suiId={s.id} v={d.verification} ens={d.ens} info={d.ensInfo} />
-
-          <Card delay={0.2}>
-            <div className="flex items-center gap-2 text-sm font-bold">
-              <Code2 className="h-4 w-4 text-p" /> Lease over the API (x402)
-            </div>
-            <p className="mt-1 text-xs text-muted">Brand agents book this space with USDC on sui:testnet:</p>
-            <pre className="mt-3 overflow-x-auto rounded-2xl border border-line bg-ink p-4 font-mono text-[11px] leading-relaxed text-p-200">{`POST /api/x402/leases
+          <TabPanel
+            className="min-h-[300px] flex-1 lg:min-h-[180px]"
+            value={side}
+            onChange={setSide}
+            tabs={[
+              { id: "chain", label: "On-chain" },
+              { id: "owner", label: "Owner" },
+              { id: "api", label: "API" },
+              ...(d.siblings.length ? [{ id: "more" as const, label: <>More spaces{count(d.siblings.length)}</> }] : []),
+            ]}
+          >
+            {side === "chain" && <VerifyPanel bare name={s.ens_name} suiId={s.id} v={d.verification} ens={d.ens} info={d.ensInfo} />}
+            {side === "owner" && (
+              <>
+                <Link href={`/${d.owner.ens_name ?? ""}`} className="group flex items-center gap-3">
+                  <Avatar letter={(d.owner.handle ?? "?")[0]?.toUpperCase()} />
+                  <div className="min-w-0">
+                    <div className="font-bold transition-colors group-hover:text-p">{d.owner.display_name ?? d.owner.handle ?? shortAddr(d.owner.address)}</div>
+                    <div className="mt-1"><EnsName name={d.owner.ens_name} kind="account" size="xs" /></div>
+                  </div>
+                </Link>
+                <div className="mt-4 grid grid-cols-2 gap-2 text-center">
+                  <div className="rounded-2xl bg-white/[0.03] p-3"><div className="text-xl font-extrabold">{d.owner.completedLeases}</div><div className="text-[11px] text-muted">completed leases</div></div>
+                  <div className="rounded-2xl bg-white/[0.03] p-3"><div className="text-xl font-extrabold">{d.owner.acceptedProofs}</div><div className="text-[11px] text-muted">accepted proofs</div></div>
+                </div>
+                {d.offering && (
+                  <Link href={`/offerings/${d.offering.id}`} className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-p/25 bg-p/[0.06] p-3 text-sm transition-colors hover:border-p/50">
+                    <span><b>Tokenised</b> <span className="text-muted">· {(d.offering.revenue_share_bps / 100).toFixed(0)}% of lease revenue across 10,000 units</span></span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-p" />
+                  </Link>
+                )}
+              </>
+            )}
+            {side === "api" && (
+              <>
+                <div className="flex items-center gap-2 text-sm font-bold"><Code2 className="h-4 w-4 text-p" /> Lease over the API (x402)</div>
+                <p className="mt-1 text-xs text-muted">Brand agents book this space with USDC on sui:testnet:</p>
+                <pre className="mt-3 overflow-x-auto rounded-2xl border border-line bg-ink p-4 font-mono text-[11px] leading-relaxed text-p-200">{`POST /api/x402/leases
 {"spaceId":"${s.id.slice(0, 10)}…","weeks":1,
  "creativeUrl":"https://…","landingUrl":"https://…","brand":"…"}`}</pre>
-          </Card>
-
-          {d.siblings.length > 0 && (
-            <div>
-              <div className="mb-3 text-sm font-bold">More spaces on this {o.object_type ?? "object"}</div>
-              <div className="grid gap-4">
-                {d.siblings.slice(0, 3).map((x: any) => (
-                  <SpaceCard key={x.id} s={{ ...x, week_ms: s.week_ms, object: o, width_mm: x.width_mm ?? 0, height_mm: x.height_mm ?? 0 }} />
+                <Link href="/agents" className="mt-3 inline-flex text-xs font-semibold text-p hover:underline">Agent API docs ↗</Link>
+              </>
+            )}
+            {side === "more" && (
+              <div className="space-y-2">
+                {d.siblings.map((x: any) => (
+                  <Link key={x.id} href={`/${x.ens_name}`} className="group flex items-center gap-3 rounded-2xl border border-line bg-white/[0.02] p-2.5 transition-colors hover:border-p/40">
+                    <Img blob={x.closeup_blob_id} alt="" className="h-12 w-12 shrink-0 rounded-xl" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold group-hover:text-p">{x.label}</span>
+                      <span className="block text-xs text-muted">{usdc(x.price_per_week)}/wk</span>
+                    </span>
+                    {x.grade > 0 && <GradeBadge grade={x.grade} aqs={x.aqs} size="sm" />}
+                  </Link>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </TabPanel>
         </div>
       </div>
       {checkout && <Checkout space={s} booked={d.bookedWeeks} onClose={() => setCheckout(false)} />}
@@ -275,42 +321,59 @@ function SpaceView({ d }: { d: any }) {
   );
 }
 
+type ObjTab = "about" | "chain";
+
 function ObjectView({ d }: { d: any }) {
   const o = d.object;
+  const [tab, setTab] = useState<ObjTab>("about");
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6">
       <Crumbs items={[{ href: "/explore", label: "Explore" }, { href: `/${o.owner?.ens_name ?? ""}`, label: o.owner?.handle ?? "owner" }, { label: o.title }]} />
-      <div className="grid gap-8 md:grid-cols-[400px_1fr]">
-        <div className="space-y-4 md:sticky md:top-[140px] md:self-start">
-          <Card className="overflow-hidden p-0">
-            <div className="relative">
-              <Img blob={o.hero_blob_id} alt={o.title} className="aspect-[4/3] w-full" />
-              <div className="absolute inset-0 bg-gradient-to-t from-p-950 via-transparent to-transparent" />
-            </div>
-            <div className="relative -mt-10 space-y-3 p-6">
+      <div className={cx("grid gap-5 lg:grid-cols-[400px_1fr]", FIXED)}>
+        <div className="flex min-h-0 flex-col gap-5">
+          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7, ease: EASE }} className="relative aspect-[4/3] shrink-0 overflow-hidden rounded-3xl border border-line lg:aspect-auto lg:h-[38%]">
+            <Img blob={o.hero_blob_id} alt={o.title} className="h-full w-full" />
+            <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/10 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 p-5">
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-extrabold tracking-tight">{o.title}</h1>
+                <h1 className="truncate text-2xl font-extrabold tracking-tight">{o.title}</h1>
                 {o.object_grade > 0 && <GradeBadge grade={o.object_grade} aqs={o.object_aqs} size="sm" />}
               </div>
-              <div className="text-sm text-muted">
-                {o.object_type} {o.city && `· ${o.city}`} · by {o.owner?.ens_name && <Link href={`/${o.owner.ens_name}`}><EnsName name={o.owner.ens_name} kind="account" size="xs" /></Link>}
-              </div>
-              {o.sponsored_until && new Date(o.sponsored_until).getTime() > Date.now() && <Badge tone="sponsored">Sponsored</Badge>}
-              {o.description && <p className="text-sm leading-relaxed text-white/75">{o.description}</p>}
-              <div className="flex flex-wrap gap-1.5">{(o.tags ?? []).map((t: string) => <Badge key={t}>{t}</Badge>)}</div>
+              <div className="mt-0.5 truncate text-sm text-white/70">{o.object_type}{o.city && ` · ${o.city}`}</div>
             </div>
-          </Card>
-          <VerifyPanel name={o.ens_name} suiId={o.id} v={d.verification} ens={d.ens} info={d.ensInfo} />
+          </motion.div>
+          <TabPanel className="min-h-[320px] flex-1 lg:min-h-0" value={tab} onChange={setTab} tabs={[{ id: "about", label: "About" }, { id: "chain", label: "On-chain" }]}>
+            {tab === "about" && (
+              <div className="space-y-4">
+                <EnsName name={o.ens_name} status={d.ensInfo?.status} kind="object" />
+                {o.owner?.ens_name && (
+                  <div className="flex items-center gap-2 text-sm text-muted">by <Link href={`/${o.owner.ens_name}`}><EnsName name={o.owner.ens_name} kind="account" size="xs" /></Link></div>
+                )}
+                {o.sponsored_until && new Date(o.sponsored_until).getTime() > Date.now() && <Badge tone="sponsored">Sponsored</Badge>}
+                {o.description && <p className="text-sm leading-relaxed text-white/75">{o.description}</p>}
+                {!!o.tags?.length && <div className="flex flex-wrap gap-1.5">{o.tags.map((t: string) => <Badge key={t}>{t}</Badge>)}</div>}
+                {o.viewing_distance_m && <div className="text-xs text-muted">Seen from ~{o.viewing_distance_m} m</div>}
+              </div>
+            )}
+            {tab === "chain" && <VerifyPanel bare name={o.ens_name} suiId={o.id} v={d.verification} ens={d.ens} info={d.ensInfo} />}
+          </TabPanel>
         </div>
-        <div>
-          <h2 className="mb-5 text-2xl font-extrabold tracking-tight">Ad spaces</h2>
-          {!d.spaces.length && <Empty title="No spaces listed yet" />}
-          <div className="grid gap-5 sm:grid-cols-2">
-            {d.spaces.map((s: any, i: number) => (
-              <motion.div key={s.id} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.07, duration: 0.6, ease: EASE }}>
-                <SpaceCard s={{ ...s, object: o }} />
-              </motion.div>
-            ))}
+        <div className="glass flex min-h-0 flex-col overflow-hidden rounded-3xl">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-5 py-4">
+            <h2 className="text-lg font-extrabold tracking-tight">Ad spaces</h2>
+            <span className="text-xs text-muted">{d.spaces.length} listed</span>
+          </div>
+          <div className="relative min-h-0 flex-1">
+            <div className="overflow-y-auto overscroll-contain p-5 lg:absolute lg:inset-0">
+              {!d.spaces.length && <Empty title="No spaces listed yet" />}
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {d.spaces.map((s: any, i: number) => (
+                  <motion.div key={s.id} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.07, duration: 0.6, ease: EASE }}>
+                    <SpaceCard s={{ ...s, object: o }} />
+                  </motion.div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>

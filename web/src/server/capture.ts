@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { HttpError } from "./auth";
 import { db, q } from "./db";
 
-/** How long a photo link stays open. Capture codes last 30 minutes, so the photo must be fresh anyway. */
+/** How long a photo link stays open, so the photo is always fresh. */
 export const CAPTURE_LINK_MINUTES = 60;
 export const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 export const MAX_ATTEMPTS = 20;
@@ -12,7 +12,7 @@ export type CapturePurpose = (typeof PURPOSES)[number];
 
 /** What the camera page tells whoever is holding the phone. */
 export const PURPOSE_COPY: Record<CapturePurpose, { title: string; steps: string[] }> = {
-  hero: { title: "Photo of the whole object", steps: ["Hold your capture-code note next to the object.", "Fit the whole object in the frame, in good light.", "Take the photo and send it."] },
+  hero: { title: "Photo of the whole object", steps: ["Step back until the whole object fits in the frame.", "Find good, even light and avoid strong glare.", "Take the photo and send it."] },
   space: { title: "Close-up of the ad space", steps: ["Frame just this section of the object.", "Place an ID card beside it for scale if you can.", "Take the photo and send it."] },
   proof: { title: "Proof of display", steps: ["Show the installed ad on the space.", "Keep your capture-code note in frame.", "Take the photo and send it."] },
   kyc: { title: "ID document", steps: ["Lay your passport, national ID or driving licence flat.", "Make sure all four corners and the text are sharp.", "Take the photo and send it."] },
@@ -36,4 +36,15 @@ export async function ownLink(id: string, userId: string) {
   const link = await q(db().from("capture_links").select("id, user_id, purpose, expires_at, revoked_at, captured_at, attempts, last_reject_reason, photo_mime").eq("id", id).maybeSingle());
   if (!link || link.user_id !== userId) throw new HttpError(404, "Photo link not found");
   return link;
+}
+
+/**
+ * True only when `image` is byte-for-byte the photo taken through one of this user's
+ * camera links, i.e. it came from the live camera and not from a gallery or another site.
+ */
+export async function fromOwnCameraLink(linkId: string, userId: string, image: Buffer) {
+  if (!/^[0-9a-f-]{36}$/i.test(linkId)) return false;
+  const l = await q(db().from("capture_links").select("user_id, photo_b64").eq("id", linkId).maybeSingle());
+  if (!l || l.user_id !== userId || !l.photo_b64) return false;
+  return Buffer.from(l.photo_b64, "base64").equals(image);
 }

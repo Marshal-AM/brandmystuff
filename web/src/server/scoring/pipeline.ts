@@ -41,7 +41,6 @@ type HeroA = {
   typical_viewing_distance_m: number;
   prohibited_zones: string[];
   tags: string[];
-  nonce_text: string;
   visible_text: VText[];
   synthetic_suspicion: "none" | "low" | "medium" | "high";
   synthetic_evidence: string;
@@ -49,7 +48,6 @@ type HeroA = {
   condition_summary: string;
 };
 
-const norm = (s: string) => s.replace(/[^a-z0-9]/gi, "").toUpperCase();
 
 async function duplicateOf(phash: string, excludeUser?: string): Promise<{ sameOwner: boolean } | null> {
   const { data: a } = await db().from("space_analyses").select("user_id, result").eq("decision", "ACCEPTED").limit(2000);
@@ -75,7 +73,8 @@ export type HeroResult = {
   metrics: Metrics;
   analysis: HeroA;
   provenance: number;
-  nonceOk: boolean;
+  /** The photo was verified as taken through the owner's live camera link. */
+  liveCamera: boolean;
   profile: ObjectProfile;
 };
 
@@ -84,7 +83,8 @@ export async function analyzeHero(p: {
   mime: string;
   name: string;
   description: string;
-  captureCode?: string | null;
+  /** Server-verified: the image bytes match a photo taken through the owner's camera link. */
+  liveCamera?: boolean;
   userId: string;
   checkDuplicates?: boolean;
 }): Promise<HeroResult> {
@@ -94,7 +94,7 @@ export async function analyzeHero(p: {
   const analysis = await generateJson<HeroA>({
     system: HERO_SYSTEM,
     parts: [
-      { text: `${ownerText} A capture code may be written on a note in the photo.` },
+      { text: ownerText },
       { text: "IMAGE A = full object (hero):" },
       { image: p.image, mime: p.mime },
     ],
@@ -105,9 +105,9 @@ export async function analyzeHero(p: {
     const second = await generateJson<HeroA>({ system: HERO_SYSTEM, parts: [{ text: ownerText }, { text: "IMAGE A = full object (hero):" }, { image: p.image, mime: p.mime }], schema: HERO_SCHEMA });
     if (second.synthetic_suspicion !== "high") analysis.synthetic_suspicion = second.synthetic_suspicion === "none" ? "low" : second.synthetic_suspicion;
   }
-  const nonceSeen = norm(analysis.nonce_text ?? "");
-  const nonceOk = !!p.captureCode && nonceSeen.length > 0 && nonceSeen.includes(norm(p.captureCode));
-  const provenance = nonceOk ? 1 : nonceSeen.length === 0 ? 0.5 : 0.5;
+  const liveCamera = !!p.liveCamera;
+  // Provenance comes from the capture path, not from anything written in the photo.
+  const provenance = liveCamera ? 1 : 0.5;
   const cls = (EXPOSURE_CLASSES[analysis.exposure_class] ? analysis.exposure_class : "other") as ExposureClass;
   const profile: ObjectProfile = {
     objectType: (analysis.object_type || "object").toLowerCase().slice(0, 60),
@@ -125,20 +125,18 @@ export async function analyzeHero(p: {
     metrics,
     analysis,
     provenance,
-    nonceOk,
+    liveCamera,
     profile,
   });
 
   if (analysis.brand_safety.some((b) => b.tier === "floor")) return reject("G1");
   if (c2pa.aiGenerated || analysis.synthetic_suspicion === "high") return reject("G2", GATE_REASON.G2, ["Take a fresh photo of your own object with the in-app camera."]);
-  if (p.captureCode && nonceSeen.length >= 3 && !nonceSeen.includes(norm(p.captureCode)))
-    return reject("G2", "The capture code in the photo doesn't match the one we showed you.");
   const dup = p.checkDuplicates === false ? null : await duplicateOf(metrics.phash, p.userId);
   if (dup) return reject("G2", dup.sameOwner ? "You've already listed this photo." : GATE_REASON.G2);
   if (analysis.visible_text.some((t) => t.instruction_like)) return reject("G4");
   if (analysis.matches_name === "no") return reject("G8", `${GATE_REASON.G8}: this looks like ${analysis.object_type}. ${analysis.match_evidence}`.trim(), ["Use a name and description that describe this object."]);
   if (metrics.eqi < 0.35 || metrics.retakeReasons.length >= 2) return reject("G6", GATE_REASON.G6, metrics.retakeReasons);
-  return { decision: "ACCEPTED", tips: metrics.retakeReasons, metrics, analysis, provenance, nonceOk, profile };
+  return { decision: "ACCEPTED", tips: metrics.retakeReasons, metrics, analysis, provenance, liveCamera, profile };
 }
 
 // =============================== SPACE ===============================

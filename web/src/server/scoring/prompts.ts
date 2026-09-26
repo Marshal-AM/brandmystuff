@@ -44,7 +44,7 @@ ${INJECTION_RULE}
    - prohibited_zones: parts of THIS object where an ad must never go (e.g. windscreens, lights, number plates, safety/certification labels, screens, vents, fire exits, legally required signage). Empty list if none.
    - tags: 3–8 short lowercase search tags (object type, material, colour, use).
 "synthetic_suspicion" covers: AI-generated look, stock/studio product-shot or marketing render look (seamless backdrop, catalogue lighting, watermark), or a photo of a screen (moiré, bezels, pixel grid). A casual real-world photo is "none".
-If a short handwritten or printed code is visible (the capture code), transcribe it exactly in nonce_text, else "".`;
+The photo was taken moments ago through brandmystuff's live in-app camera link, so there is no verification code or note to look for; never ask for one and never penalise its absence. Judge the photo on what it shows.`;
 
 export const HERO_SCHEMA = {
   type: "object",
@@ -58,14 +58,13 @@ export const HERO_SCHEMA = {
     typical_viewing_distance_m: { type: "number", minimum: 0.5, maximum: 30 },
     prohibited_zones: { type: "array", items: { type: "string" }, maxItems: 10 },
     tags: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 8 },
-    nonce_text: { type: "string" },
     visible_text: visibleText,
     synthetic_suspicion: { type: "string", enum: ["none", "low", "medium", "high"] },
     synthetic_evidence: { type: "string" },
     brand_safety: brandSafety,
     condition_summary: { type: "string" },
   },
-  required: ["image_description", "object_type", "matches_name", "match_evidence", "exposure_class", "viewer_mode", "typical_viewing_distance_m", "prohibited_zones", "tags", "nonce_text", "visible_text", "synthetic_suspicion", "synthetic_evidence", "brand_safety", "condition_summary"],
+  required: ["image_description", "object_type", "matches_name", "match_evidence", "exposure_class", "viewer_mode", "typical_viewing_distance_m", "prohibited_zones", "tags", "visible_text", "synthetic_suspicion", "synthetic_evidence", "brand_safety", "condition_summary"],
 };
 
 // ---------- Pass A (space close-up integrity) ----------

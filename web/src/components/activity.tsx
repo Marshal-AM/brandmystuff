@@ -30,17 +30,11 @@ const LABEL: Record<string, string> = {
   sponsored: "Sponsored",
 };
 
-export function ActivityFeed({ items }: { items: any[] }) {
+export function ActivityList({ items }: { items: any[] }) {
   return (
-    <Card>
-      <h3 className="mb-5 flex items-center gap-2 font-bold">
-        <span className="grid h-8 w-8 place-items-center rounded-xl bg-p/15 text-p">
-          <Activity className="h-4 w-4" />
-        </span>
-        Activity
-      </h3>
+    <>
       {!items?.length && <p className="text-sm text-muted">No on-chain activity yet.</p>}
-      <ScrollArea max={380}><ol className="relative space-y-1">
+      <ol className="relative space-y-1">
         {!!items?.length && <span aria-hidden className="absolute bottom-3 left-[7px] top-3 w-px bg-gradient-to-b from-p/60 via-line-strong to-transparent" />}
         {items?.map((a, i) => (
           <motion.li
@@ -75,7 +69,21 @@ export function ActivityFeed({ items }: { items: any[] }) {
             </div>
           </motion.li>
         ))}
-      </ol></ScrollArea>
+      </ol>
+    </>
+  );
+}
+
+export function ActivityFeed({ items }: { items: any[] }) {
+  return (
+    <Card>
+      <h3 className="mb-5 flex items-center gap-2 font-bold">
+        <span className="grid h-8 w-8 place-items-center rounded-xl bg-p/15 text-p">
+          <Activity className="h-4 w-4" />
+        </span>
+        Activity
+      </h3>
+      <ScrollArea max={380}><ActivityList items={items} /></ScrollArea>
     </Card>
   );
 }

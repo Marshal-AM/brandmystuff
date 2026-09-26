@@ -234,14 +234,14 @@ export default function ObjectPage({ params }: { params: Promise<{ id: string }>
   const sponsored = o.sponsored_until && new Date(o.sponsored_until).getTime() > Date.now();
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6">
-      <div className="grid gap-8 md:grid-cols-[380px_1fr]">
-        <div className="md:sticky md:top-[140px] md:self-start">
-          <Card className="overflow-hidden p-0">
-            <div className="relative">
-              <Img blob={o.hero_blob_id} alt={o.title} className="aspect-[4/3] w-full" />
+      <div className="grid gap-5 lg:h-[calc(100dvh-172px)] lg:min-h-[600px] lg:grid-cols-[380px_1fr]">
+        <div className="flex min-h-0 flex-col">
+          <div className="glass flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl">
+            <div className="relative aspect-[4/3] shrink-0 lg:aspect-auto lg:h-[38%]">
+              <Img blob={o.hero_blob_id} alt={o.title} className="h-full w-full" />
               <div className="absolute inset-0 bg-gradient-to-t from-p-950 via-transparent to-transparent" />
             </div>
-            <div className="relative space-y-3 p-6">
+            <div className="relative min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-6">
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-extrabold tracking-tight">{o.title}</h1>
                 {o.object_grade > 0 && <GradeBadge grade={o.object_grade} aqs={o.object_aqs} size="sm" />}
@@ -262,26 +262,28 @@ export default function ObjectPage({ params }: { params: Promise<{ id: string }>
               )}
               {sponsored && <Badge tone="sponsored">Sponsored until {new Date(o.sponsored_until).toLocaleString()}</Badge>}
               {o.description && <p className="text-sm leading-relaxed text-white/75">{o.description}</p>}
-              {mine && (
-                <div className="flex gap-2 pt-2">
-                  <Button onClick={() => setAdding(true)} data-testid="add-space">
-                    <Plus className="h-4 w-4" /> Add space
-                  </Button>
-                  <Button variant="secondary" onClick={() => setSponsoring(true)} disabled={!data.spaces.length} data-testid="sponsor">
-                    <Megaphone className="h-4 w-4" /> Boost
-                  </Button>
-                </div>
-              )}
             </div>
-          </Card>
-        </div>
-        <div>
-          <div className="mb-5 flex items-end justify-between gap-3">
-            <h2 className="text-3xl font-extrabold tracking-tight">Ad spaces</h2>
-            <span className="text-sm text-muted">{data.spaces.length} listed</span>
+            {mine && (
+              <div className="flex shrink-0 gap-2 border-t border-line p-4">
+                <Button className="flex-1" onClick={() => setAdding(true)} data-testid="add-space">
+                  <Plus className="h-4 w-4" /> Add space
+                </Button>
+                <Button variant="secondary" onClick={() => setSponsoring(true)} disabled={!data.spaces.length} data-testid="sponsor">
+                  <Megaphone className="h-4 w-4" /> Boost
+                </Button>
+              </div>
+            )}
           </div>
+        </div>
+        <div className="glass flex min-h-0 flex-col overflow-hidden rounded-3xl">
+          <div className="flex shrink-0 items-end justify-between gap-3 border-b border-line px-5 py-4">
+            <h2 className="text-lg font-extrabold tracking-tight">Ad spaces</h2>
+            <span className="text-xs text-muted">{data.spaces.length} listed</span>
+          </div>
+          <div className="relative min-h-0 flex-1">
+          <div className="overflow-y-auto overscroll-contain p-5 lg:absolute lg:inset-0">
           {!data.spaces.length && <Empty title="No spaces yet">{mine ? "Add your first ad space. Each gets its own AI score." : "The owner hasn't listed spaces yet."}</Empty>}
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
             {data.spaces.map((s: any, i: number) => (
               <motion.div key={s.id} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07, duration: 0.6, ease: EASE }}>
                 <div className="group overflow-hidden rounded-3xl border border-line bg-white/[0.03] transition-colors hover:border-p/40">
@@ -320,6 +322,8 @@ export default function ObjectPage({ params }: { params: Promise<{ id: string }>
                 </div>
               </motion.div>
             ))}
+          </div>
+          </div>
           </div>
         </div>
       </div>

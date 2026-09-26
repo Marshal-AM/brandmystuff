@@ -28,7 +28,8 @@ export function PhotoCapture({
   scanning,
 }: {
   purpose: CapturePurpose;
-  onChange: (f: File, source: "camera") => void;
+  /** `linkId` lets the server confirm the photo really came from this camera link. */
+  onChange: (f: File, source: "camera", linkId: string) => void;
   label?: string;
   preview?: string | null;
   testId?: string;
@@ -68,7 +69,7 @@ export function PhotoCapture({
       const res = await fetch(`/api/capture-links/${id}/photo`, { headers: t ? { authorization: `Bearer ${t}` } : {}, credentials: "include", cache: "no-store" });
       if (!res.ok) throw new Error("Could not fetch the photo");
       const blob = await res.blob();
-      onChangeRef.current(new File([blob], `photo-${Date.now()}.jpg`, { type: blob.type || "image/jpeg" }), "camera");
+      onChangeRef.current(new File([blob], `photo-${Date.now()}.jpg`, { type: blob.type || "image/jpeg" }), "camera", id);
     },
     [authToken],
   );

@@ -12,7 +12,7 @@ import { FlowFrame, FlowInput, FlowNext, FlowQuestion, FlowTextarea, useFlow } f
 import { SignInButtons } from "@/components/shell";
 
 const CHECKS = [
-  { icon: Fingerprint, label: "Reading your capture code" },
+  { icon: Fingerprint, label: "Confirming it came from your live camera" },
   { icon: ScanSearch, label: "Checking the photo is real and fresh" },
   { icon: Eye, label: "Matching the photo to your description" },
   { icon: ShieldCheck, label: "Checking brand safety" },
@@ -67,14 +67,10 @@ export default function ListObject() {
   const { authenticated, api, run } = useSession();
   const router = useRouter();
   const [f, setF] = useState({ title: "", make: "", model: "", color: "", city: "", description: "" });
-  const [photo, setPhoto] = useState<{ file: File; source: "camera" | "upload"; url: string } | null>(null);
-  const [code, setCode] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<{ file: File; source: "camera" | "upload"; url: string; linkId?: string } | null>(null);
   const [check, setCheck] = useState<any>(null);
   const flow = useFlow(TOTAL);
   const { busy, run: act } = useAction();
-  useEffect(() => {
-    if (authenticated && !code) api<{ code: string }>("/api/capture-codes", { method: "POST", json: { purpose: "hero" } }).then((r) => setCode(r.code)).catch(() => {});
-  }, [authenticated, code, api]);
   if (!authenticated)
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
@@ -93,8 +89,8 @@ export default function ListObject() {
       const fd = new FormData();
       fd.set("image", photo!.file);
       Object.entries(f).forEach(([k, v]) => fd.set(k, v));
-      if (code) fd.set("captureCode", code);
       fd.set("captureSource", photo!.source);
+      if (photo!.linkId) fd.set("captureLinkId", photo!.linkId);
       const r = await api<any>("/api/objects/check", { method: "POST", body: fd });
       setCheck(r);
     });
@@ -160,23 +156,14 @@ export default function ListObject() {
         )}
 
         {flow.i === 4 && (
-          <FlowQuestion n={5} required title="Now snap the whole object" sub="One clear photo with this code written on a note in frame. It proves the object is yours and the photo is fresh.">
+          <FlowQuestion n={5} required title="Now snap the whole object" sub="Take one clear photo with your phone's camera. We'll give you a link that opens the camera, and the photo comes straight back here.">
             <div className="space-y-6">
-              <div className="flex flex-wrap items-center gap-5">
-                <div className="flex gap-2">
-                  {(code ?? "····").split("").map((ch, i) => (
-                    <motion.span key={`${ch}${i}`} initial={{ rotateX: 90, opacity: 0 }} animate={{ rotateX: 0, opacity: 1 }} transition={{ delay: 0.2 + i * 0.1, type: "spring", stiffness: 300, damping: 18 }} className="grid h-16 w-12 place-items-center rounded-2xl bg-white font-mono text-3xl font-extrabold text-ink shadow-[0_12px_40px_-12px_rgba(171,159,242,0.8)]">
-                      {ch}
-                    </motion.span>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/70">
-                  <span className="inline-flex items-center gap-2"><Box className="h-4 w-4 text-p" /> Whole object</span>
-                  <span className="inline-flex items-center gap-2"><Sun className="h-4 w-4 text-p" /> Even light</span>
-                  <span className="inline-flex items-center gap-2"><Fingerprint className="h-4 w-4 text-p" /> Code visible</span>
-                </div>
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/70">
+                <span className="inline-flex items-center gap-2"><Box className="h-4 w-4 text-p" /> Whole object in frame</span>
+                <span className="inline-flex items-center gap-2"><Sun className="h-4 w-4 text-p" /> Even light, no glare</span>
+                <span className="inline-flex items-center gap-2"><Eye className="h-4 w-4 text-p" /> Seen the way people see it</span>
               </div>
-              <PhotoCapture purpose="hero" label="Photo of the whole object" testId="hero-photo" preview={photo?.url} scanning={busy === "check"} onChange={(file, source) => { setPhoto({ file, source, url: URL.createObjectURL(file) }); setCheck(null); }} />
+              <PhotoCapture purpose="hero" label="Photo of the whole object" testId="hero-photo" preview={photo?.url} scanning={busy === "check"} onChange={(file, source, linkId) => { setPhoto({ file, source, linkId, url: URL.createObjectURL(file) }); setCheck(null); }} />
               {!accepted && (
                 <Button onClick={doCheck} loading={busy === "check"} disabled={!photo} data-testid="check-hero" size="lg">
                   <ScanSearch className="h-4 w-4" /> {busy === "check" ? "Checking photo…" : check ? "Check again" : "Check photo"}

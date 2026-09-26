@@ -522,12 +522,12 @@ export function ScrollArea({ children, className, max = 320 }: { children: React
   );
 }
 
-export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: T; label: ReactNode }[]; value: T; onChange: (t: T) => void }) {
+export function Tabs<T extends string>({ tabs, value, onChange, size = "md" }: { tabs: { id: T; label: ReactNode }[]; value: T; onChange: (t: T) => void; size?: "sm" | "md" }) {
   const id = useId();
   return (
-    <div className="inline-flex gap-1 rounded-full border border-line bg-white/[0.03] p-1">
+    <div className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full border border-line bg-white/[0.03] p-1 [scrollbar-width:none]">
       {tabs.map((t) => (
-        <button key={t.id} onClick={() => onChange(t.id)} className={cx("relative rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-300", value === t.id ? "text-ink" : "text-muted hover:text-white")}>
+        <button key={t.id} type="button" onClick={() => onChange(t.id)} className={cx("relative shrink-0 whitespace-nowrap rounded-full font-semibold transition-colors duration-300", size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm", value === t.id ? "text-ink" : "text-muted hover:text-white")}>
           {value === t.id && <motion.span layoutId={`tab-${id}`} className="absolute inset-0 rounded-full bg-p shadow-[0_0_24px_rgba(171,159,242,0.45)]" transition={{ type: "spring", stiffness: 380, damping: 30 }} />}
           <span className="relative">{t.label}</span>
         </button>

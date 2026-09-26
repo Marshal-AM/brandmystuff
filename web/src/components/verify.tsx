@@ -54,12 +54,13 @@ function Row({ label, value, href }: { label: string; value: string; href?: stri
 
 type Tab = "name" | "records" | "activity";
 
-export function VerifyPanel({ name, suiId, v, ens, info }: { name: string; suiId?: string | null; v: any; ens: any; info?: any }) {
+export function VerifyPanel({ name, suiId, v, ens, info, bare }: { name: string; suiId?: string | null; v: any; ens: any; info?: any; bare?: boolean }) {
   const [tab, setTab] = useState<Tab>("name");
   const status = info?.status ?? ens?.status ?? "pending";
   const expiry = info?.expiry ? new Date(info.expiry * 1000) : null;
+  const Wrap = bare ? "div" : Card;
   return (
-    <Card>
+    <Wrap>
       <div className="flex items-center justify-between gap-3">
         <h3 className="flex items-center gap-2 font-bold">
           <span className="grid h-8 w-8 place-items-center rounded-xl bg-p/15 text-p">
@@ -122,6 +123,6 @@ export function VerifyPanel({ name, suiId, v, ens, info }: { name: string; suiId
       <a href={ensAppUrl(name)} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-p hover:underline">
         View in the ENS app <ExternalLink className="h-3 w-3" />
       </a>
-    </Card>
+    </Wrap>
   );
 }

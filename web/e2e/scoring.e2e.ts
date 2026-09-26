@@ -29,16 +29,16 @@ async function withNote(img: Buffer, code: string) {
 async function main() {
   const t0 = Date.now();
   const laptopHero = await withNote(img("laptop-hero.jpg"), "K7PX");
-  const hero = await analyzeHero({ image: laptopHero, mime: "image/jpeg", ...LAPTOP, captureCode: "K7PX", userId: uid, checkDuplicates: false });
+  const hero = await analyzeHero({ image: laptopHero, mime: "image/jpeg", ...LAPTOP, liveCamera: true, userId: uid, checkDuplicates: false });
   console.log("profile:", JSON.stringify(hero.profile));
   const laptopSpace: SpaceInput = { label: "lid-right", widthMm: 180, heightMm: 170, placement: "rear", material: "anodised aluminium", objectName: LAPTOP.name, objectDescription: LAPTOP.description, profile: hero.profile, captureSource: "camera" };
   console.log("hero:", hero.decision, hero.gate ?? "", hero.reason ?? "", `synthetic=${hero.analysis.synthetic_suspicion}`);
   assert.equal(hero.decision, "ACCEPTED", "laptop hero accepted");
 
-  const mismatch = await analyzeHero({ image: img("car-hero.jpg"), mime: "image/jpeg", ...LAPTOP, captureCode: null, userId: uid, checkDuplicates: false });
+  const mismatch = await analyzeHero({ image: img("car-hero.jpg"), mime: "image/jpeg", ...LAPTOP, userId: uid, checkDuplicates: false });
   console.log("car photo named as a laptop:", mismatch.decision, mismatch.gate, mismatch.reason);
   assert.equal(mismatch.gate, "G8", "photo that doesn't match the name → G8");
-  const car = await analyzeHero({ image: img("car-hero.jpg"), mime: "image/jpeg", ...CAR, captureCode: null, userId: uid, checkDuplicates: false });
+  const car = await analyzeHero({ image: img("car-hero.jpg"), mime: "image/jpeg", ...CAR, userId: uid, checkDuplicates: false });
   assert.equal(car.decision, "ACCEPTED", "car hero accepted under its own name");
 
   const common = { hero: laptopHero, heroMime: "image/jpeg", closeupMime: "image/jpeg", heroProvenance: hero.provenance, userId: uid, checkDuplicates: false };

@@ -21,11 +21,11 @@ const CRITERIA = [
   { k: "Durability", v: 3.3 },
 ]
 
-const CHECKS = ["Capture code verified", "Not AI, stock or a screen photo", "Close-up matches the object", "Brand-safe surface"]
+const CHECKS = ["Taken live on your camera", "Not AI, stock or a screen photo", "Close-up matches the object", "Brand-safe surface"]
 
 const points = [
   "11-criterion rubric, every score backed by evidence",
-  "Capture-code check against fake photos",
+  "Live-camera capture, no gallery uploads",
   "AI, stock and screen-photo detection",
   "Brand-safety and prompt-injection gates",
   "Ranked by quality, never by who paid",
