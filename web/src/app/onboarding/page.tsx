@@ -43,7 +43,6 @@ function Onboarding() {
   const [mode, setMode] = useState<Mode>("owner");
   const [handle, setHandle] = useState(() => (DEMO_ENABLED ? DEMO.handle() : ""));
   const [displayName, setDisplayName] = useState(DEMO.displayName);
-  const [brandName, setBrandName] = useState("");
   const [brand, setBrand] = useState(DEMO.brand);
   const [logo, setLogo] = useState<{ blobId: string; url: string } | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -61,7 +60,7 @@ function Onboarding() {
       const json =
         mode === "brand"
           ? { handle, accountType: "brand", brandName: brand.name.trim(), displayName: brand.name.trim(), brandAbout: brand.about.trim() || undefined, brandLocation: brand.location.trim() || undefined, brandLogoBlobId: logo?.blobId }
-          : { handle, accountType: "owner", displayName: displayName || undefined, brandName: brandName || undefined };
+          : { handle, accountType: "owner", displayName: displayName || undefined };
       const r = await api<any>("/api/me/profile", { method: "POST", json });
       // One signature: the on-chain profile and, if they picked another chain, their payout route.
       const tx = new Transaction();
@@ -175,12 +174,9 @@ function Onboarding() {
         {flow.i === 0 && handleStep}
 
         {mode === "owner" && flow.i === 1 && (
-          <FlowQuestion n={2} title={<>Nice to meet you, <span className="text-p">@{handle}</span>. Anything else?</>} sub="Both optional. Your display name and brand are written to your ENS records, and you can change them later in settings.">
-            <div className="grid gap-8 sm:grid-cols-2">
-              <FlowInput value={displayName} onChange={(e) => setDisplayName(e.target.value)} onEnter={onEnter} placeholder="Display name" />
-              <FlowInput autoFocus={false} value={brandName} onChange={(e) => setBrandName(e.target.value)} onEnter={onEnter} placeholder="Brand (if you'll advertise)" className="placeholder:text-lg sm:placeholder:text-xl" />
-            </div>
-            <FlowNext onClick={onEnter} label={displayName || brandName ? "OK" : "Skip"} skip={!displayName && !brandName} testId="onboarding-extras" />
+          <FlowQuestion n={2} title={<>Nice to meet you, <span className="text-p">@{handle}</span>. What should we call you?</>} sub="Optional. Your display name is written to your ENS records, and you can change it later in settings.">
+            <FlowInput value={displayName} onChange={(e) => setDisplayName(e.target.value)} onEnter={onEnter} placeholder="Display name" />
+            <FlowNext onClick={onEnter} label={displayName ? "OK" : "Skip"} skip={!displayName} testId="onboarding-extras" />
           </FlowQuestion>
         )}
 

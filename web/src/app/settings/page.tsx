@@ -53,7 +53,8 @@ export default function Settings() {
               <Field label="X / Twitter handle"><Input value={f.twitter} onChange={(e) => setF({ ...f, twitter: e.target.value })} /></Field>
               <Field label="Website"><Input value={f.website} onChange={(e) => setF({ ...f, website: e.target.value })} placeholder="https://" /></Field>
             </div>,
-            <Field key="n" label="Brand name (advertisers)"><Input value={f.brandName} onChange={(e) => setF({ ...f, brandName: e.target.value })} /></Field>,
+            // Only brand accounts have a brand; owners are people.
+            ...(me?.user?.account_type === "brand" ? [<Field key="n" label="Brand name"><Input value={f.brandName} onChange={(e) => setF({ ...f, brandName: e.target.value })} /></Field>] : []),
             <Button key="save" size="lg" loading={busy === "s"} onClick={() => run("s", async () => {
               await api("/api/me/profile", { method: "POST", json: { ...f, website: f.website || "" } });
               await refresh();
