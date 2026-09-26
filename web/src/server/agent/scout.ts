@@ -159,28 +159,8 @@ async function scoreBatch(brandText: string, items: { key: string; r: Read; phot
   return { ok, districts: res.districts ?? [] };
 }
 
-/** Deterministic last resort, clearly labelled: attested quality, price vs cap, and the ENS check. */
-function fallbackScore(r: Read, perAdCap: number): Scored {
-  const aqs = Number(r.s.aqs ?? 0);
-  const price = Number(r.s.price_per_week) / 1e6;
-  const value = price <= perAdCap ? Math.round(60 + 40 * (1 - price / Math.max(perAdCap, 0.01))) : 20;
-  const f = (score: number, note: string) => ({ score: Math.max(0, Math.min(100, Math.round(score))), note });
-  return {
-    key: "",
-    reasoning: "The AI scorer didn't answer for this space, so I estimated it from its attested quality score, price and ENS verification.",
-    audience: f(50, "estimated"),
-    context: f(50, "estimated"),
-    visibility: f(aqs, `attested AQS ${aqs}`),
-    safety: f(r.verified ? 70 : 30, r.verified ? "ENS ↔ Sui verified" : "ENS not verified"),
-    value: f(value, `${price} USDC vs ${perAdCap} USDC cap`),
-  } as Scored;
-}
-
-/**
- * Scores every space: small parallel batches, then a single-space retry for anything missing, then a
- * labelled estimate, so no space ends up silently at 0.
- */
-async function scoreAll(brandText: string, read: Read[], photos: ({ buf: Buffer; mime: string } | null)[], perAdCap: number, log: (t: string) => Promise<void>) {
+/** Scores every space: small parallel batches, then a single-space retry for anything missing. */
+async function scoreAll(brandText: string, read: Read[], photos: ({ buf: Buffer; mime: string } | null)[], log: (t: string) => Promise<void>) {
   const items = read.map((r, i) => ({ key: `S${i + 1}`, r, photo: photos[i] }));
   const batches: (typeof items)[] = [];
   for (let i = 0; i < items.length; i += SCORE_BATCH) batches.push(items.slice(i, i + SCORE_BATCH));
@@ -196,20 +176,20 @@ async function scoreAll(brandText: string, read: Read[], photos: ({ buf: Buffer;
   const missing = items.filter((x) => !scored.has(x.key));
   if (missing.length) await log(`Re-scoring ${missing.length} space${missing.length > 1 ? "s" : ""} one by one`);
   await pool(missing, 3, async (x) => {
-    for (let attempt = 0; attempt < 2 && !scored.has(x.key); attempt++) {
+    for (let attempt = 0; attempt < 3 && !scored.has(x.key); attempt++) {
       try {
         const one = await scoreBatch(brandText, [{ ...x, key: "S1" }]);
         const e = one.ok.get("S1");
         if (e) scored.set(x.key, { ...e, key: x.key });
         thoughts.push(...one.districts);
       } catch {
-        /* retried below or estimated */
+        /* retried */
       }
     }
   });
-  const estimated = items.filter((x) => !scored.has(x.key));
-  if (estimated.length) await log(`Estimated ${estimated.length} space${estimated.length > 1 ? "s" : ""} from attested records (AI scorer unavailable)`);
-  return { byIndex: items.map((x) => scored.get(x.key) ?? fallbackScore(x.r, perAdCap)), thoughts };
+  const unscored = items.filter((x) => !scored.has(x.key));
+  if (unscored.length) throw new Error(`Scout couldn't score ${unscored.map((x) => x.r.s.ens_name).join(", ")}. Try again.`);
+  return { byIndex: items.map((x) => scored.get(x.key)!), thoughts };
 }
 
 const art = (type: string): ArtKind => {
@@ -327,7 +307,7 @@ export async function runScout(userId: string, emit: Emit) {
     await out({ t: "log", text: `Scoring ${read.length} spaces against ${brand.name}` });
     const photos = await pool(read, 4, async (r) => fetchImage(r.s.closeup_blob_id));
     const brandText = `BRAND PROFILE\n${JSON.stringify({ name: brand.name, category: b.category, dna: b.dna, about: u.brand_about, location: u.brand_location, mandate: { remaining: mandate.remaining, perAdCap: mandate.perAdCap } })}`;
-    const sc = await scoreAll(brandText, read as Read[], photos, mandate.perAdCap, async (text) => { await out({ t: "log", text }); });
+    const sc = await scoreAll(brandText, read as Read[], photos, async (text) => { await out({ t: "log", text }); });
     for (const d of sc.thoughts) {
       const x = districtsMap.get(d.id.toLowerCase());
       if (x && !x.thought) x.thought = d.thought;
@@ -357,7 +337,7 @@ export async function runScout(userId: string, emit: Emit) {
         grade: GR[r.s.grade] ?? "—",
         verified: r.verified,
         ensRecords: r.rec,
-        reasoning: a?.reasoning ?? "I couldn't assess this space.",
+        reasoning: a.reasoning,
         factors,
         affordable,
       };
