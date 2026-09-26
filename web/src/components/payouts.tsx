@@ -246,11 +246,16 @@ export function PayoutsPanel() {
       ) : chain ? (
         <p className="mt-4 text-xs text-muted">No payouts yet. The next time a campaign on a space you hold pays out, your share will show up here.</p>
       ) : null}
-      <div className="mt-4 flex justify-end">
-        <a href="https://www.curvegrid.com" target="_blank" rel="noreferrer" className="inline-flex items-baseline gap-1.5 text-[11px] text-muted transition-colors hover:text-white" data-testid="powered-by-curvegrid">
-          Cross-chain payouts powered by <span className="text-[13px] font-extrabold lowercase tracking-tight text-white">curvegrid</span>
-        </a>
-      </div>
+      {/* Curvegrid MultiBaas only runs the EVM leg, so credit it only for cross-chain routes. */}
+      {chain && (
+        <div className="-mb-1 mt-4 flex items-center justify-end border-t border-line pt-5">
+          <a href="https://www.curvegrid.com/multibaas" target="_blank" rel="noreferrer" title="Cross-chain payouts run on Curvegrid MultiBaas" className="group inline-flex items-center gap-2 text-[11px] font-medium text-muted transition-colors hover:text-white" data-testid="powered-by-curvegrid">
+            <span>Powered by</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/curvegrid.png" alt="Curvegrid" width={427} height={97} className="h-5 w-auto opacity-90 brightness-125 transition-[opacity,filter] group-hover:opacity-100 group-hover:brightness-150" />
+          </a>
+        </div>
+      )}
     </Card>
   );
 }
