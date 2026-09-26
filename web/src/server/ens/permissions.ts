@@ -218,6 +218,11 @@ export async function ensureAgentIdentity(userId: string) {
   return { name, resolver, agentEvm: k.address };
 }
 
+const canonical = (v: unknown): string =>
+  v && typeof v === "object" && !Array.isArray(v)
+    ? `{${Object.keys(v as object).sort().map((k) => `${JSON.stringify(k)}:${canonical((v as any)[k])}`).join(",")}}`
+    : JSON.stringify(v ?? null);
+
 export type AgentStatus = "active" | "paused" | "exhausted" | "revoked" | "expired" | "no-mandate";
 
 /** Grants or strips the agent's roles for a mandate status; revoked/expired agents lose them. */
@@ -258,7 +263,8 @@ export async function syncAgent(userId: string) {
     texts["eth.brandmystuff.attested.mandate.expires"] = new Date(m.expiresMs).toISOString();
   }
   const state = { texts, mandate: m?.id ?? null };
-  if (JSON.stringify(state) !== JSON.stringify(ba.ens_state)) {
+  // jsonb reorders keys, so compare canonically; only write on-chain when something really changed.
+  if (canonical(state) !== canonical(ba.ens_state)) {
     await writeRecords(ba.ens_name, { texts, ...(m ? { datas: { "eth.brandmystuff.mandate": bytes32(m.id) } } : {}) });
   }
   await applyAgentStatus(userId, status);

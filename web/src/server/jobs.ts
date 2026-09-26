@@ -1,6 +1,7 @@
 /** Background job runner (ENS relayer + operator tasks) and the deadline scheduler. */
 import { db, q, ok } from "./db";
 import {
+  ens,
   ensureAccountName,
   ensureObjectName,
   ensureSpaceName,
@@ -127,11 +128,35 @@ const handlers: Record<string, (p: any) => Promise<void>> = {
   },
 };
 
+/**
+ * Gas guard: ENS jobs are Sepolia transactions from the platform key. When it can't pay for gas they
+ * wait (without using up their retries) instead of failing over and over; they resume once funded.
+ */
+const ENS_MIN_WEI = 2_000_000_000_000_000n; // 0.002 ETH
+let gasCheck = { at: 0, ok: true };
+async function relayerFunded() {
+  if (Date.now() - gasCheck.at < 60_000) return gasCheck.ok;
+  try {
+    const c = ens();
+    const ok = (await c.pub.getBalance({ address: c.account.address })) >= ENS_MIN_WEI;
+    if (!ok && gasCheck.ok) console.warn(`[jobs] ENS relayer ${c.account.address} is below 0.002 Sepolia ETH; ENS jobs paused until it is funded`);
+    gasCheck = { at: Date.now(), ok };
+  } catch {
+    gasCheck = { at: Date.now(), ok: true }; // RPC hiccup: let the jobs try
+  }
+  return gasCheck.ok;
+}
+
 export async function runJobs(limit = 20) {
   const jobs = await q(
     db().from("jobs").select("*").eq("status", "queued").lte("run_after", new Date().toISOString()).order("id").limit(limit),
   );
+  const funded = (jobs as Job[]).some((j) => j.kind.startsWith("ens_")) ? await relayerFunded() : true;
   for (const j of jobs as Job[]) {
+    if (!funded && j.kind.startsWith("ens_")) {
+      await ok(db().from("jobs").update({ run_after: new Date(Date.now() + 120_000).toISOString(), last_error: "waiting: ENS relayer out of Sepolia ETH", updated_at: new Date().toISOString() }).eq("id", j.id).eq("status", "queued"));
+      continue;
+    }
     const { data: claimed } = await db().from("jobs").update({ status: "running", updated_at: new Date().toISOString() }).eq("id", j.id).eq("status", "queued").select("id");
     if (!claimed?.length) continue;
     try {
@@ -223,7 +248,9 @@ export async function runScheduler() {
   // Brand agents: mirror each Sui mandate onto its ENS name every few minutes (revoked → roles stripped).
   const bucket = Math.floor(now / 180_000);
   const agents = await q(db().from("brand_agents").select("user_id").eq("ens_status", "registered"));
-  for (const a of agents) await enqueue("ens_agent_sync", { userId: a.user_id }, { dedupe: `ens_agent_sync:${a.user_id}:${bucket}` });
+  // Never stack syncs: skip agents that still have one queued or running.
+  const pending = new Set(((await q(db().from("jobs").select("payload").eq("kind", "ens_agent_sync").in("status", ["queued", "running"]))) as any[]).map((j) => j.payload?.userId));
+  for (const a of agents) if (!pending.has(a.user_id)) await enqueue("ens_agent_sync", { userId: a.user_id }, { dedupe: `ens_agent_sync:${a.user_id}:${bucket}` });
   const expired = await q(db().from("objects").select("id").not("sponsor_tier", "is", null).lt("sponsored_until", new Date().toISOString()));
   for (const o of expired) {
     await ok(db().from("objects").update({ sponsor_tier: null }).eq("id", o.id));
