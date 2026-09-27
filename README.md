@@ -16,14 +16,27 @@ This README covers everything that has been built: the product, the architecture
 
 | What | Link |
 |---|---|
-| Submission URL | _To be added_ |
-| Live App URL | _To be added_ (the app runs locally on `http://localhost:3010`) |
+| Live App URL | [brandmystuff.up.railway.app](https://brandmystuff.up.railway.app/) |
 | Source code | [github.com/Marshal-AM/brandmystuff](https://github.com/Marshal-AM/brandmystuff) |
-| Pitch deck | `/pitch` in the app ([source](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/pitch/page.tsx)) |
+| Pitch deck | [brandmystuff.up.railway.app/pitch](https://brandmystuff.up.railway.app/pitch) ([source](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/pitch/page.tsx)) |
 | Product docs | [docs/](https://github.com/Marshal-AM/brandmystuff/tree/main/docs) |
 | Sui deployment manifest | [deployments/sui.testnet.json](https://github.com/Marshal-AM/brandmystuff/blob/main/deployments/sui.testnet.json) |
 | ENS deployment manifest | [deployments/ens.sepolia.json](https://github.com/Marshal-AM/brandmystuff/blob/main/deployments/ens.sepolia.json) |
 | Payout relayer manifest | [web/src/lib/payout-deployments.json](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/lib/payout-deployments.json) |
+
+### Agents
+
+Every AI agent in the system, with where to find it live. The full write-up is in [section 8, Agents](#8-agents).
+
+| Agent | What it does | Live identity / endpoint |
+|---|---|---|
+| **Scout** (brand ad-buying agent) | Reads a brand, discovers spaces through ENS, scores fit, picks one ad and pays for it over x402 from an on-chain budget mandate | ENS [`scout.apple.brandmystuff.eth`](https://brandmystuff.up.railway.app/scout.apple.brandmystuff.eth) · Sui agent [`0xd3bf0aa3…cc5a39`](https://suiscan.xyz/testnet/account/0xd3bf0aa37d1c7acac528ce41f597199da6d51f4f90aff1e2298f88f2d3cc5a39) · EVM key [`0x8eB1ab86…Ebe91c`](https://sepolia.etherscan.io/address/0x8eB1ab8627F2ed6CF7494bdC54fe6f199fEbe91c) · mandate [`0x284f8109…1fd9d0d`](https://suiscan.xyz/testnet/object/0x284f81097c201c28523abc351f5710feb9b27b677f27f86e2f45db9ac1fd9d0d) · [agent page](https://brandmystuff.up.railway.app/agent) |
+| **Scout budget mandate** (the agent's leash) | Move contract that caps what the agent can spend: one agent, one payee, per-payment cap, total budget, expiry | Package [`0x04edf0fa…9f7572`](https://suiscan.xyz/testnet/object/0x04edf0fa352278e44954e97c557844d3dcb76ab0ff13be1c1eb0f601219f7572) · [source](https://github.com/Marshal-AM/brandmystuff/blob/main/move/mandate/sources/mandate.move) |
+| **Discovery agent** (for outside AI agents) | Publishes ENSIP-26 records so any agent can find our MCP and x402 endpoints | ENS `agent.brandmystuff.eth` · MCP [`/api/mcp`](https://brandmystuff.up.railway.app/api/mcp) |
+| **MCP server** | JSON-RPC tools: `search_spaces`, `get_space`, `get_object`, `quote_lease`, `quote_sponsorship` | [`https://brandmystuff.up.railway.app/api/mcp`](https://brandmystuff.up.railway.app/api/mcp) · [source](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/app/api/mcp/route.ts) |
+| **x402 facilitator** (agent payments on Sui) | HTTP 402 payments in USDC on `sui:testnet`, verified by dry run, then booked on-chain | [`/api/x402/leases`](https://brandmystuff.up.railway.app/api/x402/leases) · [`/api/x402/sponsorships`](https://brandmystuff.up.railway.app/api/x402/sponsorships) · [source](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/x402.ts) |
+| **AI judges** (Gemini) | Object inspector, space scorer and proof verifier | [`scoring/pipeline.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/scoring/pipeline.ts) · [`proofs.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/proofs.ts) |
+| **Autonomous operators** | Indexer, ENS relayer, cross-chain payout relayer and deadline keeper, running in the worker | [`scripts/worker.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/scripts/worker.ts) |
 
 ### Deployed smart contracts
 
@@ -1563,7 +1576,7 @@ Every job retries with exponential backoff and is logged. The keeper only calls 
 ### Near term
 
 - **Circle CCTP V2 on Sui.** Circle has scheduled the phase-out of CCTP V1 starting 31 October 2026, and Sui support for V2 is on its way. Because every CCTP detail lives in [`cctp.ts`](https://github.com/Marshal-AM/brandmystuff/blob/main/web/src/server/payouts/cctp.ts) and the relayer's message parsing, the migration is a contained change. V2 also brings faster transfers and hooks that could let the relayer attach payout metadata on the destination chain.
-- **Public deployment.** Host the app and worker so MultiBaas webhooks deliver in real time and the Submission and Live App links above go live.
+- **Production hardening.** The app is live at [brandmystuff.up.railway.app](https://brandmystuff.up.railway.app/). Next is monitoring and alerting for the worker, so ENS relays and cross-chain payouts are watched around the clock.
 - **Run the cross-chain e2e continuously.** The [payout e2e](https://github.com/Marshal-AM/brandmystuff/blob/main/web/e2e/payouts.e2e.ts) and the rest of the suite should run on a schedule against all four EVM chains.
 - **Real KYC providers.** Swap the mock identity flow for a real provider. The on-chain `KycRegistry` interface stays the same.
 - **Content credentials.** Move from the byte-level C2PA scan to full manifest validation.
